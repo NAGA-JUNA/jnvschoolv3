@@ -1,6 +1,6 @@
 -- =============================================
 -- JSchoolAdmin — Complete Database Schema
--- Version: 1.1.0
+-- Version: 1.2.0
 -- Engine: InnoDB | Charset: utf8mb4
 -- Timezone: Asia/Kolkata (IST)
 --
@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS `official_emails`;
 DROP TABLE IF EXISTS `admissions`;
 DROP TABLE IF EXISTS `events`;
 DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `home_slider`;
 DROP TABLE IF EXISTS `branding`;
 DROP TABLE IF EXISTS `settings`;
 DROP TABLE IF EXISTS `teachers`;
@@ -227,7 +228,28 @@ CREATE TABLE `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 11. GALLERY CATEGORIES
+-- 11. HOME SLIDER / BANNER (Admin-managed hero carousel)
+-- =============================================
+CREATE TABLE `home_slider` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(200) NOT NULL,
+  `subtitle` VARCHAR(300) DEFAULT NULL,
+  `badge_text` VARCHAR(100) DEFAULT NULL,
+  `cta_primary_text` VARCHAR(50) DEFAULT 'Apply Now',
+  `cta_primary_link` VARCHAR(255) DEFAULT '/admissions',
+  `cta_secondary_text` VARCHAR(50) DEFAULT 'Learn More',
+  `cta_secondary_link` VARCHAR(255) DEFAULT '/about',
+  `image_url` VARCHAR(500) NOT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `sort_order` INT DEFAULT 0,
+  `created_by` INT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 12. GALLERY CATEGORIES
 -- =============================================
 CREATE TABLE `gallery_categories` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -241,7 +263,7 @@ CREATE TABLE `gallery_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 12. GALLERY ITEMS
+-- 13. GALLERY ITEMS
 -- =============================================
 CREATE TABLE `gallery_items` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -261,7 +283,7 @@ CREATE TABLE `gallery_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 13. EVENTS
+-- 14. EVENTS
 -- =============================================
 CREATE TABLE `events` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -279,7 +301,7 @@ CREATE TABLE `events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 14. ADMISSIONS (Online Applications)
+-- 15. ADMISSIONS (Online Applications)
 -- =============================================
 CREATE TABLE `admissions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -302,7 +324,7 @@ CREATE TABLE `admissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 15. OFFICIAL EMAILS
+-- 16. OFFICIAL EMAILS
 -- =============================================
 CREATE TABLE `official_emails` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -317,7 +339,7 @@ CREATE TABLE `official_emails` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 16. WHATSAPP SHARE LOG
+-- 17. WHATSAPP SHARE LOG
 -- =============================================
 CREATE TABLE `whatsapp_shares` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -329,7 +351,7 @@ CREATE TABLE `whatsapp_shares` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 17. AUDIT LOGS
+-- 18. AUDIT LOGS
 -- =============================================
 CREATE TABLE `audit_logs` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -344,7 +366,7 @@ CREATE TABLE `audit_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 18. SETTINGS (Key-Value Store)
+-- 19. SETTINGS (Key-Value Store)
 -- =============================================
 CREATE TABLE `settings` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -354,7 +376,7 @@ CREATE TABLE `settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 19. BRANDING
+-- 20. BRANDING
 -- =============================================
 CREATE TABLE `branding` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -387,6 +409,7 @@ ALTER TABLE `events` ADD INDEX `idx_event_date` (`event_date`);
 ALTER TABLE `admissions` ADD INDEX `idx_status` (`status`);
 ALTER TABLE `audit_logs` ADD INDEX `idx_user_action` (`user_id`, `action`);
 ALTER TABLE `audit_logs` ADD INDEX `idx_created_at` (`created_at`);
+ALTER TABLE `home_slider` ADD INDEX `idx_active_order` (`is_active`, `sort_order`);
 
 
 -- =============================================
@@ -527,6 +550,14 @@ INSERT INTO `notifications` (`title`, `body`, `urgency`, `status`, `submitted_by
 ('Annual Day Celebration', 'Annual Day will be celebrated on 15th March 2026. All parents are invited.', 'important', 'approved', 1, 1, '2026-01-20 10:30:00', 1),
 ('Winter Vacation Notice', 'School will remain closed from 25th Dec to 5th Jan for winter break.', 'normal', 'approved', 3, 1, '2025-12-15 09:00:00', 1),
 ('PTM Schedule', 'Parent-Teacher meeting is scheduled for 20th Feb 2026 from 10 AM to 1 PM.', 'important', 'pending', 4, NULL, NULL, 0);
+
+-- -------------------------------------------
+-- Home Slider (sample slides)
+-- -------------------------------------------
+INSERT INTO `home_slider` (`title`, `subtitle`, `badge_text`, `cta_primary_text`, `cta_primary_link`, `cta_secondary_text`, `cta_secondary_link`, `image_url`, `is_active`, `sort_order`, `created_by`) VALUES
+('Welcome to JNV Model School', 'Nurturing young minds with quality education, strong values, and a commitment to excellence since 2005.', 'CBSE Affiliated • Est. 2005', 'Apply Now', '/admissions', 'Learn More', '/about', 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1920&q=80', 1, 1, 1),
+('Building Tomorrow\'s Leaders', 'Empowering students with modern education, critical thinking skills, and holistic development.', 'Admissions Open 2025-26', 'Apply Now', '/admissions', 'Our Faculty', '/faculty', 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80', 1, 2, 1),
+('Excellence in Every Field', 'From academics to sports, arts to technology — our students shine in every arena.', 'State-Level Achievers', 'View Gallery', '/gallery', 'Academics', '/academics', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1920&q=80', 1, 3, 1);
 
 -- -------------------------------------------
 -- Gallery Categories
