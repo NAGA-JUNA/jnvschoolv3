@@ -35,8 +35,17 @@ const adminGroups: NavGroup[] = [
       { label: "Add Student", icon: UserPlus, href: "/admin/students/add" },
       { label: "Alumni", icon: School, href: "/admin/students/alumni" },
       { label: "Import Students", icon: Upload, href: "/admin/students/import" },
-      { label: "Teachers", icon: Users, href: "/admin/teachers" },
       { label: "Admissions", icon: ClipboardList, href: "/admin/admissions" },
+    ],
+  },
+  {
+    title: "Staff",
+    icon: Users,
+    items: [
+      { label: "Teachers", icon: Users, href: "/admin/teachers" },
+      { label: "Add Teacher", icon: UserPlus, href: "/admin/teachers/add" },
+      { label: "Inactive Teachers", icon: UserCheck, href: "/admin/teachers/inactive" },
+      { label: "Import Teachers", icon: Upload, href: "/admin/teachers/import" },
     ],
   },
   {
@@ -86,7 +95,7 @@ interface AppSidebarProps {
 export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const { branding } = useTheme();
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Academics: true, Collaboration: true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Academics: true, Staff: true, Collaboration: true });
 
   const toggleGroup = (title: string) => {
     setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
