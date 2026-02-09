@@ -1,0 +1,54 @@
+// Public API endpoints
+export const PUBLIC = {
+  notifications: "/public/notifications",
+  galleryCategories: "/public/gallery/categories",
+  galleryItems: (slug: string) => `/public/gallery/items?category=${slug}`,
+  events: "/public/events",
+  admissions: "/public/admissions",
+} as const;
+
+// Admin API endpoints
+export const ADMIN = {
+  dashboard: "/admin/dashboard/metrics",
+  activity: "/admin/dashboard/activity",
+  alerts: "/admin/alerts",
+  teachers: "/admin/teachers",
+  teacher: (id: number) => `/admin/teachers/${id}`,
+  students: "/admin/students",
+  student: (id: number) => `/admin/students/${id}`,
+  studentsExport: "/admin/students/export",
+  admissions: "/admin/admissions",
+  admission: (id: number) => `/admin/admissions/${id}`,
+  admissionsExport: "/admin/admissions/export",
+  notifications: "/admin/notifications",
+  notification: (id: number) => `/admin/notifications/${id}`,
+  notificationApprove: (id: number) => `/admin/notifications/${id}/approve`,
+  notificationReject: (id: number) => `/admin/notifications/${id}/reject`,
+  notificationBulkApprove: "/admin/notifications/bulk-approve",
+  galleryCategories: "/admin/gallery/categories",
+  galleryCategory: (id: number) => `/admin/gallery/categories/${id}`,
+  galleryApprovals: "/admin/gallery/approvals",
+  galleryApprove: (id: number) => `/admin/gallery/items/${id}/approve`,
+  galleryReject: (id: number) => `/admin/gallery/items/${id}/reject`,
+  events: "/admin/events",
+  event: (id: number) => `/admin/events/${id}`,
+  whatsappGroups: "/admin/whatsapp/groups",
+  whatsappLogs: "/admin/whatsapp/logs",
+  whatsappLog: "/admin/whatsapp/log",
+  emails: "/admin/emails",
+  emailCreate: "/admin/emails/create",
+  reports: "/admin/reports",
+  auditLogs: "/admin/audit-logs",
+  settings: "/admin/settings",
+} as const;
+
+// Teacher API endpoints
+export const TEACHER = {
+  dashboard: "/teacher/dashboard/metrics",
+  activity: "/teacher/dashboard/activity",
+  postNotification: "/teacher/notifications",
+  uploadGallery: "/teacher/gallery/upload",
+  addYoutubeLink: "/teacher/gallery/youtube",
+  mySubmissions: "/teacher/submissions",
+  profile: "/teacher/profile",
+} as const;
