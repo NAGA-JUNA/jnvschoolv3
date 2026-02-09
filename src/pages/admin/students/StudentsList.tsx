@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,12 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus, Search, Download, Eye, Pencil, MessageCircle, UserX, LayoutGrid, LayoutList,
   ChevronLeft, ChevronRight, GraduationCap, MoreVertical, Copy, FileDown, UserCheck, Phone
 } from "lucide-react";
 import { StudentRecord, CLASSES, SECTIONS, ACADEMIC_YEARS, MESSAGE_TEMPLATES } from "@/types/student";
-import { mockStudents } from "@/data/mockStudents";
+import { useApi } from "@/hooks/useApi";
+import api from "@/api/client";
+import { ADMIN } from "@/api/endpoints";
 import { toast } from "sonner";
 
 export default function StudentsList() {
@@ -34,17 +38,23 @@ export default function StudentsList() {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const perPage = 10;
 
+  const { data: students, loading, error, refetch } = useApi<StudentRecord[]>(
+    () => api.get<StudentRecord[]>(ADMIN.students),
+    []
+  );
+
   const filtered = useMemo(() => {
-    return mockStudents.filter((s) => {
+    if (!students) return [];
+    return students.filter((s) => {
       const q = search.toLowerCase();
-      const matchSearch = !q || s.full_name.toLowerCase().includes(q) || s.admission_no.toLowerCase().includes(q) || s.primary_phone.includes(q) || s.whatsapp_number.includes(q);
+      const matchSearch = !q || s.full_name.toLowerCase().includes(q) || s.admission_no.toLowerCase().includes(q) || s.primary_phone?.includes(q) || s.whatsapp_number?.includes(q);
       const matchClass = classFilter === "all" || s.class === classFilter;
       const matchSection = sectionFilter === "all" || s.section === sectionFilter;
       const matchYear = yearFilter === "all" || s.academic_year === yearFilter;
       const matchStatus = statusFilter === "all" || s.status === statusFilter;
       return matchSearch && matchClass && matchSection && matchYear && matchStatus;
     });
-  }, [search, classFilter, sectionFilter, yearFilter, statusFilter]);
+  }, [students, search, classFilter, sectionFilter, yearFilter, statusFilter]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
@@ -68,9 +78,15 @@ export default function StudentsList() {
     setSelectedTemplate("");
   };
 
-  const handleDeactivate = (student: StudentRecord) => {
-    toast.success(`${student.full_name} has been deactivated`);
-    setDeactivateDialog({ open: false });
+  const handleDeactivate = async (student: StudentRecord) => {
+    try {
+      await api.put(ADMIN.student(student.id), { status: "inactive" });
+      toast.success(`${student.full_name} has been deactivated`);
+      setDeactivateDialog({ open: false });
+      refetch();
+    } catch {
+      toast.error("Failed to deactivate student");
+    }
   };
 
   const handleBulkExport = () => {
@@ -83,11 +99,43 @@ export default function StudentsList() {
     setSelected([]);
   };
 
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Students Management" description="Manage student records, attendance, and documents" />
+        <Card className="p-4 space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-4 w-[200px]" />
+                <Skeleton className="h-3 w-[150px]" />
+              </div>
+              <Skeleton className="h-4 w-[80px]" />
+              <Skeleton className="h-6 w-[60px]" />
+            </div>
+          ))}
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Students Management" description="Manage student records, attendance, and documents" />
+        <ErrorState message={error} onRetry={refetch} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Students Management"
-        description="Manage student records, attendance, and documents"
+        description={`Manage student records, attendance, and documents • ${students?.length || 0} total students`}
         action={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
@@ -257,9 +305,10 @@ export default function StudentsList() {
             <p className="text-sm text-muted-foreground">Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}</p>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-              {Array.from({ length: totalPages }, (_, i) => (
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
                 <Button key={i} variant={page === i + 1 ? "default" : "outline"} size="sm" className="w-9" onClick={() => setPage(i + 1)}>{i + 1}</Button>
               ))}
+              {totalPages > 5 && <span className="px-2 self-center text-muted-foreground">...</span>}
               <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>

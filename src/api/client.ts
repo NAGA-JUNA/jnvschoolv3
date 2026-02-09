@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types";
 
-const BASE_URL = "https://schooldomain.com/api";
+const BASE_URL = "https://jnvschool.awayindia.com/api";
 
 class ApiClient {
   private baseUrl: string;
