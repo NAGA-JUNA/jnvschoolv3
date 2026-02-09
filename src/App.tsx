@@ -47,6 +47,7 @@ import ReportsPage from "@/pages/admin/Reports";
 import AuditLogsPage from "@/pages/admin/AuditLogs";
 import SettingsPage from "@/pages/admin/Settings";
 import BrandingSettingsPage from "@/pages/admin/BrandingSettings";
+import HomeBannerPage from "@/pages/admin/HomeBanner";
 // Teacher pages
 import TeacherDashboard from "@/pages/teacher/Dashboard";
 import PostNotification from "@/pages/teacher/PostNotification";
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/admin/reports" element={<ReportsPage />} />
             <Route path="/admin/audit" element={<AuditLogsPage />} />
             <Route path="/admin/branding" element={<BrandingSettingsPage />} />
+            <Route path="/admin/home-banner" element={<HomeBannerPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
             <Route path="/admin/developer" element={<DeveloperPage />} />
           </Route>

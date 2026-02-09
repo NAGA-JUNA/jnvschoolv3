@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, GraduationCap, UserPlus, Bell, Image, Calendar,
   MessageCircle, Mail, BarChart3, FileText, Settings, LogOut,
   ChevronLeft, ChevronDown, ChevronRight, BookOpen, Handshake, ShieldCheck, Palette,
-  ClipboardList, UserCheck, Upload, School,
+  ClipboardList, UserCheck, Upload, School, SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,7 @@ const adminGroups: NavGroup[] = [
     items: [
       { label: "Reports", icon: BarChart3, href: "/admin/reports" },
       { label: "Audit Logs", icon: FileText, href: "/admin/audit" },
+      { label: "Home Banner", icon: SlidersHorizontal, href: "/admin/home-banner" },
       { label: "Branding", icon: Palette, href: "/admin/branding" },
       { label: "Settings", icon: Settings, href: "/admin/settings" },
     ],

@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { schoolInfo, schoolStats, principalInfo, mockPublicNotifications, mockPublicEvents, galleryCategories, facilities } from "@/data/mockSchoolData";
 import { mockTeachers } from "@/data/mockTeachers";
+import { HeroSlider } from "@/components/public/HeroSlider";
+import { mockSliderSlides } from "@/data/mockSliderData";
 
 const quickLinks = [
   { icon: Bell, title: "Notifications", description: "Latest school announcements", href: "/notifications", color: "bg-kpi-blue" },
@@ -21,29 +23,8 @@ const galleryPreview = galleryCategories.filter((c) => c.type === "images").flat
 export default function PublicHome() {
   return (
     <div>
-      {/* ===== HERO ===== */}
-      <section className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground py-20 md:py-28 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djJIMjR2LTJoMTJ6TTM2IDI0djJIMjR2LTJoMTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
-        <div className="max-w-5xl mx-auto text-center space-y-6 relative z-10">
-          <Badge variant="secondary" className="text-sm px-4 py-1.5 bg-primary-foreground/15 text-primary-foreground border-primary-foreground/20">
-            {schoolInfo.affiliation} Affiliated • Est. {schoolInfo.established}
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-            Welcome to<br />{schoolInfo.name}
-          </h1>
-          <p className="text-lg md:text-xl opacity-90 max-w-3xl mx-auto">
-            {schoolInfo.tagline}
-          </p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Button size="lg" variant="secondary" asChild className="text-base">
-              <Link to="/admissions">Apply Now <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-base" asChild>
-              <Link to="/about">Learn More</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      {/* ===== HERO SLIDER ===== */}
+      <HeroSlider slides={mockSliderSlides} />
 
       {/* ===== STATS ===== */}
       <section className="bg-card border-b">
