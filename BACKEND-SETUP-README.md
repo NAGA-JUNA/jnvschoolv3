@@ -1011,6 +1011,417 @@ error_reporting(E_ALL);
 
 ---
 
+## Complete API Router (`api/index.php`)
+
+```php
+<?php
+// =============================================
+// JSchoolAdmin — API Entry Point / Router
+// Version: 1.2.0
+// =============================================
+
+// Error handling (disable display_errors in production)
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// Load core config
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/cors.php';
+require_once __DIR__ . '/helpers/response.php';
+require_once __DIR__ . '/helpers/validator.php';
+require_once __DIR__ . '/helpers/jwt.php';
+require_once __DIR__ . '/helpers/upload.php';
+require_once __DIR__ . '/middleware/auth.php';
+
+// Load controllers
+require_once __DIR__ . '/controllers/AuthController.php';
+require_once __DIR__ . '/controllers/DashboardController.php';
+require_once __DIR__ . '/controllers/StudentController.php';
+require_once __DIR__ . '/controllers/TeacherController.php';
+require_once __DIR__ . '/controllers/AttendanceController.php';
+require_once __DIR__ . '/controllers/ExamController.php';
+require_once __DIR__ . '/controllers/DocumentController.php';
+require_once __DIR__ . '/controllers/MessageController.php';
+require_once __DIR__ . '/controllers/NotificationController.php';
+require_once __DIR__ . '/controllers/GalleryController.php';
+require_once __DIR__ . '/controllers/EventController.php';
+require_once __DIR__ . '/controllers/AdmissionController.php';
+require_once __DIR__ . '/controllers/WhatsAppController.php';
+require_once __DIR__ . '/controllers/EmailController.php';
+require_once __DIR__ . '/controllers/ReportController.php';
+require_once __DIR__ . '/controllers/BrandingController.php';
+require_once __DIR__ . '/controllers/AuditLogController.php';
+require_once __DIR__ . '/controllers/SliderController.php';
+
+// ─── Parse request ───
+$method = $_SERVER['REQUEST_METHOD'];
+$route  = trim($_GET['route'] ?? '', '/');
+
+// Remove query string from route
+if (($pos = strpos($route, '?')) !== false) {
+    $route = substr($route, 0, $pos);
+}
+
+// =============================================
+// ROUTE MATCHING
+// =============================================
+
+// ─── Helper: extract numeric ID from route segment ───
+function routeMatch(string $pattern, string $route, array &$matches = []): bool {
+    $regex = preg_replace('#\{(\w+)\}#', '(\d+)', $pattern);
+    $regex = '#^' . $regex . '$#';
+    return (bool) preg_match($regex, $route, $matches);
+}
+
+$matches = [];
+
+try {
+
+    // =========================================
+    // AUTH ROUTES (partially public)
+    // =========================================
+    if ($route === 'auth/login' && $method === 'POST') {
+        (new AuthController())->login();
+    }
+    elseif ($route === 'auth/logout' && $method === 'POST') {
+        (new AuthController())->logout();
+    }
+    elseif ($route === 'auth/me' && $method === 'GET') {
+        (new AuthController())->me();
+    }
+
+    // =========================================
+    // PUBLIC ROUTES (no auth required)
+    // =========================================
+    elseif ($route === 'public/notifications' && $method === 'GET') {
+        (new NotificationController())->publicIndex();
+    }
+    elseif ($route === 'public/gallery/categories' && $method === 'GET') {
+        (new GalleryController())->publicCategories();
+    }
+    elseif ($route === 'public/gallery/items' && $method === 'GET') {
+        (new GalleryController())->publicItems(); // ?category=slug
+    }
+    elseif ($route === 'public/events' && $method === 'GET') {
+        (new EventController())->publicIndex();
+    }
+    elseif ($route === 'public/admissions' && $method === 'POST') {
+        (new AdmissionController())->publicSubmit();
+    }
+
+    // =========================================
+    // HOME SLIDER (public GET, admin CRUD)
+    // =========================================
+    elseif ($route === 'home/slider/reorder' && $method === 'PATCH') {
+        (new SliderController())->reorder();
+    }
+    elseif ($route === 'home/slider') {
+        match ($method) {
+            'GET'   => (new SliderController())->index(),
+            'POST'  => (new SliderController())->store(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('home/slider/{id}', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'PUT'    => (new SliderController())->update($id),
+            'DELETE' => (new SliderController())->destroy($id),
+            default  => jsonError('Method not allowed', 405),
+        };
+    }
+
+    // =========================================
+    // ADMIN — DASHBOARD
+    // =========================================
+    elseif ($route === 'admin/dashboard/metrics' && $method === 'GET') {
+        (new DashboardController())->adminMetrics();
+    }
+    elseif ($route === 'admin/dashboard/activity' && $method === 'GET') {
+        (new DashboardController())->adminActivity();
+    }
+    elseif ($route === 'admin/alerts' && $method === 'GET') {
+        (new DashboardController())->alerts();
+    }
+
+    // =========================================
+    // ADMIN — STUDENTS
+    // =========================================
+    elseif ($route === 'admin/students/export' && $method === 'GET') {
+        (new StudentController())->export();
+    }
+    elseif ($route === 'admin/students/import' && $method === 'POST') {
+        (new StudentController())->import();
+    }
+    elseif ($route === 'admin/students/bulk-promote' && $method === 'POST') {
+        (new StudentController())->bulkPromote();
+    }
+    elseif ($route === 'admin/students/alumni' && $method === 'GET') {
+        (new StudentController())->alumni();
+    }
+    elseif ($route === 'admin/students') {
+        match ($method) {
+            'GET'   => (new StudentController())->index(),
+            'POST'  => (new StudentController())->store(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/students/{id}/attendance', $route, $matches)) {
+        (new AttendanceController())->studentHistory((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/students/{id}/exams', $route, $matches)) {
+        (new ExamController())->studentResults((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/students/{id}/documents', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'GET'  => (new DocumentController())->studentDocuments($id),
+            'POST' => (new DocumentController())->uploadStudentDocument($id),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/students/{id}/messages', $route, $matches)) {
+        (new MessageController())->studentMessages((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/students/{id}', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'GET'    => (new StudentController())->show($id),
+            'PUT'    => (new StudentController())->update($id),
+            'DELETE' => (new StudentController())->destroy($id),
+            default  => jsonError('Method not allowed', 405),
+        };
+    }
+
+    // =========================================
+    // ADMIN — TEACHERS
+    // =========================================
+    elseif ($route === 'admin/teachers/export' && $method === 'GET') {
+        (new TeacherController())->export();
+    }
+    elseif ($route === 'admin/teachers/import' && $method === 'POST') {
+        (new TeacherController())->import();
+    }
+    elseif ($route === 'admin/teachers/inactive' && $method === 'GET') {
+        (new TeacherController())->inactive();
+    }
+    elseif ($route === 'admin/teachers') {
+        match ($method) {
+            'GET'   => (new TeacherController())->index(),
+            'POST'  => (new TeacherController())->store(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/teachers/{id}/assign-classes', $route, $matches)) {
+        (new TeacherController())->assignClasses((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/teachers/{id}/attendance', $route, $matches)) {
+        (new AttendanceController())->teacherHistory((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/teachers/{id}/documents', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'GET'  => (new DocumentController())->teacherDocuments($id),
+            'POST' => (new DocumentController())->uploadTeacherDocument($id),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/teachers/{id}/messages', $route, $matches)) {
+        (new MessageController())->teacherMessages((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/teachers/{id}', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'GET'    => (new TeacherController())->show($id),
+            'PUT'    => (new TeacherController())->update($id),
+            'DELETE' => (new TeacherController())->destroy($id),
+            default  => jsonError('Method not allowed', 405),
+        };
+    }
+
+    // =========================================
+    // ADMIN — ADMISSIONS
+    // =========================================
+    elseif ($route === 'admin/admissions/export' && $method === 'GET') {
+        (new AdmissionController())->export();
+    }
+    elseif ($route === 'admin/admissions') {
+        (new AdmissionController())->index();
+    }
+    elseif (routeMatch('admin/admissions/{id}', $route, $matches)) {
+        (new AdmissionController())->updateStatus((int) $matches[1]);
+    }
+
+    // =========================================
+    // ADMIN — NOTIFICATIONS
+    // =========================================
+    elseif ($route === 'admin/notifications/bulk-approve' && $method === 'POST') {
+        (new NotificationController())->bulkApprove();
+    }
+    elseif ($route === 'admin/notifications') {
+        (new NotificationController())->index();
+    }
+    elseif (routeMatch('admin/notifications/{id}/approve', $route, $matches)) {
+        (new NotificationController())->approve((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/notifications/{id}/reject', $route, $matches)) {
+        (new NotificationController())->reject((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/notifications/{id}', $route, $matches)) {
+        (new NotificationController())->show((int) $matches[1]);
+    }
+
+    // =========================================
+    // ADMIN — GALLERY
+    // =========================================
+    elseif ($route === 'admin/gallery/approvals' && $method === 'GET') {
+        (new GalleryController())->approvals();
+    }
+    elseif ($route === 'admin/gallery/categories') {
+        match ($method) {
+            'GET'  => (new GalleryController())->categories(),
+            'POST' => (new GalleryController())->createCategory(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/gallery/categories/{id}', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'PUT'    => (new GalleryController())->updateCategory($id),
+            'DELETE' => (new GalleryController())->deleteCategory($id),
+            default  => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/gallery/items/{id}/approve', $route, $matches)) {
+        (new GalleryController())->approveItem((int) $matches[1]);
+    }
+    elseif (routeMatch('admin/gallery/items/{id}/reject', $route, $matches)) {
+        (new GalleryController())->rejectItem((int) $matches[1]);
+    }
+
+    // =========================================
+    // ADMIN — EVENTS
+    // =========================================
+    elseif ($route === 'admin/events') {
+        match ($method) {
+            'GET'  => (new EventController())->index(),
+            'POST' => (new EventController())->store(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif (routeMatch('admin/events/{id}', $route, $matches)) {
+        $id = (int) $matches[1];
+        match ($method) {
+            'GET'    => (new EventController())->show($id),
+            'PUT'    => (new EventController())->update($id),
+            'DELETE' => (new EventController())->destroy($id),
+            default  => jsonError('Method not allowed', 405),
+        };
+    }
+
+    // =========================================
+    // ADMIN — WHATSAPP
+    // =========================================
+    elseif ($route === 'admin/whatsapp/groups' && $method === 'GET') {
+        (new WhatsAppController())->groups();
+    }
+    elseif ($route === 'admin/whatsapp/logs' && $method === 'GET') {
+        (new WhatsAppController())->logs();
+    }
+    elseif ($route === 'admin/whatsapp/log' && $method === 'POST') {
+        (new WhatsAppController())->logShare();
+    }
+
+    // =========================================
+    // ADMIN — EMAILS
+    // =========================================
+    elseif ($route === 'admin/emails' && $method === 'GET') {
+        (new EmailController())->index();
+    }
+    elseif ($route === 'admin/emails/create' && $method === 'POST') {
+        (new EmailController())->create();
+    }
+
+    // =========================================
+    // ADMIN — REPORTS & AUDIT LOGS
+    // =========================================
+    elseif ($route === 'admin/reports' && $method === 'GET') {
+        (new ReportController())->index();
+    }
+    elseif ($route === 'admin/audit-logs' && $method === 'GET') {
+        (new AuditLogController())->index();
+    }
+
+    // =========================================
+    // ADMIN — SETTINGS & BRANDING
+    // =========================================
+    elseif ($route === 'admin/settings') {
+        match ($method) {
+            'GET' => (new BrandingController())->getSettings(),
+            'PUT' => (new BrandingController())->updateSettings(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+    elseif ($route === 'admin/branding' && $method === 'PUT') {
+        (new BrandingController())->updateBranding();
+    }
+
+    // =========================================
+    // TEACHER ROUTES
+    // =========================================
+    elseif ($route === 'teacher/dashboard/metrics' && $method === 'GET') {
+        (new DashboardController())->teacherMetrics();
+    }
+    elseif ($route === 'teacher/dashboard/activity' && $method === 'GET') {
+        (new DashboardController())->teacherActivity();
+    }
+    elseif ($route === 'teacher/students' && $method === 'GET') {
+        (new StudentController())->teacherStudents();
+    }
+    elseif ($route === 'teacher/attendance/mark' && $method === 'POST') {
+        (new AttendanceController())->mark();
+    }
+    elseif ($route === 'teacher/exams/marks' && $method === 'POST') {
+        (new ExamController())->enterMarks();
+    }
+    elseif ($route === 'teacher/notifications' && $method === 'POST') {
+        (new NotificationController())->teacherSubmit();
+    }
+    elseif ($route === 'teacher/gallery/upload' && $method === 'POST') {
+        (new GalleryController())->teacherUpload();
+    }
+    elseif ($route === 'teacher/gallery/youtube' && $method === 'POST') {
+        (new GalleryController())->teacherYoutube();
+    }
+    elseif ($route === 'teacher/submissions' && $method === 'GET') {
+        (new NotificationController())->teacherSubmissions();
+    }
+    elseif ($route === 'teacher/profile') {
+        match ($method) {
+            'GET' => (new TeacherController())->myProfile(),
+            'PUT' => (new TeacherController())->updateMyProfile(),
+            default => jsonError('Method not allowed', 405),
+        };
+    }
+
+    // =========================================
+    // 404 — NO ROUTE MATCHED
+    // =========================================
+    else {
+        jsonError("Endpoint not found: {$method} /{$route}", 404);
+    }
+
+} catch (Throwable $e) {
+    // Log error to cPanel error log
+    error_log("JSchoolAdmin API Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+
+    // Return clean JSON error (no stack trace in production)
+    jsonError('Internal server error', 500);
+}
+```
+
+---
+
 ## Support
 
 - **Frontend Issues:** Check browser console (F12) for errors
@@ -1021,4 +1432,4 @@ error_reporting(E_ALL);
 
 ---
 
-*JSchoolAdmin v1.1.0 — Modern School Management System — Powered by JNV Tech*
+*JSchoolAdmin v1.2.0 — Modern School Management System — Powered by JNV Tech*
