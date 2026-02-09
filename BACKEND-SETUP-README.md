@@ -98,7 +98,8 @@ public_html/
 │   │   ├── EmailController.php
 │   │   ├── ReportController.php
 │   │   ├── BrandingController.php    # School branding settings
-│   │   └── AuditLogController.php
+│   │   ├── AuditLogController.php
+│   │   └── SliderController.php     # Home banner/slider CRUD
 │   ├── models/
 │   │   ├── User.php
 │   │   ├── Student.php
@@ -113,7 +114,8 @@ public_html/
 │   │   ├── Event.php
 │   │   ├── Admission.php
 │   │   ├── Branding.php
-│   │   └── AuditLog.php
+│   │   ├── AuditLog.php
+│   │   └── Slider.php
 │   ├── helpers/
 │   │   ├── response.php          # JSON response helper
 │   │   ├── validator.php         # Input validation
@@ -186,6 +188,7 @@ Alternatively, click the **SQL** tab and paste the contents of `schema.sql` dire
 | `audit_logs` | System audit trail |
 | `settings` | Key-value school settings |
 | `branding` | Theme/branding configuration |
+| `home_slider` | Admin-managed hero carousel slides |
 
 ---
 
@@ -509,6 +512,11 @@ The frontend works fully without a backend connection using mock data. This is u
 | `PUT` | `/api/admin/branding` | Save branding settings |
 | `POST` | `/api/admin/whatsapp/log` | Log WhatsApp share |
 | `GET` | `/api/admin/whatsapp/logs` | Get WhatsApp share history |
+| **Home Slider** | | |
+| `GET` | `/api/home/slider` | List all slider slides (public) |
+| `POST` | `/api/home/slider` | Create new slide |
+| `PUT` | `/api/home/slider/{id}` | Update slide |
+| `DELETE` | `/api/home/slider/{id}` | Delete slide |
 
 ### Teacher Endpoints (Requires `teacher` or `office` role)
 
