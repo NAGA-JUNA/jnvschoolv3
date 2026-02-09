@@ -23,7 +23,11 @@ import DeveloperPage from "@/pages/public/Developer";
 // Admin pages
 import AdminDashboard from "@/pages/admin/Dashboard";
 import TeachersPage from "@/pages/admin/Teachers";
-import StudentsPage from "@/pages/admin/Students";
+import StudentsPage from "@/pages/admin/students/StudentsList";
+import StudentFormPage from "@/pages/admin/students/StudentForm";
+import StudentProfilePage from "@/pages/admin/students/StudentProfile";
+import AlumniPage from "@/pages/admin/students/AlumniPage";
+import ImportStudentsPage from "@/pages/admin/students/ImportStudents";
 import AdmissionsPage from "@/pages/admin/Admissions";
 import NotificationsPage from "@/pages/admin/Notifications";
 import GalleryCategoriesPage from "@/pages/admin/GalleryCategories";
@@ -71,6 +75,11 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/teachers" element={<TeachersPage />} />
             <Route path="/admin/students" element={<StudentsPage />} />
+            <Route path="/admin/students/add" element={<StudentFormPage />} />
+            <Route path="/admin/students/import" element={<ImportStudentsPage />} />
+            <Route path="/admin/students/alumni" element={<AlumniPage />} />
+            <Route path="/admin/students/:id" element={<StudentProfilePage />} />
+            <Route path="/admin/students/:id/edit" element={<StudentFormPage />} />
             <Route path="/admin/admissions" element={<AdmissionsPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/admin/gallery-categories" element={<GalleryCategoriesPage />} />
