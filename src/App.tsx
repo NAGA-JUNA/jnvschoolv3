@@ -63,9 +63,6 @@ const App = () => (
             <Route path="/admissions" element={<PublicAdmissions />} />
           </Route>
 
-          {/* Developer Page */}
-          <Route path="/developer" element={<DeveloperPage />} />
-
           {/* Auth */}
           <Route path="/login" element={<LoginPage />} />
 
@@ -85,6 +82,7 @@ const App = () => (
             <Route path="/admin/audit" element={<AuditLogsPage />} />
             <Route path="/admin/branding" element={<BrandingSettingsPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
+            <Route path="/admin/developer" element={<DeveloperPage />} />
           </Route>
 
           {/* Teacher Panel */}
@@ -94,6 +92,7 @@ const App = () => (
             <Route path="/teacher/upload-gallery" element={<UploadGallery />} />
             <Route path="/teacher/submissions" element={<MySubmissions />} />
             <Route path="/teacher/profile" element={<TeacherProfile />} />
+            <Route path="/teacher/developer" element={<DeveloperPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

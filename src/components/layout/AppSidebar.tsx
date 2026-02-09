@@ -217,7 +217,7 @@ export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
           {!collapsed && (
             <div className="px-3 pt-3 pb-2 flex flex-col items-center gap-1">
               <Link
-                to="/developer"
+                to={`/${role}/developer`}
                 className="inline-flex flex-col items-center gap-1 text-sidebar-foreground/30 hover:text-sidebar-foreground/60 transition-colors"
               >
                 <img src={jnvLogo} alt="JNV Tech" className="h-8 w-auto object-contain opacity-60" />
