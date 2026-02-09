@@ -215,13 +215,13 @@ export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
             {!collapsed && <span>Sign Out</span>}
           </Link>
           {!collapsed && (
-            <div className="px-3 pt-3 pb-2 text-center">
+            <div className="px-3 pt-3 pb-2 flex flex-col items-center gap-1">
               <Link
                 to="/developer"
-                className="inline-flex items-center gap-1.5 text-[10px] text-sidebar-foreground/30 hover:text-sidebar-foreground/60 transition-colors"
+                className="inline-flex flex-col items-center gap-1 text-sidebar-foreground/30 hover:text-sidebar-foreground/60 transition-colors"
               >
-                <img src={jnvLogo} alt="JNV Tech" className="h-3.5 w-3.5 object-contain opacity-50" />
-                Powered by JNV Tech
+                <img src={jnvLogo} alt="JNV Tech" className="h-8 w-auto object-contain opacity-60" />
+                <span className="text-[10px]">Powered by JNV Tech</span>
               </Link>
             </div>
           )}

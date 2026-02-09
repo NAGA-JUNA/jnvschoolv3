@@ -19,13 +19,13 @@ export function Footer() {
           )}
           <div>
             <span className="text-xs font-bold text-foreground">{branding.schoolName}</span>
-            <span className="text-[10px] text-muted-foreground ml-1.5">— {branding.tagline}</span>
+            <span className="text-[10px] text-muted-foreground ml-1.5">— Modern School Management</span>
           </div>
         </div>
         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
           <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">v1.0.0</span>
           <span>
-            © {new Date().getFullYear()} {branding.schoolName}. All rights reserved.
+            © {new Date().getFullYear()} JSchoolAdmin. All rights reserved.
             {" "}
             <span className="mx-0.5">@</span>
             <Link to="/developer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors font-medium">
