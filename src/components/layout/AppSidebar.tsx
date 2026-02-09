@@ -2,13 +2,14 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, GraduationCap, UserPlus, Bell, Image, Calendar,
   MessageCircle, Mail, BarChart3, FileText, Settings, LogOut,
-  ChevronLeft, ChevronDown, ChevronRight, BookOpen, Handshake, ShieldCheck,
+  ChevronLeft, ChevronDown, ChevronRight, BookOpen, Handshake, ShieldCheck, Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
 import { LucideIcon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface NavItem {
   label: string;
@@ -57,6 +58,7 @@ const adminGroups: NavGroup[] = [
     items: [
       { label: "Reports", icon: BarChart3, href: "/admin/reports" },
       { label: "Audit Logs", icon: FileText, href: "/admin/audit" },
+      { label: "Branding", icon: Palette, href: "/admin/branding" },
       { label: "Settings", icon: Settings, href: "/admin/settings" },
     ],
   },
@@ -78,6 +80,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
+  const { branding } = useTheme();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Academics: true, Collaboration: true });
 
   const toggleGroup = (title: string) => {
@@ -124,25 +127,51 @@ export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
           collapsed ? "-translate-x-full lg:translate-x-0 lg:w-16" : "w-64 translate-x-0"
         )}
       >
-        {/* Branding Header */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50">
-          <div className="bg-sidebar-primary rounded-xl p-2 shadow-lg shadow-sidebar-primary/30">
-            <GraduationCap className="h-5 w-5 text-sidebar-primary-foreground" />
+        {/* Logo & Branding Header */}
+        <div className="border-b border-sidebar-border/50">
+          {/* Logo Zone */}
+          <div className={cn(
+            "flex items-center justify-center py-5 px-3",
+            collapsed ? "py-3" : "py-5"
+          )}>
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.schoolName}
+                className={cn(
+                  "object-contain transition-all duration-300",
+                  collapsed ? "w-10 h-10" : "w-20 h-20"
+                )}
+              />
+            ) : (
+              <div className={cn(
+                "bg-sidebar-primary/20 rounded-2xl flex items-center justify-center transition-all duration-300",
+                collapsed ? "w-10 h-10" : "w-20 h-20"
+              )}>
+                <GraduationCap className={cn(
+                  "text-sidebar-primary-foreground transition-all",
+                  collapsed ? "h-5 w-5" : "h-10 w-10"
+                )} />
+              </div>
+            )}
           </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-sm text-sidebar-foreground truncate">SchoolAdmin</h2>
-              <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-wider capitalize">{role} Panel</p>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden lg:flex h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={onToggle}
-          >
-            <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
-          </Button>
+          {/* Name & toggle */}
+          <div className="flex items-center gap-2 px-4 pb-3">
+            {!collapsed && (
+              <div className="flex-1 min-w-0 text-center">
+                <h2 className="font-bold text-sm text-sidebar-foreground truncate">{branding.schoolName}</h2>
+                <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-wider capitalize">{role} Panel</p>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:flex h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent ml-auto"
+              onClick={onToggle}
+            >
+              <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+            </Button>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -186,7 +215,7 @@ export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
           </Link>
           {!collapsed && (
             <div className="px-3 pt-3 pb-2 text-center">
-              <p className="text-[10px] text-sidebar-foreground/30">Powered by SchoolAdmin</p>
+              <p className="text-[10px] text-sidebar-foreground/30">Powered by {branding.schoolName}</p>
             </div>
           )}
         </div>

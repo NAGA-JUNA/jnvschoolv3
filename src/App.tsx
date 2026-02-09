@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Layouts
 import { PanelLayout } from "@/components/layout/PanelLayout";
@@ -32,7 +33,7 @@ import EmailManagementPage from "@/pages/admin/EmailManagement";
 import ReportsPage from "@/pages/admin/Reports";
 import AuditLogsPage from "@/pages/admin/AuditLogs";
 import SettingsPage from "@/pages/admin/Settings";
-
+import BrandingSettingsPage from "@/pages/admin/BrandingSettings";
 // Teacher pages
 import TeacherDashboard from "@/pages/teacher/Dashboard";
 import PostNotification from "@/pages/teacher/PostNotification";
@@ -46,6 +47,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -77,6 +79,7 @@ const App = () => (
             <Route path="/admin/emails" element={<EmailManagementPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />
             <Route path="/admin/audit" element={<AuditLogsPage />} />
+            <Route path="/admin/branding" element={<BrandingSettingsPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
           </Route>
 
@@ -93,6 +96,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
