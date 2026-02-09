@@ -245,7 +245,7 @@ interface ThemeContextType {
 
 const DEFAULT_BRANDING: BrandingState = {
   logoUrl: null,
-  schoolName: "SchoolAdmin",
+  schoolName: "JSchoolAdmin",
   tagline: "Modern School Management",
   activePresetId: "royal-blue",
   customColors: null,

@@ -18,6 +18,7 @@ import PublicNotifications from "@/pages/public/Notifications";
 import PublicGallery from "@/pages/public/Gallery";
 import PublicEvents from "@/pages/public/Events";
 import PublicAdmissions from "@/pages/public/Admissions";
+import DeveloperPage from "@/pages/public/Developer";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -61,6 +62,9 @@ const App = () => (
             <Route path="/events" element={<PublicEvents />} />
             <Route path="/admissions" element={<PublicAdmissions />} />
           </Route>
+
+          {/* Developer Page */}
+          <Route path="/developer" element={<DeveloperPage />} />
 
           {/* Auth */}
           <Route path="/login" element={<LoginPage />} />
