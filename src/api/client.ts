@@ -33,6 +33,13 @@ class ApiClient {
         headers,
       });
 
+      if (response.status === 401) {
+        // Token expired or invalid — clear and redirect to login
+        this.setToken(null);
+        window.location.href = "/login";
+        throw new Error("Session expired. Please log in again.");
+      }
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || `HTTP ${response.status}`);
@@ -41,7 +48,6 @@ class ApiClient {
       return await response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message === "Failed to fetch") {
-        // Demo mode: return mock-friendly error
         throw new Error("API not reachable. Connect your PHP backend to go live.");
       }
       throw error;
