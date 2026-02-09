@@ -22,8 +22,12 @@ import DeveloperPage from "@/pages/public/Developer";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/Dashboard";
-import TeachersPage from "@/pages/admin/Teachers";
 import StudentsPage from "@/pages/admin/students/StudentsList";
+import TeachersListPage from "@/pages/admin/teachers/TeachersList";
+import TeacherFormPage from "@/pages/admin/teachers/TeacherForm";
+import TeacherProfilePage from "@/pages/admin/teachers/TeacherProfile";
+import ImportTeachersPage from "@/pages/admin/teachers/ImportTeachers";
+import InactiveTeachersPage from "@/pages/admin/teachers/InactiveTeachers";
 import StudentFormPage from "@/pages/admin/students/StudentForm";
 import StudentProfilePage from "@/pages/admin/students/StudentProfile";
 import AlumniPage from "@/pages/admin/students/AlumniPage";
@@ -73,7 +77,12 @@ const App = () => (
           {/* Admin Panel */}
           <Route element={<PanelLayout role="admin" />}>
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/teachers" element={<TeachersPage />} />
+            <Route path="/admin/teachers" element={<TeachersListPage />} />
+            <Route path="/admin/teachers/add" element={<TeacherFormPage />} />
+            <Route path="/admin/teachers/import" element={<ImportTeachersPage />} />
+            <Route path="/admin/teachers/inactive" element={<InactiveTeachersPage />} />
+            <Route path="/admin/teachers/:id" element={<TeacherProfilePage />} />
+            <Route path="/admin/teachers/:id/edit" element={<TeacherFormPage />} />
             <Route path="/admin/students" element={<StudentsPage />} />
             <Route path="/admin/students/add" element={<StudentFormPage />} />
             <Route path="/admin/students/import" element={<ImportStudentsPage />} />
