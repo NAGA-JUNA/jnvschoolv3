@@ -1,5 +1,7 @@
 import { GraduationCap } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
+import jnvLogo from "@/assets/jnvtech-logo.png";
 
 export function Footer() {
   const { branding } = useTheme();
@@ -22,7 +24,16 @@ export function Footer() {
         </div>
         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
           <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">v1.0.0</span>
-          <span>© {new Date().getFullYear()} {branding.schoolName}. All rights reserved.</span>
+          <span>
+            © {new Date().getFullYear()} {branding.schoolName}. All rights reserved.
+            {" "}
+            <span className="mx-0.5">@</span>
+            <Link to="/developer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors font-medium">
+              <img src={jnvLogo} alt="JNV Tech" className="h-3.5 w-3.5 object-contain inline-block" />
+              JNV Tech
+            </Link>
+            {" "}- "Journey to New Value"
+          </span>
         </div>
       </div>
     </footer>

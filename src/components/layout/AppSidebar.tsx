@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import jnvLogo from "@/assets/jnvtech-logo.png";
 import {
   LayoutDashboard, Users, GraduationCap, UserPlus, Bell, Image, Calendar,
   MessageCircle, Mail, BarChart3, FileText, Settings, LogOut,
@@ -215,7 +216,13 @@ export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
           </Link>
           {!collapsed && (
             <div className="px-3 pt-3 pb-2 text-center">
-              <p className="text-[10px] text-sidebar-foreground/30">Powered by {branding.schoolName}</p>
+              <Link
+                to="/developer"
+                className="inline-flex items-center gap-1.5 text-[10px] text-sidebar-foreground/30 hover:text-sidebar-foreground/60 transition-colors"
+              >
+                <img src={jnvLogo} alt="JNV Tech" className="h-3.5 w-3.5 object-contain opacity-50" />
+                Powered by JNV Tech
+              </Link>
             </div>
           )}
         </div>
