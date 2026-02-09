@@ -1,4 +1,5 @@
-import { Bell, GraduationCap, Image, Calendar, ArrowRight, ChevronRight, Users, Award, BookOpen, Phone, Mail, MapPin, User, Star, CheckCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Bell, GraduationCap, Image, Calendar, ArrowRight, ChevronRight, Users, Award, BookOpen, Phone, Mail, MapPin, User, Star, CheckCircle, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,8 @@ import { schoolInfo, schoolStats, principalInfo, mockPublicNotifications, mockPu
 import { mockTeachers } from "@/data/mockTeachers";
 import { HeroSlider } from "@/components/public/HeroSlider";
 import { mockSliderSlides } from "@/data/mockSliderData";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 
 const quickLinks = [
   { icon: Bell, title: "Notifications", description: "Latest school announcements", href: "/notifications", color: "bg-kpi-blue" },
@@ -15,10 +18,84 @@ const quickLinks = [
   { icon: GraduationCap, title: "Admissions", description: "Apply for admission online", href: "/admissions", color: "bg-kpi-purple" },
 ];
 
-const featuredTeachers = mockTeachers.filter((t) => t.status === "active").slice(0, 4);
+const activeTeachers = mockTeachers.filter((t) => t.status === "active");
 const latestNotices = mockPublicNotifications.slice(0, 3);
 const upcomingEvents = mockPublicEvents.filter((e) => e.type !== "holiday").slice(0, 3);
 const galleryPreview = galleryCategories.filter((c) => c.type === "images").flatMap((c) => c.items).slice(0, 6);
+const showSlider = activeTeachers.length > 4;
+
+function FacultyCarousel() {
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true, align: "start", slidesToScroll: 1, breakpoints: { "(min-width: 768px)": { slidesToScroll: 2 } } },
+    [Autoplay({ delay: 4000, stopOnInteraction: true })]
+  );
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCanPrev(emblaApi.canScrollPrev());
+    setCanNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+  }, [emblaApi, onSelect]);
+
+  return (
+    <div className="relative">
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex -ml-4">
+          {activeTeachers.map((teacher) => (
+            <div key={teacher.id} className="flex-[0_0_50%] md:flex-[0_0_25%] pl-4 min-w-0">
+              <TeacherCard teacher={teacher} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute -left-4 top-1/2 -translate-y-1/2 rounded-full bg-card shadow-md hidden md:flex"
+        onClick={() => emblaApi?.scrollPrev()}
+        disabled={!canPrev}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute -right-4 top-1/2 -translate-y-1/2 rounded-full bg-card shadow-md hidden md:flex"
+        onClick={() => emblaApi?.scrollNext()}
+        disabled={!canNext}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function TeacherCard({ teacher }: { teacher: typeof activeTeachers[0] }) {
+  return (
+    <Card className="overflow-hidden hover:shadow-md transition-shadow text-center">
+      <div className="aspect-square bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+        {teacher.photo_url ? (
+          <img src={teacher.photo_url} alt={teacher.full_name} className="w-full h-full object-cover" />
+        ) : (
+          <User className="h-16 w-16 text-primary/20" />
+        )}
+      </div>
+      <div className="p-4 space-y-1">
+        <h3 className="font-semibold text-sm">{teacher.full_name}</h3>
+        <p className="text-xs text-muted-foreground">{teacher.subjects.join(", ")}</p>
+        <p className="text-xs text-muted-foreground">{teacher.qualification}</p>
+      </div>
+    </Card>
+  );
+}
 
 export default function PublicHome() {
   return (
@@ -93,24 +170,15 @@ export default function PublicHome() {
             <Link to="/faculty">View All <ChevronRight className="h-4 w-4 ml-1" /></Link>
           </Button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {featuredTeachers.map((teacher) => (
-            <Card key={teacher.id} className="overflow-hidden hover:shadow-md transition-shadow text-center">
-              <div className="aspect-square bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                {teacher.photo_url ? (
-                  <img src={teacher.photo_url} alt={teacher.full_name} className="w-full h-full object-cover" />
-                ) : (
-                  <User className="h-16 w-16 text-primary/20" />
-                )}
-              </div>
-              <div className="p-4 space-y-1">
-                <h3 className="font-semibold text-sm">{teacher.full_name}</h3>
-                <p className="text-xs text-muted-foreground">{teacher.subjects.join(", ")}</p>
-                <p className="text-xs text-muted-foreground">{teacher.qualification}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {showSlider ? (
+          <FacultyCarousel />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            {activeTeachers.slice(0, 4).map((teacher) => (
+              <TeacherCard key={teacher.id} teacher={teacher} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ===== LATEST NOTIFICATIONS ===== */}
