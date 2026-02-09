@@ -17,6 +17,7 @@ export const PUBLIC = {
   galleryItems: (slug: string) => `/public/gallery/items?category=${slug}`,
   events: "/public/events",
   admissions: "/public/admissions",
+  slider: "/home/slider",
 } as const;
 
 // Admin API endpoints (requires admin role)
@@ -90,6 +91,10 @@ export const ADMIN = {
   // Settings & Branding
   settings: "/admin/settings",
   branding: "/admin/branding",
+
+  // Home Banner / Slider
+  slider: "/home/slider",
+  sliderItem: (id: number) => `/home/slider/${id}`,
 } as const;
 
 // Teacher API endpoints (requires teacher/office role)
