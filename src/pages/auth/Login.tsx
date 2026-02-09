@@ -7,6 +7,9 @@ import { GraduationCap, LogIn, Info, User, ShieldCheck, Eye, EyeOff, ArrowLeft }
 import { Link, useNavigate } from "react-router-dom";
 import { schoolInfo } from "@/data/mockSchoolData";
 import jnvLogo from "@/assets/jnvtech-logo.png";
+import api from "@/api/client";
+import { AUTH } from "@/api/endpoints";
+import { toast } from "sonner";
 
 const DEMO_CREDENTIALS = [
   { role: "Super Admin", email: "admin@school.com", password: "admin123", nav: "/admin", icon: ShieldCheck },
@@ -25,9 +28,16 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    navigate(role === "admin" ? "/admin" : "/teacher");
+    try {
+      const res = await api.post<{ token: string; user: { role: string } }>(AUTH.login, { email, password });
+      const { token, user } = res.data;
+      api.setToken(token);
+      navigate(user?.role === "teacher" ? "/teacher" : "/admin");
+    } catch (err: any) {
+      toast.error(err.message || "Login failed. Check your credentials.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDemoFill = (cred: typeof DEMO_CREDENTIALS[number]) => {
