@@ -5,6 +5,7 @@ import { CalendarWidget } from "@/components/dashboard/CalendarWidget";
 import { TrendChart } from "@/components/dashboard/TrendChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/useApi";
 import api from "@/api/client";
@@ -36,8 +37,15 @@ interface ActivityItem {
   user_role: string;
 }
 
+interface TrendDataPoint {
+  month: string;
+  admissions: number;
+  notifications: number;
+  gallery: number;
+}
+
 export default function AdminDashboard() {
-  const { data: metrics, loading: metricsLoading } = useApi<DashboardMetrics>(
+  const { data: metrics, loading: metricsLoading, error: metricsError, refetch: refetchMetrics } = useApi<DashboardMetrics>(
     () => api.get<DashboardMetrics>(ADMIN.dashboard)
   );
   const { data: alerts, loading: alertsLoading } = useApi<AlertItem[]>(
@@ -46,6 +54,13 @@ export default function AdminDashboard() {
   const { data: activity, loading: activityLoading } = useApi<ActivityItem[]>(
     () => api.get<ActivityItem[]>(ADMIN.activity)
   );
+  const { data: trends, loading: trendsLoading } = useApi<TrendDataPoint[]>(
+    () => api.get<TrendDataPoint[]>("/admin/dashboard/trends")
+  );
+
+  if (metricsError) {
+    return <ErrorState message={metricsError} onRetry={refetchMetrics} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -76,7 +91,7 @@ export default function AdminDashboard() {
         {/* Left content */}
         <div className="lg:col-span-8 space-y-6">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <TrendChart />
+            <TrendChart data={trends ?? undefined} loading={trendsLoading} />
             <CalendarWidget />
           </div>
           <RecentActivity items={activity ?? undefined} loading={activityLoading} />
