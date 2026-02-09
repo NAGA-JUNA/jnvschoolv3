@@ -517,8 +517,250 @@ The frontend works fully without a backend connection using mock data. This is u
 | `POST` | `/api/home/slider` | Create new slide |
 | `PUT` | `/api/home/slider/{id}` | Update slide |
 | `DELETE` | `/api/home/slider/{id}` | Delete slide |
+| `PATCH` | `/api/home/slider/reorder` | Reorder slides (batch) |
+
+### Slider Controller Example (`api/controllers/SliderController.php`)
+
+```php
+<?php
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../helpers/response.php';
+require_once __DIR__ . '/../helpers/upload.php';
+require_once __DIR__ . '/../middleware/auth.php';
+
+class SliderController
+{
+    private PDO $db;
+
+    public function __construct()
+    {
+        $this->db = getDB();
+    }
+
+    // ─── GET /api/home/slider (Public — no auth) ───
+    public function index(): void
+    {
+        $stmt = $this->db->prepare(
+            "SELECT id, title, subtitle, badge_text,
+                    cta_primary_text, cta_primary_link,
+                    cta_secondary_text, cta_secondary_link,
+                    image_url, is_active, sort_order
+             FROM home_slider
+             WHERE is_active = 1
+             ORDER BY sort_order ASC"
+        );
+        $stmt->execute();
+        jsonSuccess($stmt->fetchAll());
+    }
+
+    // ─── GET all slides for admin (includes inactive) ───
+    public function adminIndex(): void
+    {
+        requireRole(['super_admin', 'admin']);
+
+        $stmt = $this->db->prepare(
+            "SELECT * FROM home_slider ORDER BY sort_order ASC"
+        );
+        $stmt->execute();
+        jsonSuccess($stmt->fetchAll());
+    }
+
+    // ─── POST /api/home/slider ───
+    public function store(): void
+    {
+        requireRole(['super_admin', 'admin']);
+
+        $data  = json_decode(file_get_contents('php://input'), true);
+        $title = trim($data['title'] ?? '');
+        if ($title === '') {
+            jsonError('Title is required', 422);
+        }
+
+        // Handle image upload (multipart or URL)
+        $imageUrl = $data['image_url'] ?? '';
+        if (isset($_FILES['image'])) {
+            $imageUrl = uploadFile($_FILES['image'], 'slider', [
+                'max_size'    => 2 * 1024 * 1024,  // 2 MB
+                'types'       => ['jpg', 'jpeg', 'png', 'webp'],
+                'min_width'   => 1200,
+                'recommended' => '1920×900',
+            ]);
+        }
+        if ($imageUrl === '') {
+            jsonError('Background image is required', 422);
+        }
+
+        // Auto-increment sort order
+        $stmt = $this->db->query(
+            "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM home_slider"
+        );
+        $nextOrder = (int) $stmt->fetchColumn();
+
+        $stmt = $this->db->prepare(
+            "INSERT INTO home_slider
+                (title, subtitle, badge_text,
+                 cta_primary_text, cta_primary_link,
+                 cta_secondary_text, cta_secondary_link,
+                 image_url, is_active, sort_order, created_by)
+             VALUES
+                (:title, :subtitle, :badge,
+                 :cta1_text, :cta1_link,
+                 :cta2_text, :cta2_link,
+                 :image, :active, :sort, :user)"
+        );
+        $stmt->execute([
+            ':title'     => $title,
+            ':subtitle'  => $data['subtitle']           ?? null,
+            ':badge'     => $data['badge_text']          ?? null,
+            ':cta1_text' => $data['cta_primary_text']    ?? 'Apply Now',
+            ':cta1_link' => $data['cta_primary_link']    ?? '/admissions',
+            ':cta2_text' => $data['cta_secondary_text']  ?? 'Learn More',
+            ':cta2_link' => $data['cta_secondary_link']  ?? '/about',
+            ':image'     => $imageUrl,
+            ':active'    => (int) ($data['is_active']    ?? 1),
+            ':sort'      => $nextOrder,
+            ':user'      => currentUserId(),
+        ]);
+
+        auditLog('create', 'home_slider', (int) $this->db->lastInsertId());
+        jsonSuccess(['id' => $this->db->lastInsertId()], 'Slide created', 201);
+    }
+
+    // ─── PUT /api/home/slider/{id} ───
+    public function update(int $id): void
+    {
+        requireRole(['super_admin', 'admin']);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        // Dynamic SET — only update provided fields
+        $allowed = [
+            'title', 'subtitle', 'badge_text',
+            'cta_primary_text', 'cta_primary_link',
+            'cta_secondary_text', 'cta_secondary_link',
+            'image_url', 'is_active', 'sort_order',
+        ];
+        $sets   = [];
+        $params = [':id' => $id];
+
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $data)) {
+                $sets[]            = "`$field` = :$field";
+                $params[":$field"] = $data[$field];
+            }
+        }
+
+        // Handle new image upload
+        if (isset($_FILES['image'])) {
+            $imageUrl = uploadFile($_FILES['image'], 'slider', [
+                'max_size' => 2 * 1024 * 1024,
+                'types'    => ['jpg', 'jpeg', 'png', 'webp'],
+            ]);
+            $sets[]               = "`image_url` = :image_url";
+            $params[':image_url'] = $imageUrl;
+        }
+
+        if (empty($sets)) {
+            jsonError('No fields to update', 422);
+        }
+
+        $sql  = "UPDATE home_slider SET " . implode(', ', $sets) . " WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        if ($stmt->rowCount() === 0) {
+            jsonError('Slide not found', 404);
+        }
+
+        auditLog('update', 'home_slider', $id);
+        jsonSuccess(null, 'Slide updated');
+    }
+
+    // ─── DELETE /api/home/slider/{id} ───
+    public function destroy(int $id): void
+    {
+        requireRole(['super_admin', 'admin']);
+
+        $stmt = $this->db->prepare("SELECT image_url FROM home_slider WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $slide = $stmt->fetch();
+
+        if (!$slide) {
+            jsonError('Slide not found', 404);
+        }
+
+        // Delete local file if applicable
+        if (str_starts_with($slide['image_url'], '/uploads/')) {
+            $filePath = UPLOAD_DIR . ltrim($slide['image_url'], '/uploads/');
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        }
+
+        $stmt = $this->db->prepare("DELETE FROM home_slider WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+
+        auditLog('delete', 'home_slider', $id);
+        jsonSuccess(null, 'Slide deleted');
+    }
+
+    // ─── PATCH /api/home/slider/reorder ───
+    public function reorder(): void
+    {
+        requireRole(['super_admin', 'admin']);
+
+        $data  = json_decode(file_get_contents('php://input'), true);
+        $order = $data['order'] ?? []; // [{ id, sort_order }, ...]
+
+        $stmt = $this->db->prepare(
+            "UPDATE home_slider SET sort_order = :sort WHERE id = :id"
+        );
+        foreach ($order as $item) {
+            $stmt->execute([
+                ':id'   => (int) $item['id'],
+                ':sort' => (int) $item['sort_order'],
+            ]);
+        }
+
+        auditLog('reorder', 'home_slider', null);
+        jsonSuccess(null, 'Slides reordered');
+    }
+}
+```
+
+#### Router Registration (`api/index.php`)
+
+```php
+// Home Slider routes
+case 'home/slider/reorder':
+    (new SliderController())->reorder();
+    break;
+
+case 'home/slider':
+    $ctrl = new SliderController();
+    match ($method) {
+        'GET'  => $ctrl->index(),
+        'POST' => $ctrl->store(),
+        default => jsonError('Method not allowed', 405),
+    };
+    break;
+
+// Dynamic route: home/slider/{id}
+default:
+    if (preg_match('#^home/slider/(\d+)$#', $route, $m)) {
+        $id   = (int) $m[1];
+        $ctrl = new SliderController();
+        match ($method) {
+            'PUT'    => $ctrl->update($id),
+            'DELETE' => $ctrl->destroy($id),
+            default  => jsonError('Method not allowed', 405),
+        };
+    }
+    break;
+```
 
 ### Teacher Endpoints (Requires `teacher` or `office` role)
+
 
 | Method | Endpoint | Description |
 |---|---|---|
