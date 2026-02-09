@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# If request is for API, let it pass through to api/ folder
+RewriteRule ^api/ - [L]
+
+# If request is for a real file or directory, serve it
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Otherwise, serve index.html (SPA routing)
+RewriteRule ^ index.html [L]
