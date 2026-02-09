@@ -1,7 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { mockPublicEvents } from "@/data/mockSchoolData";
 
 const typeColors: Record<string, string> = {
   academic: "bg-kpi-blue/10 text-kpi-blue",
@@ -11,14 +14,13 @@ const typeColors: Record<string, string> = {
   other: "bg-secondary text-secondary-foreground",
 };
 
-const mockEvents = [
-  { id: 1, title: "Parent-Teacher Meeting", description: "Quarterly PTM for all classes. Parents are requested to attend and discuss student progress with respective class teachers.", date: "2024-03-20", location: "School Auditorium", type: "academic" },
-  { id: 2, title: "Annual Day Celebration", description: "Annual day celebration with cultural programs, award ceremony, and special performances by students.", date: "2024-04-10", end_date: "2024-04-11", location: "Main Ground", type: "cultural" },
-  { id: 3, title: "Inter-House Sports Competition", description: "Annual sports day with track & field events, team sports, and athletics.", date: "2024-03-25", location: "Sports Complex", type: "sports" },
-  { id: 4, title: "Holi Holiday", description: "School will remain closed on account of Holi festival.", date: "2024-03-25", type: "holiday" },
-];
+const eventTypes = ["all", "academic", "cultural", "sports", "holiday"] as const;
 
 export default function PublicEvents() {
+  const [filter, setFilter] = useState<string>("all");
+
+  const filtered = filter === "all" ? mockPublicEvents : mockPublicEvents.filter((e) => e.type === filter);
+
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 space-y-6">
       <div className="text-center space-y-2">
@@ -26,8 +28,17 @@ export default function PublicEvents() {
         <p className="text-muted-foreground">Upcoming events and important dates</p>
       </div>
 
+      {/* Type Filter */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {eventTypes.map((t) => (
+          <Button key={t} variant={filter === t ? "default" : "outline"} size="sm" onClick={() => setFilter(t)} className="capitalize">
+            {t}
+          </Button>
+        ))}
+      </div>
+
       <div className="space-y-4">
-        {mockEvents.map((event) => (
+        {filtered.map((event) => (
           <Card key={event.id} className="p-5 hover:shadow-md transition-shadow">
             <div className="flex items-start gap-4">
               <div className="bg-primary/10 rounded-xl p-3 text-center min-w-[60px]">
@@ -39,19 +50,26 @@ export default function PublicEvents() {
                 </p>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h3 className="font-semibold text-lg">{event.title}</h3>
                   <Badge variant="outline" className={cn("capitalize text-xs", typeColors[event.type])}>{event.type}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">{event.description}</p>
                 <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {event.date}{event.end_date ? ` — ${event.end_date}` : ""}</span>
+                  <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {event.date}</span>
+                  {event.time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {event.time}</span>}
                   {event.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>}
                 </div>
               </div>
             </div>
           </Card>
         ))}
+        {filtered.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>No events found for this category.</p>
+          </div>
+        )}
       </div>
     </div>
   );

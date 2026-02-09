@@ -14,10 +14,14 @@ import LoginPage from "@/pages/auth/Login";
 
 // Public pages
 import PublicHome from "@/pages/public/Home";
+import PublicAbout from "@/pages/public/About";
+import PublicAcademics from "@/pages/public/Academics";
+import PublicFaculty from "@/pages/public/Faculty";
 import PublicNotifications from "@/pages/public/Notifications";
 import PublicGallery from "@/pages/public/Gallery";
 import PublicEvents from "@/pages/public/Events";
 import PublicAdmissions from "@/pages/public/Admissions";
+import PublicContact from "@/pages/public/Contact";
 import DeveloperPage from "@/pages/public/Developer";
 
 // Admin pages
@@ -65,10 +69,14 @@ const App = () => (
           {/* Public Routes */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<PublicHome />} />
+            <Route path="/about" element={<PublicAbout />} />
+            <Route path="/academics" element={<PublicAcademics />} />
+            <Route path="/faculty" element={<PublicFaculty />} />
             <Route path="/notifications" element={<PublicNotifications />} />
             <Route path="/gallery" element={<PublicGallery />} />
             <Route path="/events" element={<PublicEvents />} />
             <Route path="/admissions" element={<PublicAdmissions />} />
+            <Route path="/contact" element={<PublicContact />} />
           </Route>
 
           {/* Auth */}
