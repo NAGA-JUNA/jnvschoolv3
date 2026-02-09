@@ -1,171 +1,224 @@
 
 
-# Complete README, SQL Schema, Sample Login & Missing Endpoints Update
+# Public School Website Enhancement Plan
 
-This plan addresses four key deliverables to make the system fully documented, testable, and deployment-ready.
+## Current State Analysis
 
----
+Your current public website has **5 pages** with basic content:
 
-## What's Missing Today
+| Page | Current State | What's Missing |
+|---|---|---|
+| **Home** (`/`) | Simple hero + 4 quick-access cards | No school info, stats, principal message, teacher showcase, testimonials, campus photos |
+| **Notifications** (`/notifications`) | 3 hardcoded mock notices | Works but needs real-looking data |
+| **Gallery** (`/gallery`) | Basic tabs with stock photos | Needs more categories and better layout |
+| **Events** (`/events`) | 4 mock events, minimal design | Needs richer content |
+| **Admissions** (`/admissions`) | Form works, basic fields | OK as-is, minor polish |
+| **Public Layout** (Header/Footer) | Says "SchoolAdmin", no school branding | Needs school name, contact info, social links |
 
-### 1. API Endpoints (endpoints.ts)
-The following endpoints are not defined in the frontend:
-- **Auth**: `/auth/login`, `/auth/logout`, `/auth/me`
-- **Students**: bulk promote, exam results, fees placeholder
-- **Teachers**: attendance, class assignment updates
-- **Branding**: save/update branding settings via API
-- **Settings**: detailed settings CRUD
+### Missing Pages (that a real school website needs)
 
-### 2. Login Page (Demo Mode)
-Currently the login page skips authentication entirely -- it just navigates to `/admin` or `/teacher` on form submit without checking credentials. There are no sample credentials shown for testers.
-
-### 3. SQL Schema
-The existing SQL in BACKEND-SETUP-README.md is missing tables that the new Student and Teacher modules need:
-- `teachers` (detailed staff table with qualifications, subjects, classes)
-- `student_attendance`
-- `exam_results`
-- `student_documents` / `teacher_documents`
-- `student_messages` / `teacher_messages`
-- Sample data rows for all tables
-
-### 4. README
-The main `README.md` is still the generic Lovable template. The `BACKEND-SETUP-README.md` needs updating with the new module info but references "SchoolAdmin" instead of "JSchoolAdmin".
-
----
-
-## Plan of Action
-
-### Step 1: Update `src/api/endpoints.ts` -- Add Missing Endpoints
-
-Add the following endpoint groups:
-
-**AUTH group (new)**
-- `POST /auth/login`
-- `POST /auth/logout`
-- `GET /auth/me`
-
-**ADMIN group (additions)**
-- `POST /admin/students/bulk-promote` -- Promote selected students
-- `GET /admin/students/{id}/exams` -- Exam results for a student
-- `DELETE /admin/students/{id}` -- Soft-delete student
-- `DELETE /admin/teachers/{id}` -- Soft-delete teacher
-- `PUT /admin/teachers/{id}/assign-classes` -- Update class assignments
-- `GET /admin/teachers/{id}/attendance` -- Staff attendance
-- `PUT /admin/branding` -- Save branding settings
-- `PUT /admin/settings` -- Already exists, no change needed
-
-**TEACHER group (additions)**
-- `GET /teacher/students` -- View students in assigned classes
-- `POST /teacher/attendance/mark` -- Mark student attendance
-- `POST /teacher/exams/marks` -- Enter exam marks
-
-### Step 2: Update Login Page -- Add Demo Credentials Display
-
-Modify `src/pages/auth/Login.tsx` to:
-- Show a "Demo Credentials" info box below the form
-- Display sample login details for each role:
-  - **Admin**: `admin@school.com` / `admin123`
-  - **Teacher**: `priya.singh@school.com` / `teacher123`
-- Keep the current behavior (direct navigation) since there is no real backend yet
-- Pre-fill email/password fields when clicking a demo credential row
-
-### Step 3: Create Complete SQL File
-
-Create a new file `schema.sql` at the project root containing:
-
-**All Tables (updated with new modules)**
-
-| Table | Purpose |
+| New Page | Purpose |
 |---|---|
-| `users` | Admin/Teacher login accounts |
-| `teachers` | Detailed teacher profiles (qualification, subjects, classes) |
-| `students` | Student records with parent info |
-| `student_attendance` | Daily attendance records |
-| `exam_results` | Subject-wise marks and grades |
-| `student_documents` | Uploaded student documents |
-| `teacher_documents` | Uploaded teacher documents |
-| `student_messages` | WhatsApp message history for students |
-| `teacher_messages` | WhatsApp message history for teachers |
-| `notifications` | Notification submissions |
-| `gallery_categories` | Gallery category metadata |
-| `gallery_items` | Gallery uploads |
-| `events` | School events/calendar |
-| `admissions` | Online admission applications |
-| `official_emails` | School email accounts |
-| `whatsapp_shares` | WhatsApp sharing log |
-| `audit_logs` | System audit trail |
-| `settings` | Key-value school settings |
-| `branding` | Theme/branding configuration |
-
-**Sample Data Inserts**
-- 3 user accounts (Super Admin, Office Admin, Teacher)
-- 10 teachers (matching mock data)
-- 8 students (matching mock data)
-- Attendance records, exam results, documents
-- Gallery categories, sample events, settings
-- All with realistic Indian school data
-
-### Step 4: Update `BACKEND-SETUP-README.md`
-
-Full overhaul to:
-- Rename all "SchoolAdmin" references to "JSchoolAdmin"
-- Add complete API reference for Student and Teacher module endpoints
-- Update the SQL section to reference the new `schema.sql` file
-- Add a "Demo/Testing Mode" section explaining how the frontend works without a backend
-- Add sample login credentials section
-- Update the directory structure to include new controllers/models
-- Add Excel import template format documentation
-- Update the security checklist
-- Update version to `v1.1.0`
-
-### Step 5: Update `README.md`
-
-Replace the generic Lovable template with a proper project README covering:
-- Project name: JSchoolAdmin
-- Tech stack summary (React + Tailwind frontend, PHP + MySQL backend)
-- Features list (all modules)
-- Quick start for development
-- Demo credentials
-- Link to `BACKEND-SETUP-README.md` for deployment
-- Link to `schema.sql` for database setup
-- Screenshots section (placeholder)
+| **About Us** (`/about`) | School history, vision, mission, principal's message, achievements |
+| **Faculty / Teachers** (`/faculty`) | Public teacher directory with photos, subjects, qualifications -- pulled from admin teacher data |
+| **Contact Us** (`/contact`) | School address, map, phone, email, contact form |
+| **Academics** (`/academics`) | Classes offered, curriculum, exam schedule, facilities |
 
 ---
 
-## Technical Details
+## Pages to Update/Create -- Summary
 
-### Files to Create
+**6 existing files to update:**
+1. `src/pages/public/Home.tsx` -- Full redesign with rich content
+2. `src/pages/public/Notifications.tsx` -- More realistic data
+3. `src/pages/public/Events.tsx` -- More events, better layout
+4. `src/pages/public/Gallery.tsx` -- More categories, better grid
+5. `src/components/layout/PublicLayout.tsx` -- Branded header + rich footer
+6. `src/App.tsx` -- Add new routes
+
+**4 new pages to create:**
+1. `src/pages/public/About.tsx` -- About Us page
+2. `src/pages/public/Faculty.tsx` -- Teachers page (reads from mock teacher data)
+3. `src/pages/public/Contact.tsx` -- Contact page
+4. `src/pages/public/Academics.tsx` -- Academics info page
+
+**1 new data file:**
+1. `src/data/mockSchoolData.ts` -- Centralized school info (name, address, stats, facilities, etc.)
+
+---
+
+## How Teacher Data Flows from Admin to Public Website
+
+The **Faculty/Teachers page** on the public website will pull data from the same `mockTeachers` data source used by the admin panel. This means:
+
+- When the backend is connected, the admin panel manages teacher records (name, photo, subjects, qualification)
+- The public Faculty page calls the same `/api/public/teachers` endpoint to display only **active** teachers
+- For now (demo mode), both admin and public pages read from `src/data/mockTeachers.ts`
+- Teacher photos uploaded via Admin Panel will automatically appear on the public website
+
+---
+
+## Detailed Plan
+
+### Step 1: Create School Data File (`src/data/mockSchoolData.ts`)
+
+Centralized data for the public website including:
+- School name, address, phone, email
+- Principal name and message
+- Vision, mission, values
+- Statistics (students count, teachers, years established, etc.)
+- Facilities list
+- Achievements / milestones
+- Upcoming academic calendar
+- Curriculum info
+
+### Step 2: Redesign Home Page (`src/pages/public/Home.tsx`)
+
+Transform from a basic hero + 4 cards into a full school landing page:
+
+**Sections:**
+1. **Hero Banner** -- School name, tagline, campus background image, CTA buttons
+2. **Welcome / About Snippet** -- Principal's message with photo
+3. **Stats Counter** -- Students, Teachers, Years, Achievements (animated counters)
+4. **Why Choose Us** -- Facilities and USPs with icons
+5. **Our Faculty** -- Top 4 featured teachers with photos and subjects (from mockTeachers)
+6. **Latest Notifications** -- 3 most recent notices
+7. **Upcoming Events** -- Next 3 events
+8. **Gallery Preview** -- 6 recent photos in a grid
+9. **Admissions CTA** -- Call-to-action banner for new admissions
+10. **Contact Strip** -- Address, phone, email, map location
+
+### Step 3: Create About Us Page (`src/pages/public/About.tsx`)
+
+**Sections:**
+- School history and overview
+- Vision and Mission
+- Principal's message (with photo)
+- Core values
+- Achievements and awards
+- Infrastructure / Campus facilities
+
+### Step 4: Create Faculty Page (`src/pages/public/Faculty.tsx`)
+
+**Key Feature:** Reads teacher data from `mockTeachers.ts` (same data as admin panel)
+
+**Sections:**
+- Page header with school education philosophy
+- Teacher grid cards showing:
+  - Photo (placeholder if not uploaded)
+  - Name
+  - Subjects
+  - Qualification
+  - Experience
+- Filter by subject
+- Only shows `status: "active"` teachers
+
+**Admin Connection:** When teacher photos/info are updated in Admin Panel, they appear here automatically.
+
+### Step 5: Create Academics Page (`src/pages/public/Academics.tsx`)
+
+**Sections:**
+- Classes offered (Nursery to 12th)
+- Curriculum (CBSE affiliation details)
+- Subject list per class group
+- Exam pattern and schedule
+- Facilities (labs, library, sports, computer lab)
+- Extra-curricular activities
+
+### Step 6: Create Contact Page (`src/pages/public/Contact.tsx`)
+
+**Sections:**
+- Contact information cards (phone, email, address)
+- Google Maps embed (placeholder coordinates)
+- Contact form (name, email, phone, subject, message)
+- Office hours
+- Social media links
+
+### Step 7: Update Notifications Page (`src/pages/public/Notifications.tsx`)
+
+- Add 6-8 realistic notifications instead of 3
+- Add date formatting
+- Add search/filter by urgency
+- Better empty state
+
+### Step 8: Update Events Page (`src/pages/public/Events.tsx`)
+
+- Add 8-10 realistic events
+- Add month-based filtering
+- Better visual calendar-style layout
+- Past vs upcoming separation
+
+### Step 9: Update Gallery Page (`src/pages/public/Gallery.tsx`)
+
+- Add more categories (5-6 categories)
+- Better masonry-style grid
+- Category filter chips
+- Image counter per category
+
+### Step 10: Update Public Layout (`src/components/layout/PublicLayout.tsx`)
+
+**Header updates:**
+- Read school name from ThemeContext branding
+- Add navigation for new pages (About, Faculty, Academics, Contact)
+- Better mobile menu with school branding
+
+**Footer updates:**
+- Rich footer with 4 columns:
+  - Column 1: School logo, name, tagline, brief description
+  - Column 2: Quick Links (all pages)
+  - Column 3: Contact Info (address, phone, email)
+  - Column 4: Office Hours + Social media
+- Copyright bar at bottom
+
+### Step 11: Update Routes (`src/App.tsx`)
+
+Add 4 new routes:
+- `/about` -- About Us
+- `/faculty` -- Faculty / Teachers
+- `/academics` -- Academics
+- `/contact` -- Contact Us
+
+---
+
+## Technical Notes
+
+### Files to Create (4 files)
 
 | File | Purpose |
 |---|---|
-| `schema.sql` | Complete database schema + sample data, ready to import in phpMyAdmin |
+| `src/data/mockSchoolData.ts` | School info, stats, facilities, principal details |
+| `src/pages/public/About.tsx` | About Us page |
+| `src/pages/public/Faculty.tsx` | Public teacher directory (imports from mockTeachers) |
+| `src/pages/public/Academics.tsx` | Academics information page |
+| `src/pages/public/Contact.tsx` | Contact page with form |
 
-### Files to Modify
+### Files to Update (6 files)
 
 | File | Changes |
 |---|---|
-| `src/api/endpoints.ts` | Add AUTH, missing ADMIN, and TEACHER endpoints |
-| `src/pages/auth/Login.tsx` | Add demo credentials display, pre-fill on click |
-| `BACKEND-SETUP-README.md` | Full rebrand + new module docs + updated schema reference |
-| `README.md` | Replace with proper JSchoolAdmin project README |
-
-### Sample Login Credentials (for Demo Mode)
-
-| Role | Email | Password |
-|---|---|---|
-| Super Admin | admin@school.com | admin123 |
-| Office Staff | office@school.com | office123 |
-| Teacher | priya.singh@school.com | teacher123 |
-
-### SQL File Highlights
-- Uses `utf8mb4` charset for full Unicode support
-- All tables use `InnoDB` engine with proper foreign keys
-- Soft-delete pattern (status fields, not actual DELETE)
-- Indexes on frequently filtered columns
-- Timezone set to `Asia/Kolkata` (IST)
-- Passwords hashed with `bcrypt` (`$2y$10$...`)
-- Ready to paste directly into phpMyAdmin SQL tab
+| `src/pages/public/Home.tsx` | Full redesign with 10 sections |
+| `src/pages/public/Notifications.tsx` | More mock data, search filter |
+| `src/pages/public/Events.tsx` | More events, month filter |
+| `src/pages/public/Gallery.tsx` | More categories, better grid |
+| `src/components/layout/PublicLayout.tsx` | Branded header + rich footer |
+| `src/App.tsx` | Add 4 new routes |
 
 ### No New Dependencies
-All changes use existing React, Tailwind, and Lucide icons.
+All changes use existing React, Tailwind, Lucide icons, and shadcn/ui components.
+
+### Data Flow for Teachers
+```text
+Admin Panel                          Public Website
++---------------------------+        +---------------------------+
+| /admin/teachers            |        | /faculty                  |
+| - Add/Edit teacher info   |        | - Shows active teachers   |
+| - Upload teacher photo    | -----> | - Displays photo, name,   |
+| - Update subjects/classes |  same  |   subjects, qualification |
+| - Mark active/inactive    |  data  | - Filters by subject      |
++---------------------------+ source +---------------------------+
+        |                                      |
+        v                                      v
+  mockTeachers.ts (demo)            mockTeachers.ts (demo)
+  /api/admin/teachers (live)        /api/public/teachers (live)
+```
 
