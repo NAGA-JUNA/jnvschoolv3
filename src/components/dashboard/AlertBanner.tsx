@@ -9,9 +9,9 @@ interface AlertBannerProps {
 }
 
 const styles = {
-  info: "bg-info/10 border-info/30 text-info",
-  warning: "bg-warning/10 border-warning/30 text-warning",
-  error: "bg-destructive/10 border-destructive/30 text-destructive",
+  info: "bg-primary text-primary-foreground",
+  warning: "bg-kpi-orange text-white",
+  error: "bg-destructive text-destructive-foreground",
 };
 
 const icons = {
@@ -27,12 +27,17 @@ export function AlertBanner({ message, type, dismissible = true }: AlertBannerPr
   const Icon = icons[type];
 
   return (
-    <div className={cn("flex items-center gap-3 p-4 rounded-lg border", styles[type])}>
-      <Icon className="h-5 w-5 flex-shrink-0" />
+    <div className={cn("flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-sm", styles[type])}>
+      <div className="p-1.5 rounded-full bg-white/20 flex-shrink-0">
+        <Icon className="h-4 w-4" />
+      </div>
       <p className="text-sm font-medium flex-1">{message}</p>
       {dismissible && (
-        <button onClick={() => setVisible(false)} className="hover:opacity-70">
-          <X className="h-4 w-4" />
+        <button
+          onClick={() => setVisible(false)}
+          className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
+        >
+          <X className="h-3.5 w-3.5" />
         </button>
       )}
     </div>

@@ -1,67 +1,104 @@
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ActivityItem } from "@/types";
-import { Bell, Image, UserPlus, GraduationCap, Calendar, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-const iconMap = {
-  notification: Bell,
-  gallery: Image,
-  admission: UserPlus,
-  student: GraduationCap,
-  teacher: Users,
-  event: Calendar,
-};
+interface Announcement {
+  id: number;
+  author: string;
+  initials: string;
+  department: string;
+  message: string;
+  timestamp: string;
+  accentColor: string;
+}
 
-const colorMap = {
-  notification: "text-kpi-blue bg-kpi-blue/10",
-  gallery: "text-kpi-orange bg-kpi-orange/10",
-  admission: "text-kpi-green bg-kpi-green/10",
-  student: "text-kpi-purple bg-kpi-purple/10",
-  teacher: "text-kpi-pink bg-kpi-pink/10",
-  event: "text-info bg-info/10",
-};
-
-const placeholderActivity: ActivityItem[] = [
-  { id: 1, type: "notification", message: "New notification submitted for approval", timestamp: "2 min ago", link: "/admin/notifications" },
-  { id: 2, type: "admission", message: "New admission application received", timestamp: "15 min ago", link: "/admin/admissions" },
-  { id: 3, type: "gallery", message: "3 new photos uploaded to Annual Day", timestamp: "1 hour ago", link: "/admin/gallery-approvals" },
-  { id: 4, type: "student", message: "Student record updated: Rahul Sharma", timestamp: "2 hours ago", link: "/admin/students" },
-  { id: 5, type: "event", message: "Parent-Teacher meeting scheduled", timestamp: "3 hours ago", link: "/admin/events" },
-  { id: 6, type: "teacher", message: "New teacher onboarded: Priya Singh", timestamp: "5 hours ago", link: "/admin/teachers" },
+const placeholderAnnouncements: Announcement[] = [
+  {
+    id: 1,
+    author: "Principal Office",
+    initials: "PO",
+    department: "Administration",
+    message: "School annual day preparations begin next week. All teachers to submit event proposals by Friday.",
+    timestamp: "2 min ago",
+    accentColor: "border-l-kpi-blue",
+  },
+  {
+    id: 2,
+    author: "Admissions Dept",
+    initials: "AD",
+    department: "Admissions",
+    message: "New admission application received from Rahul Sharma for Class 5. Please review and process.",
+    timestamp: "15 min ago",
+    accentColor: "border-l-kpi-green",
+  },
+  {
+    id: 3,
+    author: "Gallery Admin",
+    initials: "GA",
+    department: "Media",
+    message: "3 new photos uploaded to Annual Day album awaiting approval.",
+    timestamp: "1 hour ago",
+    accentColor: "border-l-kpi-orange",
+  },
+  {
+    id: 4,
+    author: "HR Department",
+    initials: "HR",
+    department: "Human Resources",
+    message: "New teacher onboarded: Priya Singh — Mathematics Department.",
+    timestamp: "2 hours ago",
+    accentColor: "border-l-kpi-purple",
+  },
+  {
+    id: 5,
+    author: "Events Team",
+    initials: "ET",
+    department: "Events",
+    message: "Parent-Teacher meeting scheduled for next Saturday at 10:00 AM.",
+    timestamp: "3 hours ago",
+    accentColor: "border-l-kpi-pink",
+  },
 ];
 
 interface RecentActivityProps {
-  items?: ActivityItem[];
+  items?: Announcement[];
 }
 
-export function RecentActivity({ items = placeholderActivity }: RecentActivityProps) {
+export function RecentActivity({ items = placeholderAnnouncements }: RecentActivityProps) {
   return (
     <Card className="p-5">
-      <h3 className="font-semibold mb-4">Recent Activity</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold">Announcements</h3>
+        <span className="text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors">View All</span>
+      </div>
       <ScrollArea className="h-[320px]">
         <div className="space-y-3">
-          {items.map((item) => {
-            const Icon = iconMap[item.type];
-            return (
-              <Link
-                key={item.id}
-                to={item.link || "#"}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
-              >
-                <div className={cn("p-2 rounded-lg flex-shrink-0", colorMap[item.type])}>
-                  <Icon className="h-4 w-4" />
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className={cn(
+                "flex items-start gap-3 p-3 rounded-lg border-l-4 bg-muted/30 hover:bg-muted/50 transition-colors",
+                item.accentColor
+              )}
+            >
+              <Avatar className="h-9 w-9 flex-shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {item.initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-semibold text-foreground">{item.author}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                    {item.department}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium group-hover:text-primary transition-colors">
-                    {item.message}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{item.timestamp}</p>
-                </div>
-              </Link>
-            );
-          })}
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.message}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5">{item.timestamp}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </ScrollArea>
     </Card>

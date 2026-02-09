@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const placeholderData = [
   { month: "Jan", admissions: 12, notifications: 24, gallery: 8 },
@@ -17,33 +17,28 @@ interface TrendChartProps {
 export function TrendChart({ data = placeholderData }: TrendChartProps) {
   return (
     <Card className="p-5">
-      <h3 className="font-semibold mb-4">Trends Overview</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold">Session Recorded</h3>
+        <span className="text-xs text-muted-foreground">Last 6 months</span>
+      </div>
       <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="admissions" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="notifications" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gallery" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(25, 95%, 53%)" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="hsl(25, 95%, 53%)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" />
+          <BarChart data={data} barGap={2} barCategoryGap="20%">
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" vertical={false} />
             <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis fontSize={12} tickLine={false} axisLine={false} />
-            <Tooltip />
+            <Tooltip
+              contentStyle={{
+                borderRadius: "8px",
+                border: "1px solid hsl(214, 32%, 91%)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              }}
+            />
             <Legend />
-            <Area type="monotone" dataKey="admissions" stroke="hsl(221, 83%, 53%)" fill="url(#admissions)" strokeWidth={2} />
-            <Area type="monotone" dataKey="notifications" stroke="hsl(142, 71%, 45%)" fill="url(#notifications)" strokeWidth={2} />
-            <Area type="monotone" dataKey="gallery" stroke="hsl(25, 95%, 53%)" fill="url(#gallery)" strokeWidth={2} />
-          </AreaChart>
+            <Bar dataKey="admissions" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="notifications" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="gallery" fill="hsl(25, 95%, 53%)" radius={[4, 4, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </Card>

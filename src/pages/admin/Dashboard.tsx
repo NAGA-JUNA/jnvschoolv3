@@ -8,9 +8,7 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 
 export default function AdminDashboard() {
   return (
-    <div className="space-y-6 pl-0 lg:pl-0">
-      <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-
+    <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <KPICard title="Total Students" value={1248} icon={GraduationCap} color="blue" trend={{ value: 12, label: "vs last month" }} />
@@ -23,20 +21,23 @@ export default function AdminDashboard() {
       {/* Alert Banner */}
       <AlertBanner
         message="School annual day preparations begin next week. Ensure all event registrations are complete."
-        type="info"
+        type="warning"
       />
 
-      {/* 3-column dashboard layout */}
+      {/* Main dashboard grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main content */}
+        {/* Left content */}
         <div className="lg:col-span-8 space-y-6">
-          <TrendChart />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <TrendChart />
+            <CalendarWidget />
+          </div>
           <RecentActivity />
         </div>
+
         {/* Right panel */}
         <div className="lg:col-span-4 space-y-6">
           <QuickActions role="admin" />
-          <CalendarWidget />
         </div>
       </div>
     </div>

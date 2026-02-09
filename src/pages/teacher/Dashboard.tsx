@@ -19,9 +19,9 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8">
           <RecentActivity items={[
-            { id: 1, type: "notification", message: "Your notification 'Annual Day Registration' was approved", timestamp: "1 hour ago", link: "/teacher/submissions" },
-            { id: 2, type: "gallery", message: "Gallery upload 'Sports Day Photos' is pending approval", timestamp: "3 hours ago", link: "/teacher/submissions" },
-            { id: 3, type: "notification", message: "New notification submitted for review", timestamp: "Yesterday", link: "/teacher/submissions" },
+            { id: 1, author: "Admin Office", initials: "AO", department: "Administration", message: "Your notification 'Annual Day Registration' was approved", timestamp: "1 hour ago", accentColor: "border-l-kpi-blue" },
+            { id: 2, author: "Gallery Admin", initials: "GA", department: "Media", message: "Gallery upload 'Sports Day Photos' is pending approval", timestamp: "3 hours ago", accentColor: "border-l-kpi-orange" },
+            { id: 3, author: "System", initials: "SY", department: "Notifications", message: "New notification submitted for review", timestamp: "Yesterday", accentColor: "border-l-kpi-green" },
           ]} />
         </div>
         <div className="lg:col-span-4 space-y-6">

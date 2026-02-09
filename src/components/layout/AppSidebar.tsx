@@ -1,31 +1,68 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, GraduationCap, UserPlus, Bell, Image, Calendar,
-  MessageCircle, Mail, BarChart3, FileText, Settings, LogOut, GraduationCapIcon,
-  ChevronLeft, Menu,
+  MessageCircle, Mail, BarChart3, FileText, Settings, LogOut,
+  ChevronLeft, ChevronDown, ChevronRight, BookOpen, Handshake, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
+import { LucideIcon } from "lucide-react";
 
-const adminLinks = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-  { label: "Teachers", icon: Users, href: "/admin/teachers" },
-  { label: "Students", icon: GraduationCap, href: "/admin/students" },
-  { label: "Admissions", icon: UserPlus, href: "/admin/admissions" },
-  { label: "Notifications", icon: Bell, href: "/admin/notifications" },
-  { label: "Gallery Categories", icon: Image, href: "/admin/gallery-categories" },
-  { label: "Gallery Approvals", icon: Image, href: "/admin/gallery-approvals" },
-  { label: "Events", icon: Calendar, href: "/admin/events" },
-  { label: "WhatsApp", icon: MessageCircle, href: "/admin/whatsapp" },
-  { label: "Email Management", icon: Mail, href: "/admin/emails" },
-  { label: "Reports", icon: BarChart3, href: "/admin/reports" },
-  { label: "Audit Logs", icon: FileText, href: "/admin/audit" },
-  { label: "Settings", icon: Settings, href: "/admin/settings" },
+interface NavItem {
+  label: string;
+  icon: LucideIcon;
+  href: string;
+}
+
+interface NavGroup {
+  title: string;
+  icon: LucideIcon;
+  items: NavItem[];
+}
+
+const adminGroups: NavGroup[] = [
+  {
+    title: "Academics",
+    icon: BookOpen,
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
+      { label: "Students", icon: GraduationCap, href: "/admin/students" },
+      { label: "Teachers", icon: Users, href: "/admin/teachers" },
+      { label: "Admissions", icon: UserPlus, href: "/admin/admissions" },
+    ],
+  },
+  {
+    title: "Collaboration",
+    icon: Handshake,
+    items: [
+      { label: "Notifications", icon: Bell, href: "/admin/notifications" },
+      { label: "Gallery", icon: Image, href: "/admin/gallery-categories" },
+      { label: "Gallery Approvals", icon: Image, href: "/admin/gallery-approvals" },
+      { label: "Events", icon: Calendar, href: "/admin/events" },
+    ],
+  },
+  {
+    title: "Communication",
+    icon: MessageCircle,
+    items: [
+      { label: "WhatsApp", icon: MessageCircle, href: "/admin/whatsapp" },
+      { label: "Email Management", icon: Mail, href: "/admin/emails" },
+    ],
+  },
+  {
+    title: "Administration",
+    icon: ShieldCheck,
+    items: [
+      { label: "Reports", icon: BarChart3, href: "/admin/reports" },
+      { label: "Audit Logs", icon: FileText, href: "/admin/audit" },
+      { label: "Settings", icon: Settings, href: "/admin/settings" },
+    ],
+  },
 ];
 
-const teacherLinks = [
+const teacherLinks: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/teacher" },
   { label: "Post Notification", icon: Bell, href: "/teacher/post-notification" },
   { label: "Upload Gallery", icon: Image, href: "/teacher/upload-gallery" },
@@ -35,91 +72,123 @@ const teacherLinks = [
 
 interface AppSidebarProps {
   role: "admin" | "teacher";
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
-export function AppSidebar({ role }: AppSidebarProps) {
+export function AppSidebar({ role, collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
-  const links = role === "admin" ? adminLinks : teacherLinks;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Academics: true, Collaboration: true });
+
+  const toggleGroup = (title: string) => {
+    setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const isActive = (href: string) =>
+    location.pathname === href ||
+    (href !== "/admin" && href !== "/teacher" && location.pathname.startsWith(href));
+
+  const renderLink = (link: NavItem) => (
+    <Link
+      key={link.href}
+      to={link.href}
+      onClick={() => window.innerWidth < 1024 && onToggle()}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+        isActive(link.href)
+          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/25"
+          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+      )}
+    >
+      <link.icon className="h-4 w-4 flex-shrink-0" />
+      {!collapsed && <span className="truncate">{link.label}</span>}
+    </Link>
+  );
 
   return (
     <>
       {/* Mobile overlay */}
-      <div className={cn(
-        "lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity",
-        collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
-      )} onClick={() => setCollapsed(true)} />
+      <div
+        className={cn(
+          "lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity",
+          collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}
+        onClick={onToggle}
+      />
 
-      {/* Mobile toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden fixed top-3 left-3 z-50"
-        onClick={() => setCollapsed(!collapsed)}
+      <aside
+        className={cn(
+          "fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col transition-all duration-300",
+          "bg-gradient-to-b from-[hsl(var(--sidebar-gradient-from))] to-[hsl(var(--sidebar-gradient-to))]",
+          "text-sidebar-foreground",
+          collapsed ? "-translate-x-full lg:translate-x-0 lg:w-16" : "w-64 translate-x-0"
+        )}
       >
-        <Menu className="h-5 w-5" />
-      </Button>
-
-      <aside className={cn(
-        "fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300",
-        collapsed ? "-translate-x-full lg:translate-x-0 lg:w-16" : "w-64 translate-x-0"
-      )}>
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-          <div className="bg-sidebar-primary rounded-lg p-2">
-            <GraduationCapIcon className="h-5 w-5 text-sidebar-primary-foreground" />
+        {/* Branding Header */}
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50">
+          <div className="bg-sidebar-primary rounded-xl p-2 shadow-lg shadow-sidebar-primary/30">
+            <GraduationCap className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-sm truncate">SchoolAdmin</h2>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{role} Panel</p>
+              <h2 className="font-bold text-sm text-sidebar-foreground truncate">SchoolAdmin</h2>
+              <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-wider capitalize">{role} Panel</p>
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="hidden lg:flex h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={() => setCollapsed(!collapsed)}
+            className="hidden lg:flex h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            onClick={onToggle}
           >
             <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
           </Button>
         </div>
 
         {/* Navigation */}
-        <ScrollArea className="flex-1 py-4">
+        <ScrollArea className="flex-1 py-3">
           <nav className="px-2 space-y-1">
-            {links.map((link) => {
-              const isActive = location.pathname === link.href ||
-                (link.href !== "/admin" && link.href !== "/teacher" && location.pathname.startsWith(link.href));
-              return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => window.innerWidth < 1024 && setCollapsed(true)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <link.icon className="h-4 w-4 flex-shrink-0" />
-                  {!collapsed && <span className="truncate">{link.label}</span>}
-                </Link>
-              );
-            })}
+            {role === "admin"
+              ? adminGroups.map((group) => (
+                  <div key={group.title} className="mb-1">
+                    {!collapsed && (
+                      <button
+                        onClick={() => toggleGroup(group.title)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-sidebar-foreground/40 hover:text-sidebar-foreground/60 transition-colors"
+                      >
+                        <span>{group.title}</span>
+                        {openGroups[group.title] ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </button>
+                    )}
+                    {(collapsed || openGroups[group.title]) && (
+                      <div className="space-y-0.5">
+                        {group.items.map(renderLink)}
+                      </div>
+                    )}
+                  </div>
+                ))
+              : teacherLinks.map(renderLink)}
           </nav>
         </ScrollArea>
 
         {/* Footer */}
-        <div className="border-t border-sidebar-border p-3">
+        <div className="border-t border-sidebar-border/50 p-2">
           <Link
             to="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
           >
             <LogOut className="h-4 w-4 flex-shrink-0" />
             {!collapsed && <span>Sign Out</span>}
           </Link>
+          {!collapsed && (
+            <div className="px-3 pt-3 pb-2 text-center">
+              <p className="text-[10px] text-sidebar-foreground/30">Powered by SchoolAdmin</p>
+            </div>
+          )}
         </div>
       </aside>
     </>
