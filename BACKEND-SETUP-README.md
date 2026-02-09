@@ -1,6 +1,8 @@
-# SchoolAdmin — PHP Backend Setup Guide (cPanel)
+# JSchoolAdmin — PHP Backend Setup Guide (cPanel)
 
-Complete step-by-step guide to set up the SchoolAdmin REST API backend on a cPanel-hosted server with MySQL.
+Complete step-by-step guide to set up the JSchoolAdmin REST API backend on a cPanel-hosted server with MySQL.
+
+**Version:** 1.1.0 | **Last Updated:** February 2026
 
 ---
 
@@ -17,14 +19,15 @@ Complete step-by-step guide to set up the SchoolAdmin REST API backend on a cPan
 9. [Step 6: Set File Permissions](#step-6-set-file-permissions)
 10. [Step 7: Upload Frontend Build](#step-7-upload-frontend-build)
 11. [Step 8: Enable SSL](#step-8-enable-ssl)
-12. [API Endpoints Reference](#api-endpoints-reference)
-13. [Database Schema](#database-schema)
+12. [Demo / Testing Mode](#demo--testing-mode)
+13. [API Endpoints Reference](#api-endpoints-reference)
 14. [Authentication Flow](#authentication-flow)
 15. [CORS Configuration](#cors-configuration)
 16. [File Upload Configuration](#file-upload-configuration)
-17. [Cron Jobs](#cron-jobs)
-18. [Troubleshooting](#troubleshooting)
-19. [Security Checklist](#security-checklist)
+17. [Excel Import Template Format](#excel-import-template-format)
+18. [Cron Jobs](#cron-jobs)
+19. [Troubleshooting](#troubleshooting)
+20. [Security Checklist](#security-checklist)
 
 ---
 
@@ -81,8 +84,12 @@ public_html/
 │   ├── controllers/
 │   │   ├── AuthController.php
 │   │   ├── DashboardController.php
-│   │   ├── StudentController.php
-│   │   ├── TeacherController.php
+│   │   ├── StudentController.php     # Students CRUD + bulk promote
+│   │   ├── AttendanceController.php  # Student & staff attendance
+│   │   ├── ExamController.php        # Exam results & marks entry
+│   │   ├── TeacherController.php     # Teachers CRUD + class assignment
+│   │   ├── DocumentController.php    # Student & teacher documents
+│   │   ├── MessageController.php     # WhatsApp message history
 │   │   ├── NotificationController.php
 │   │   ├── GalleryController.php
 │   │   ├── EventController.php
@@ -90,24 +97,34 @@ public_html/
 │   │   ├── WhatsAppController.php
 │   │   ├── EmailController.php
 │   │   ├── ReportController.php
+│   │   ├── BrandingController.php    # School branding settings
 │   │   └── AuditLogController.php
 │   ├── models/
+│   │   ├── User.php
 │   │   ├── Student.php
 │   │   ├── Teacher.php
+│   │   ├── Attendance.php
+│   │   ├── ExamResult.php
+│   │   ├── Document.php
+│   │   ├── Message.php
 │   │   ├── Notification.php
 │   │   ├── GalleryCategory.php
 │   │   ├── GalleryItem.php
 │   │   ├── Event.php
 │   │   ├── Admission.php
+│   │   ├── Branding.php
 │   │   └── AuditLog.php
 │   ├── helpers/
 │   │   ├── response.php          # JSON response helper
 │   │   ├── validator.php         # Input validation
 │   │   ├── jwt.php               # JWT token helper
-│   │   └── upload.php            # File upload helper
+│   │   ├── upload.php            # File upload helper
+│   │   └── excel.php             # Excel import/export helper
 │   └── uploads/                  # Uploaded files directory
 │       ├── gallery/
 │       ├── notifications/
+│       ├── students/             # Student photos & documents
+│       ├── teachers/             # Teacher photos & documents
 │       └── profiles/
 ├── index.html                    # ← Frontend (React build)
 ├── assets/                       # ← Frontend assets (from build)
@@ -121,16 +138,16 @@ public_html/
 
 1. Log into **cPanel** → **MySQL® Databases**
 2. Create a new database:
-   - Database name: `schooladmin_db`
+   - Database name: `jschooladmin_db`
 3. Create a new user:
-   - Username: `schooladmin_user`
+   - Username: `jschooladmin_user`
    - Password: *(use a strong password, save it)*
 4. Add user to database:
    - Select the user and database
    - Grant **ALL PRIVILEGES**
    - Click **Make Changes**
 
-> **Note:** cPanel prefixes your account name, so your actual database name will be like `cpanelusr_schooladmin_db`.
+> **Note:** cPanel prefixes your account name, so your actual database name will be like `cpanelusr_jschooladmin_db`.
 
 ---
 
@@ -138,250 +155,37 @@ public_html/
 
 1. Open **phpMyAdmin** from cPanel
 2. Select your newly created database
-3. Click the **SQL** tab
-4. Paste and execute the following schema:
+3. Click the **Import** tab
+4. Upload the `schema.sql` file from the project root
+5. Click **Go**
 
-```sql
--- =============================================
--- SchoolAdmin Database Schema
--- Version: 1.0.0
--- =============================================
+Alternatively, click the **SQL** tab and paste the contents of `schema.sql` directly.
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+05:30";
+> The schema file includes all 19 tables, indexes, and sample data. See [`schema.sql`](./schema.sql) for the complete file.
 
--- -------------------------------------------
--- Users (Admin & Teacher login)
--- -------------------------------------------
-CREATE TABLE `users` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `name` VARCHAR(100) NOT NULL,
-  `email` VARCHAR(150) UNIQUE NOT NULL,
-  `password` VARCHAR(255) NOT NULL,
-  `role` ENUM('admin', 'teacher', 'office') NOT NULL DEFAULT 'teacher',
-  `phone` VARCHAR(20) DEFAULT NULL,
-  `whatsapp` VARCHAR(20) DEFAULT NULL,
-  `subject` VARCHAR(100) DEFAULT NULL,
-  `avatar` VARCHAR(255) DEFAULT NULL,
-  `is_active` TINYINT(1) DEFAULT 1,
-  `last_login` DATETIME DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+### Tables Overview
 
--- -------------------------------------------
--- Students
--- -------------------------------------------
-CREATE TABLE `students` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `admission_no` VARCHAR(50) UNIQUE NOT NULL,
-  `name` VARCHAR(100) NOT NULL,
-  `class` VARCHAR(20) NOT NULL,
-  `section` VARCHAR(10) DEFAULT NULL,
-  `roll_no` INT DEFAULT NULL,
-  `parent_name` VARCHAR(100) DEFAULT NULL,
-  `parent_phone` VARCHAR(20) DEFAULT NULL,
-  `parent_email` VARCHAR(150) DEFAULT NULL,
-  `address` TEXT DEFAULT NULL,
-  `date_of_birth` DATE DEFAULT NULL,
-  `gender` ENUM('male', 'female', 'other') DEFAULT NULL,
-  `blood_group` VARCHAR(5) DEFAULT NULL,
-  `status` ENUM('active', 'inactive', 'graduated', 'transferred') DEFAULT 'active',
-  `photo` VARCHAR(255) DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Notifications
--- -------------------------------------------
-CREATE TABLE `notifications` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200) NOT NULL,
-  `body` TEXT NOT NULL,
-  `urgency` ENUM('normal', 'important', 'urgent') DEFAULT 'normal',
-  `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-  `rejection_reason` TEXT DEFAULT NULL,
-  `attachment` VARCHAR(255) DEFAULT NULL,
-  `expiry_date` DATE DEFAULT NULL,
-  `submitted_by` INT NOT NULL,
-  `approved_by` INT DEFAULT NULL,
-  `approved_at` DATETIME DEFAULT NULL,
-  `is_public` TINYINT(1) DEFAULT 0,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`submitted_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`approved_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Gallery Categories
--- -------------------------------------------
-CREATE TABLE `gallery_categories` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `name` VARCHAR(100) NOT NULL,
-  `slug` VARCHAR(100) UNIQUE NOT NULL,
-  `type` ENUM('images', 'videos') DEFAULT 'images',
-  `cover_image` VARCHAR(255) DEFAULT NULL,
-  `item_count` INT DEFAULT 0,
-  `is_active` TINYINT(1) DEFAULT 1,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Gallery Items
--- -------------------------------------------
-CREATE TABLE `gallery_items` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `category_id` INT NOT NULL,
-  `title` VARCHAR(200) DEFAULT NULL,
-  `file_url` VARCHAR(500) NOT NULL,
-  `thumbnail_url` VARCHAR(500) DEFAULT NULL,
-  `type` ENUM('image', 'video', 'youtube') DEFAULT 'image',
-  `youtube_id` VARCHAR(20) DEFAULT NULL,
-  `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-  `uploaded_by` INT NOT NULL,
-  `approved_by` INT DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`category_id`) REFERENCES `gallery_categories`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`approved_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Events
--- -------------------------------------------
-CREATE TABLE `events` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200) NOT NULL,
-  `description` TEXT DEFAULT NULL,
-  `event_date` DATE NOT NULL,
-  `event_time` TIME DEFAULT NULL,
-  `location` VARCHAR(200) DEFAULT NULL,
-  `type` ENUM('academic', 'cultural', 'sports', 'meeting', 'holiday', 'other') DEFAULT 'other',
-  `is_public` TINYINT(1) DEFAULT 1,
-  `created_by` INT DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Admissions (Online Applications)
--- -------------------------------------------
-CREATE TABLE `admissions` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `student_name` VARCHAR(100) NOT NULL,
-  `class_applied` VARCHAR(20) NOT NULL,
-  `date_of_birth` DATE NOT NULL,
-  `gender` ENUM('male', 'female', 'other') NOT NULL,
-  `parent_name` VARCHAR(100) NOT NULL,
-  `parent_phone` VARCHAR(20) NOT NULL,
-  `parent_email` VARCHAR(150) DEFAULT NULL,
-  `address` TEXT NOT NULL,
-  `previous_school` VARCHAR(200) DEFAULT NULL,
-  `documents` JSON DEFAULT NULL,
-  `status` ENUM('pending', 'approved', 'rejected', 'waitlisted') DEFAULT 'pending',
-  `notes` TEXT DEFAULT NULL,
-  `reviewed_by` INT DEFAULT NULL,
-  `reviewed_at` DATETIME DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`reviewed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Official Emails
--- -------------------------------------------
-CREATE TABLE `official_emails` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_id` INT DEFAULT NULL,
-  `email_address` VARCHAR(150) UNIQUE NOT NULL,
-  `display_name` VARCHAR(100) NOT NULL,
-  `password_hash` VARCHAR(255) NOT NULL,
-  `webmail_url` VARCHAR(300) DEFAULT NULL,
-  `status` ENUM('active', 'suspended', 'deleted') DEFAULT 'active',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- WhatsApp Share Log
--- -------------------------------------------
-CREATE TABLE `whatsapp_shares` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `item_type` ENUM('notification', 'event', 'admission') NOT NULL,
-  `item_id` INT NOT NULL,
-  `shared_by` INT NOT NULL,
-  `shared_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`shared_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Audit Logs
--- -------------------------------------------
-CREATE TABLE `audit_logs` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_id` INT DEFAULT NULL,
-  `action` VARCHAR(100) NOT NULL,
-  `entity_type` VARCHAR(50) NOT NULL,
-  `entity_id` INT DEFAULT NULL,
-  `details` JSON DEFAULT NULL,
-  `ip_address` VARCHAR(45) DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Settings (Key-Value Store)
--- -------------------------------------------
-CREATE TABLE `settings` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `key_name` VARCHAR(100) UNIQUE NOT NULL,
-  `value` TEXT DEFAULT NULL,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- -------------------------------------------
--- Indexes for Performance
--- -------------------------------------------
-ALTER TABLE `students` ADD INDEX `idx_class_section` (`class`, `section`);
-ALTER TABLE `students` ADD INDEX `idx_status` (`status`);
-ALTER TABLE `notifications` ADD INDEX `idx_status` (`status`);
-ALTER TABLE `notifications` ADD INDEX `idx_submitted_by` (`submitted_by`);
-ALTER TABLE `gallery_items` ADD INDEX `idx_category_status` (`category_id`, `status`);
-ALTER TABLE `events` ADD INDEX `idx_event_date` (`event_date`);
-ALTER TABLE `admissions` ADD INDEX `idx_status` (`status`);
-ALTER TABLE `audit_logs` ADD INDEX `idx_user_action` (`user_id`, `action`);
-ALTER TABLE `audit_logs` ADD INDEX `idx_created_at` (`created_at`);
-
--- -------------------------------------------
--- Default Admin User (password: admin123)
--- Change this immediately after first login!
--- -------------------------------------------
-INSERT INTO `users` (`name`, `email`, `password`, `role`) VALUES
-('Super Admin', 'admin@school.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
-
--- -------------------------------------------
--- Default Settings
--- -------------------------------------------
-INSERT INTO `settings` (`key_name`, `value`) VALUES
-('school_name', 'My School'),
-('school_tagline', 'Excellence in Education'),
-('school_phone', '+91-XXXXXXXXXX'),
-('school_email', 'info@school.com'),
-('school_address', 'School Address Here'),
-('academic_year', '2025-2026'),
-('whatsapp_groups', '[]');
-
--- -------------------------------------------
--- Sample Gallery Categories
--- -------------------------------------------
-INSERT INTO `gallery_categories` (`name`, `slug`, `type`) VALUES
-('Annual Day', 'annual-day', 'images'),
-('Sports Day', 'sports-day', 'images'),
-('Classroom Activities', 'classroom-activities', 'images'),
-('Videos', 'videos', 'videos');
-```
+| Table | Purpose |
+|---|---|
+| `users` | Admin/Office/Teacher login accounts |
+| `teachers` | Detailed teacher profiles (qualification, subjects, classes) |
+| `students` | Student records with parent/guardian info |
+| `student_attendance` | Daily attendance records |
+| `exam_results` | Subject-wise marks and grades |
+| `student_documents` | Uploaded student documents (Aadhaar, TC, etc.) |
+| `teacher_documents` | Uploaded teacher documents (ID, certificates, resume) |
+| `student_messages` | WhatsApp message history for students |
+| `teacher_messages` | WhatsApp message history for teachers |
+| `notifications` | Notification submissions with approval workflow |
+| `gallery_categories` | Gallery category metadata |
+| `gallery_items` | Gallery uploads with approval |
+| `events` | School events and calendar |
+| `admissions` | Online admission applications |
+| `official_emails` | School email accounts |
+| `whatsapp_shares` | WhatsApp sharing log |
+| `audit_logs` | System audit trail |
+| `settings` | Key-value school settings |
+| `branding` | Theme/branding configuration |
 
 ---
 
@@ -410,9 +214,9 @@ Create `api/config/database.php`:
 // IMPORTANT: Update these values with your actual cPanel database credentials
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'cpanelusr_schooladmin_db');  // Your full database name
-define('DB_USER', 'cpanelusr_schooladmin_user'); // Your full database username
-define('DB_PASS', 'YOUR_STRONG_PASSWORD_HERE');  // Database password
+define('DB_NAME', 'cpanelusr_jschooladmin_db');  // Your full database name
+define('DB_USER', 'cpanelusr_jschooladmin_user'); // Your full database username
+define('DB_PASS', 'YOUR_STRONG_PASSWORD_HERE');   // Database password
 define('DB_CHARSET', 'utf8mb4');
 
 // JWT Configuration
@@ -420,7 +224,7 @@ define('JWT_SECRET', 'CHANGE_THIS_TO_A_RANDOM_64_CHAR_STRING');
 define('JWT_EXPIRY', 86400); // 24 hours in seconds
 
 // App Configuration
-define('APP_NAME', 'SchoolAdmin');
+define('APP_NAME', 'JSchoolAdmin');
 define('APP_URL', 'https://yourdomain.com');
 define('API_URL', 'https://yourdomain.com/api');
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
@@ -585,7 +389,45 @@ chmod 600 public_html/api/config/database.php
 
 ---
 
+## Demo / Testing Mode
+
+The frontend works fully without a backend connection using mock data. This is useful for:
+- UI testing and design review
+- Feature demonstrations
+- Client previews before backend deployment
+
+### How It Works
+- All data is loaded from `src/data/mockStudents.ts` and `src/data/mockTeachers.ts`
+- The login page accepts any credentials and navigates based on selected role
+- CRUD operations use local state (changes reset on page refresh)
+- API endpoints are defined in `src/api/endpoints.ts` but not called until backend is connected
+
+### Demo Login Credentials
+
+| Role | Email | Password | Panel |
+|---|---|---|---|
+| Super Admin | `admin@school.com` | `admin123` | Admin Dashboard |
+| Office Staff | `office@school.com` | `office123` | Admin Dashboard |
+| Teacher | `priya.singh@school.com` | `teacher123` | Teacher Dashboard |
+
+> Click any credential row on the login page to auto-fill the form.
+
+### Switching to Live Backend
+1. Update `src/api/client.ts` with your API base URL
+2. Replace mock data calls with actual API calls using the `useApi` hook
+3. Build and deploy the frontend
+
+---
+
 ## API Endpoints Reference
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Login (returns JWT token) |
+| `POST` | `/api/auth/logout` | Logout / invalidate token |
+| `GET` | `/api/auth/me` | Get current user profile |
 
 ### Public Endpoints (No auth required)
 
@@ -597,32 +439,54 @@ chmod 600 public_html/api/config/database.php
 | `GET` | `/api/public/events` | List upcoming public events |
 | `POST` | `/api/public/admissions` | Submit admission application |
 
-### Auth Endpoints
+### Admin Endpoints (Requires `admin` or `super_admin` role)
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/auth/login` | Login (returns JWT token) |
-| `POST` | `/api/auth/logout` | Logout / invalidate token |
-| `GET` | `/api/auth/me` | Get current user profile |
-
-### Admin Endpoints (Requires `admin` role)
-
-| Method | Endpoint | Description |
-|---|---|---|
+| **Dashboard** | | |
 | `GET` | `/api/admin/dashboard/metrics` | Dashboard KPI data |
-| `GET` | `/api/admin/students` | List students (paginated) |
+| `GET` | `/api/admin/dashboard/activity` | Recent activity feed |
+| `GET` | `/api/admin/alerts` | System alerts |
+| **Students** | | |
+| `GET` | `/api/admin/students` | List students (paginated, filterable) |
 | `POST` | `/api/admin/students` | Create student |
+| `GET` | `/api/admin/students/{id}` | Get student details |
 | `PUT` | `/api/admin/students/{id}` | Update student |
-| `DELETE` | `/api/admin/students/{id}` | Delete student |
-| `GET` | `/api/admin/students/export` | Export students to CSV |
-| `GET` | `/api/admin/teachers` | List teachers |
-| `POST` | `/api/admin/teachers` | Create teacher/staff |
+| `DELETE` | `/api/admin/students/{id}` | Soft-delete student |
+| `POST` | `/api/admin/students/import` | Import students from Excel |
+| `GET` | `/api/admin/students/export` | Export students (Excel/PDF) |
+| `POST` | `/api/admin/students/bulk-promote` | Bulk promote selected students |
+| `GET` | `/api/admin/students/alumni` | List alumni records |
+| `GET` | `/api/admin/students/{id}/attendance` | Student attendance history |
+| `GET` | `/api/admin/students/{id}/exams` | Student exam results |
+| `GET` | `/api/admin/students/{id}/documents` | List student documents |
+| `POST` | `/api/admin/students/{id}/documents` | Upload student document |
+| `GET` | `/api/admin/students/{id}/messages` | Student message history |
+| **Teachers** | | |
+| `GET` | `/api/admin/teachers` | List teachers (paginated, filterable) |
+| `POST` | `/api/admin/teachers` | Create teacher |
+| `GET` | `/api/admin/teachers/{id}` | Get teacher details |
 | `PUT` | `/api/admin/teachers/{id}` | Update teacher |
-| `DELETE` | `/api/admin/teachers/{id}` | Delete teacher |
+| `DELETE` | `/api/admin/teachers/{id}` | Soft-delete (mark inactive) |
+| `POST` | `/api/admin/teachers/import` | Import teachers from Excel |
+| `GET` | `/api/admin/teachers/export` | Export teachers (Excel/PDF) |
+| `GET` | `/api/admin/teachers/inactive` | List inactive/former teachers |
+| `PUT` | `/api/admin/teachers/{id}/assign-classes` | Update class assignments |
+| `GET` | `/api/admin/teachers/{id}/attendance` | Staff attendance history |
+| `GET` | `/api/admin/teachers/{id}/documents` | List teacher documents |
+| `POST` | `/api/admin/teachers/{id}/documents` | Upload teacher document |
+| `GET` | `/api/admin/teachers/{id}/messages` | Teacher message history |
+| **Admissions** | | |
+| `GET` | `/api/admin/admissions` | List admission applications |
+| `PATCH` | `/api/admin/admissions/{id}` | Update admission status |
+| `GET` | `/api/admin/admissions/export` | Export to CSV |
+| **Notifications** | | |
 | `GET` | `/api/admin/notifications` | List all notifications |
+| `GET` | `/api/admin/notifications/{id}` | Get notification details |
 | `PATCH` | `/api/admin/notifications/{id}/approve` | Approve notification |
 | `PATCH` | `/api/admin/notifications/{id}/reject` | Reject notification |
 | `POST` | `/api/admin/notifications/bulk-approve` | Bulk approve |
+| **Gallery** | | |
 | `GET` | `/api/admin/gallery/categories` | List categories |
 | `POST` | `/api/admin/gallery/categories` | Create category |
 | `PUT` | `/api/admin/gallery/categories/{id}` | Update category |
@@ -630,28 +494,34 @@ chmod 600 public_html/api/config/database.php
 | `GET` | `/api/admin/gallery/approvals` | Pending gallery items |
 | `PATCH` | `/api/admin/gallery/items/{id}/approve` | Approve item |
 | `PATCH` | `/api/admin/gallery/items/{id}/reject` | Reject item |
+| **Events** | | |
 | `GET` | `/api/admin/events` | List all events |
 | `POST` | `/api/admin/events` | Create event |
 | `PUT` | `/api/admin/events/{id}` | Update event |
 | `DELETE` | `/api/admin/events/{id}` | Delete event |
-| `GET` | `/api/admin/admissions` | List admission applications |
-| `PATCH` | `/api/admin/admissions/{id}` | Update admission status |
-| `GET` | `/api/admin/admissions/export` | Export to CSV |
-| `POST` | `/api/admin/emails` | Create official email |
+| **Other** | | |
 | `GET` | `/api/admin/emails` | List official emails |
+| `POST` | `/api/admin/emails/create` | Create official email |
 | `GET` | `/api/admin/reports` | Get report data |
 | `GET` | `/api/admin/audit-logs` | List audit logs |
 | `GET` | `/api/admin/settings` | Get all settings |
 | `PUT` | `/api/admin/settings` | Update settings |
-| `POST` | `/api/admin/whatsapp/mark-shared` | Mark item as shared |
+| `PUT` | `/api/admin/branding` | Save branding settings |
+| `POST` | `/api/admin/whatsapp/log` | Log WhatsApp share |
+| `GET` | `/api/admin/whatsapp/logs` | Get WhatsApp share history |
 
 ### Teacher Endpoints (Requires `teacher` or `office` role)
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/teacher/dashboard/metrics` | Teacher dashboard data |
+| `GET` | `/api/teacher/dashboard/activity` | Teacher activity feed |
+| `GET` | `/api/teacher/students` | View students in assigned classes |
+| `POST` | `/api/teacher/attendance/mark` | Mark student attendance |
+| `POST` | `/api/teacher/exams/marks` | Enter exam marks |
 | `POST` | `/api/teacher/notifications` | Submit notification |
 | `POST` | `/api/teacher/gallery/upload` | Upload gallery item |
+| `POST` | `/api/teacher/gallery/youtube` | Add YouTube link |
 | `GET` | `/api/teacher/submissions` | My submissions list |
 | `GET` | `/api/teacher/profile` | Get profile |
 | `PUT` | `/api/teacher/profile` | Update profile |
@@ -665,7 +535,11 @@ All list endpoints support:
 | `page` | `?page=2` | Page number (default: 1) |
 | `per_page` | `?per_page=25` | Items per page (default: 20) |
 | `search` | `?search=rahul` | Search keyword |
-| `status` | `?status=pending` | Filter by status |
+| `status` | `?status=active` | Filter by status |
+| `class` | `?class=10` | Filter by class (students/teachers) |
+| `section` | `?section=A` | Filter by section |
+| `subject` | `?subject=Mathematics` | Filter by subject (teachers) |
+| `academic_year` | `?academic_year=2025-2026` | Filter by academic year |
 | `sort` | `?sort=created_at` | Sort field |
 | `order` | `?order=desc` | Sort direction |
 
@@ -752,6 +626,54 @@ Supported upload types:
 - **Images:** jpg, jpeg, png, gif, webp (max 10MB)
 - **Documents:** pdf, doc, docx (max 10MB)
 - **Videos:** mp4 (max 50MB) — or use YouTube links
+- **Excel:** xlsx, xls, csv (max 10MB) — for import
+
+---
+
+## Excel Import Template Format
+
+### Students Import (`students_import_template.xlsx`)
+
+| Column | Required | Format | Example |
+|---|---|---|---|
+| Admission No | ✅ | Text | ADM2025010 |
+| Full Name | ✅ | Text | Rahul Verma |
+| Class | ✅ | Text | 10 |
+| Section | | Text | A |
+| Roll No | | Number | 15 |
+| Gender | | Male/Female/Other | Male |
+| Date of Birth | | YYYY-MM-DD | 2012-05-15 |
+| Blood Group | | Text | B+ |
+| Father Name | | Text | Suresh Verma |
+| Mother Name | | Text | Anita Verma |
+| Parent Phone | ✅ | Text | +91-9812345678 |
+| WhatsApp | | Text | +91-9812345678 |
+| Email | | Text | parent@email.com |
+| Address | | Text | 123, MG Road, Lucknow |
+| Emergency Contact | | Text | +91-9812345679 |
+
+**Duplicate Check:** `admission_no` must be unique. Rows with existing admission numbers will be flagged as duplicates during import preview.
+
+### Teachers Import (`teachers_import_template.xlsx`)
+
+| Column | Required | Format | Example |
+|---|---|---|---|
+| Employee ID | ✅ | Text | EMP011 |
+| Full Name | ✅ | Text | Rahul Verma |
+| Gender | | Male/Female/Other | Male |
+| Date of Birth | | YYYY-MM-DD | 1988-05-15 |
+| Phone | ✅ | Text | +91-9812345678 |
+| WhatsApp | | Text | +91-9812345678 |
+| Email | | Text | rahul@school.com |
+| Address | | Text | 123, MG Road, Lucknow |
+| Qualification | | Text | M.Sc. Mathematics, B.Ed. |
+| Experience (Years) | | Number | 8 |
+| Joining Date | | YYYY-MM-DD | 2017-06-01 |
+| Subjects | | Comma-separated | Mathematics, Physics |
+| Classes | | Comma-separated | 10-A, 9-B |
+| Employment Type | | Full-time/Part-time | Full-time |
+
+**Duplicate Check:** `employee_id` must be unique. Rows with existing employee IDs will be flagged.
 
 ---
 
@@ -765,6 +687,9 @@ Set up in **cPanel** → **Cron Jobs**:
 
 # Daily database backup at 2 AM
 0 2 * * * /usr/local/bin/php /home/cpanelusr/public_html/api/cron/backup.php
+
+# Archive alumni records at end of academic year (April 1)
+0 0 1 4 * /usr/local/bin/php /home/cpanelusr/public_html/api/cron/archive-alumni.php
 ```
 
 ---
@@ -781,6 +706,8 @@ Set up in **cPanel** → **Cron Jobs**:
 | **JWT token invalid** | Ensure `JWT_SECRET` is the same across all server instances |
 | **Blank page / JSON parse error** | PHP error output is mixing with JSON. Set `display_errors = Off` in production |
 | **Slow queries** | Add database indexes (already included in schema). Check slow query log |
+| **Excel import fails** | Verify file is .xlsx/.csv format, check column headers match template |
+| **Student duplicate error** | Admission number already exists. Use different admission number or update existing |
 
 ### Enable Error Logging (Development Only)
 
@@ -809,6 +736,10 @@ error_reporting(E_ALL);
 - [ ] Block direct access to config/model/helper files via `.htaccess`
 - [ ] Use `httponly` and `secure` flags for any cookies
 - [ ] Implement CSRF protection for form submissions
+- [ ] Validate file types and sizes on upload (server-side)
+- [ ] Sanitize uploaded file names to prevent path traversal
+- [ ] Hash all passwords with `bcrypt` (already in schema)
+- [ ] Log all admin actions to `audit_logs` table
 
 ---
 
@@ -816,7 +747,7 @@ error_reporting(E_ALL);
 
 ```
 1. Create MySQL database + user in cPanel
-2. Import SQL schema via phpMyAdmin
+2. Import schema.sql via phpMyAdmin
 3. Upload api/ folder to public_html/
 4. Edit api/config/database.php with your credentials
 5. Upload frontend dist/ contents to public_html/
@@ -836,7 +767,8 @@ error_reporting(E_ALL);
 - **API Issues:** Check cPanel Error Log
 - **Database Issues:** Use phpMyAdmin to inspect tables
 - **Hosting Issues:** Contact your cPanel hosting provider
+- **Documentation:** See [README.md](./README.md) for project overview
 
 ---
 
-*SchoolAdmin v1.0.0 — Modern School Management System*
+*JSchoolAdmin v1.1.0 — Modern School Management System — Powered by JNV Tech*
