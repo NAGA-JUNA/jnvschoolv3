@@ -34,10 +34,12 @@ class ApiClient {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid — clear and redirect to login
-        this.setToken(null);
-        window.location.href = "/login";
-        throw new Error("Session expired. Please log in again.");
+        const errorBody = await response.json().catch(() => ({}));
+        if (errorBody.code === "token_expired" || errorBody.message?.toLowerCase().includes("token expired")) {
+          this.setToken(null);
+          window.location.href = "/login";
+        }
+        throw new Error(errorBody.message || "Unauthorized");
       }
 
       if (!response.ok) {
