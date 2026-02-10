@@ -1,65 +1,30 @@
 <?php
-require_once __DIR__.'/../includes/auth.php';
-requireRole(['super_admin']);
-$db=getDB();
-
-if($_SERVER['REQUEST_METHOD']==='POST'){
-    if(!verifyCsrf()){setFlash('error','Invalid.');}else{
-    foreach($_POST['settings']??[] as $key=>$val){
-        $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$key,$val,$val]);
-    }
-    auditLog('update_settings','settings',0);
-    setFlash('success','Settings saved.');
-    header('Location: /admin/settings.php');exit;
-    }
-}
-
-// Create user
-if(isset($_POST['create_user'])){
-    if(!verifyCsrf()){setFlash('error','Invalid.');}else{
-    $name=trim($_POST['user_name']??'');$email=trim($_POST['user_email']??'');$pass=$_POST['user_password']??'';$role=$_POST['user_role']??'teacher';
-    if($name&&$email&&$pass){
-        $hash=password_hash($pass,PASSWORD_DEFAULT);
-        $db->prepare("INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)")->execute([$name,$email,$hash,$role]);
-        auditLog('create_user','user',(int)$db->lastInsertId());
-        setFlash('success','User created.');
-    }else{setFlash('error','All fields required.');}
-    header('Location: /admin/settings.php');exit;
-    }
-}
-
-$settings=$db->query("SELECT * FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
-$users=$db->query("SELECT id,name,email,role,is_active,last_login FROM users ORDER BY name")->fetchAll();
-
-$pageTitle='Settings';
-require_once __DIR__.'/../includes/header.php';
-?>
-<h3 class="mb-4">Settings</h3>
-
-<div class="card mb-4"><div class="card-header">School Info</div><div class="card-body">
-<form method="POST" class="row g-3">
-<?= csrfField() ?>
-<div class="col-md-6"><label class="form-label">School Name</label><input type="text" name="settings[school_name]" class="form-control" value="<?= e($settings['school_name']??'') ?>"></div>
-<div class="col-md-6"><label class="form-label">Email</label><input type="email" name="settings[school_email]" class="form-control" value="<?= e($settings['school_email']??'') ?>"></div>
-<div class="col-md-4"><label class="form-label">Phone</label><input type="text" name="settings[school_phone]" class="form-control" value="<?= e($settings['school_phone']??'') ?>"></div>
-<div class="col-md-4"><label class="form-label">Academic Year</label><input type="text" name="settings[academic_year]" class="form-control" value="<?= e($settings['academic_year']??'') ?>"></div>
-<div class="col-12"><label class="form-label">Address</label><textarea name="settings[school_address]" class="form-control" rows="2"><?= e($settings['school_address']??'') ?></textarea></div>
-<div class="col-12"><button class="btn btn-primary">Save Settings</button></div>
-</form></div></div>
-
-<div class="card mb-4"><div class="card-header">Create New User</div><div class="card-body">
-<form method="POST" class="row g-2">
-<?= csrfField() ?>
-<input type="hidden" name="create_user" value="1">
-<div class="col-md-3"><input type="text" name="user_name" class="form-control" placeholder="Name" required></div>
-<div class="col-md-3"><input type="email" name="user_email" class="form-control" placeholder="Email" required></div>
-<div class="col-md-2"><input type="password" name="user_password" class="form-control" placeholder="Password" required></div>
-<div class="col-md-2"><select name="user_role" class="form-select"><option value="admin">Admin</option><option value="teacher">Teacher</option><option value="office">Office</option></select></div>
-<div class="col-md-2"><button class="btn btn-success w-100">Create</button></div>
-</form></div></div>
-
-<div class="card"><div class="card-header">Users</div><div class="card-body p-0">
-<table class="table table-sm mb-0"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Last Login</th></tr></thead>
-<tbody><?php foreach($users as $u): ?><tr><td><?= e($u['name']) ?></td><td><?= e($u['email']) ?></td><td><?= e($u['role']) ?></td><td><?= $u['is_active']?'Yes':'No' ?></td><td><?= e($u['last_login']??'Never') ?></td></tr><?php endforeach; ?></tbody>
-</table></div></div>
-<?php require_once __DIR__.'/../includes/footer.php'; ?>
+$pageTitle='Settings';require_once __DIR__.'/../includes/auth.php';requireAdmin();$db=getDB();
+if($_SERVER['REQUEST_METHOD']==='POST'&&verifyCsrf()){$action=$_POST['form_action']??'settings';
+if($action==='settings'){$keys=['school_name','school_short_name','school_tagline','school_email','school_phone','school_address','primary_color','academic_year','admission_open'];foreach($keys as $k){$v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);}auditLog('update_settings','settings');setFlash('success','Settings updated.');}
+if($action==='create_user'){$name=trim($_POST['user_name']??'');$email=trim($_POST['user_email']??'');$pass=$_POST['user_password']??'';$role=$_POST['user_role']??'teacher';if($name&&$email&&strlen($pass)>=6){try{$db->prepare("INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)")->execute([$name,$email,password_hash($pass,PASSWORD_DEFAULT),$role]);auditLog('create_user','user',(int)$db->lastInsertId(),$email);setFlash('success',"User created.");}catch(PDOException $e){if($e->getCode()==23000)setFlash('error','Email exists.');else setFlash('error',$e->getMessage());}}else setFlash('error','All fields required, password min 6.');}
+if($action==='delete_user'&&isSuperAdmin()){$uid=(int)($_POST['delete_user_id']??0);if($uid&&$uid!==currentUserId()){$db->prepare("DELETE FROM users WHERE id=?")->execute([$uid]);auditLog('delete_user','user',$uid);setFlash('success','Deleted.');}}
+header('Location: /admin/settings.php');exit;}
+$settings=[];$stmt=$db->query("SELECT setting_key,setting_value FROM settings");while($r=$stmt->fetch())$settings[$r['setting_key']]=$r['setting_value'];
+$users=$db->query("SELECT id,name,email,role,is_active,last_login FROM users ORDER BY created_at DESC")->fetchAll();
+require_once __DIR__.'/../includes/header.php';$s=$settings;?>
+<div class="row g-3"><div class="col-lg-7"><div class="card border-0 rounded-3 mb-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-building me-2"></i>School Info</h6></div><div class="card-body"><form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="settings"><div class="row g-3">
+<div class="col-md-6"><label class="form-label">School Name</label><input type="text" name="school_name" class="form-control" value="<?=e($s['school_name']??'')?>"></div>
+<div class="col-md-6"><label class="form-label">Short Name</label><input type="text" name="school_short_name" class="form-control" value="<?=e($s['school_short_name']??'')?>"></div>
+<div class="col-12"><label class="form-label">Tagline</label><input type="text" name="school_tagline" class="form-control" value="<?=e($s['school_tagline']??'')?>"></div>
+<div class="col-md-6"><label class="form-label">Email</label><input type="email" name="school_email" class="form-control" value="<?=e($s['school_email']??'')?>"></div>
+<div class="col-md-6"><label class="form-label">Phone</label><input type="tel" name="school_phone" class="form-control" value="<?=e($s['school_phone']??'')?>"></div>
+<div class="col-12"><label class="form-label">Address</label><textarea name="school_address" class="form-control" rows="2"><?=e($s['school_address']??'')?></textarea></div>
+<div class="col-md-4"><label class="form-label">Color</label><input type="color" name="primary_color" class="form-control form-control-color" value="<?=e($s['primary_color']??'#1e40af')?>"></div>
+<div class="col-md-4"><label class="form-label">Academic Year</label><input type="text" name="academic_year" class="form-control" value="<?=e($s['academic_year']??'')?>"></div>
+<div class="col-md-4"><label class="form-label">Admissions</label><select name="admission_open" class="form-select"><option value="1" <?=($s['admission_open']??'1')==='1'?'selected':''?>>Open</option><option value="0" <?=($s['admission_open']??'1')==='0'?'selected':''?>>Closed</option></select></div>
+<div class="col-12"><button class="btn btn-primary">Save Settings</button></div></div></form></div></div></div>
+<div class="col-lg-5"><div class="card border-0 rounded-3 mb-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0">Create User</h6></div><div class="card-body"><form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="create_user">
+<div class="mb-2"><input type="text" name="user_name" class="form-control form-control-sm" placeholder="Name" required></div>
+<div class="mb-2"><input type="email" name="user_email" class="form-control form-control-sm" placeholder="Email" required></div>
+<div class="mb-2"><input type="password" name="user_password" class="form-control form-control-sm" placeholder="Password" required minlength="6"></div>
+<div class="mb-2"><select name="user_role" class="form-select form-select-sm"><option value="teacher">Teacher</option><option value="office">Office</option><option value="admin">Admin</option><?php if(isSuperAdmin()):?><option value="super_admin">Super Admin</option><?php endif;?></select></div>
+<button class="btn btn-success btn-sm w-100">Create User</button></form></div></div>
+<div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0">Users (<?=count($users)?>)</h6></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Name</th><th>Role</th><th>Last Login</th><th></th></tr></thead><tbody>
+<?php foreach($users as $u):?><tr><td style="font-size:.8rem"><strong><?=e($u['name'])?></strong><br><small class="text-muted"><?=e($u['email'])?></small></td><td><span class="badge bg-primary-subtle text-primary"><?=e($u['role'])?></span></td><td style="font-size:.75rem"><?=$u['last_login']?date('M d, H:i',strtotime($u['last_login'])):'Never'?></td><td><?php if(isSuperAdmin()&&$u['id']!==currentUserId()):?><form method="POST" class="d-inline"><input type="hidden" name="form_action" value="delete_user"><input type="hidden" name="delete_user_id" value="<?=$u['id']?>"><?=csrfField()?><button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="return confirm('Delete?')"><i class="bi bi-trash" style="font-size:.7rem"></i></button></form><?php endif;?></td></tr><?php endforeach;?></tbody></table></div></div></div></div></div>
+<?php require_once __DIR__.'/../includes/footer.php';?>

@@ -1,59 +1,66 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/config/mail.php';
+if (isLoggedIn()) { header('Location: /'); exit; }
 
-$success = '';
-$error = '';
-
+$success = ''; $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrf()) { $error = 'Invalid request.'; }
     else {
         $email = trim($_POST['email'] ?? '');
-        if (!$email) { $error = 'Email is required.'; }
+        if (!$email) { $error = 'Please enter your email.'; }
         else {
             $db = getDB();
-            $stmt = $db->prepare("SELECT id FROM users WHERE email = ? AND is_active = 1");
+            $stmt = $db->prepare("SELECT id, name FROM users WHERE email = ? AND is_active = 1");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
-
-            // Always show success to prevent email enumeration
-            $success = 'If an account exists with that email, a reset link has been sent.';
-
             if ($user) {
                 $token = bin2hex(random_bytes(32));
                 $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
                 $db->prepare("UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?")->execute([$token, $expires, $user['id']]);
-
-                $resetUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/reset-password.php?token=' . $token;
-                $body = "<h2>Password Reset</h2><p>Click below to reset your password:</p><p><a href='{$resetUrl}'>Reset Password</a></p><p>This link expires in 1 hour.</p>";
-                sendMail($email, 'Password Reset', $body);
+                $resetUrl = 'https://jnvschool.awayindia.com/reset-password.php?token=' . $token;
+                $body = "<h2>Password Reset</h2><p>Hi {$user['name']},</p><p>Click below to reset your password:</p><p><a href='{$resetUrl}' style='padding:10px 24px;background:#1e40af;color:#fff;text-decoration:none;border-radius:8px;'>Reset Password</a></p><p>This link expires in 1 hour.</p>";
+                sendMail($email, 'Password Reset — JNV School', $body);
             }
+            $success = 'If that email exists, a reset link has been sent.';
         }
     }
 }
+$schoolName = 'Jawahar Navodaya Vidyalaya';
+try { $s = getDB()->query("SELECT setting_value FROM settings WHERE setting_key='school_name'"); $r=$s->fetch(); if($r) $schoolName=$r['setting_value']; } catch(Exception $ex) {}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Forgot Password</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Forgot Password — <?= htmlspecialchars($schoolName) ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{font-family:'Inter',sans-serif}body{margin:0;min-height:100vh}.split-container{display:flex;min-height:100vh}.left-panel{flex:1;background:linear-gradient(135deg,#0f172a,#1e40af,#3b82f6);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:3rem;position:relative;overflow:hidden}.left-panel::before{content:'';position:absolute;top:-50%;right:-50%;width:100%;height:200%;background:radial-gradient(circle,rgba(255,255,255,0.05),transparent 60%);animation:float 15s ease-in-out infinite}@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}.left-content{position:relative;z-index:1;text-align:center;max-width:400px}.school-icon{width:80px;height:80px;background:rgba(255,255,255,0.15);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 1.5rem;backdrop-filter:blur(10px)}.right-panel{flex:1;display:flex;align-items:center;justify-content:center;padding:3rem;background:#fff}.form-box{width:100%;max-width:400px}.form-box h2{font-weight:700;color:#0f172a;margin-bottom:.25rem}.form-box p.subtitle{color:#64748b;margin-bottom:2rem}.form-control{border-radius:10px;padding:.75rem 1rem;border-color:#e2e8f0}.form-control:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}.btn-submit{width:100%;padding:.75rem;border-radius:10px;font-weight:600;background:linear-gradient(135deg,#1e40af,#3b82f6);border:none;color:#fff;transition:all .3s}.btn-submit:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(59,130,246,.4);color:#fff}.input-group-text{border-radius:10px 0 0 10px;background:#f8fafc;border-color:#e2e8f0;color:#64748b}.input-group .form-control{border-radius:0 10px 10px 0}@media(max-width:991.98px){.split-container{flex-direction:column}.left-panel{padding:2rem;min-height:auto}}
+    </style>
 </head>
-<body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh">
-<div class="card shadow" style="width:400px">
-  <div class="card-body p-4">
-    <h4 class="text-center mb-4">Forgot Password</h4>
-    <?php if ($success): ?><div class="alert alert-success"><?= e($success) ?></div><?php endif; ?>
-    <?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
-    <form method="POST">
-      <?= csrfField() ?>
-      <div class="mb-3">
-        <label class="form-label">Email Address</label>
-        <input type="email" name="email" class="form-control" required>
-      </div>
-      <button class="btn btn-primary w-100">Send Reset Link</button>
-      <div class="text-center mt-3"><a href="/login.php">Back to Login</a></div>
-    </form>
-  </div>
+<body>
+<div class="split-container">
+    <div class="left-panel"><div class="left-content"><div class="school-icon"><i class="bi bi-shield-lock-fill"></i></div><h1 style="font-size:2rem;font-weight:800"><?= htmlspecialchars($schoolName) ?></h1><p style="opacity:.85">Reset your account password securely</p></div></div>
+    <div class="right-panel">
+        <div class="form-box">
+            <h2>Forgot Password?</h2>
+            <p class="subtitle">Enter your email and we'll send you a reset link</p>
+            <?php if ($success): ?><div class="alert alert-success py-2" style="border-radius:10px"><i class="bi bi-check-circle-fill me-1"></i> <?= htmlspecialchars($success) ?></div><?php endif; ?>
+            <?php if ($error): ?><div class="alert alert-danger py-2" style="border-radius:10px"><i class="bi bi-exclamation-circle-fill me-1"></i> <?= htmlspecialchars($error) ?></div><?php endif; ?>
+            <form method="POST">
+                <?= csrfField() ?>
+                <div class="mb-3">
+                    <label class="form-label fw-medium" style="font-size:.875rem;color:#334155">Email Address</label>
+                    <div class="input-group"><span class="input-group-text"><i class="bi bi-envelope"></i></span><input type="email" name="email" class="form-control" placeholder="your@email.com" required></div>
+                </div>
+                <button type="submit" class="btn btn-submit"><i class="bi bi-send me-2"></i>Send Reset Link</button>
+            </form>
+            <div class="text-center mt-3"><a href="/login.php" class="text-decoration-none" style="font-size:.875rem"><i class="bi bi-arrow-left me-1"></i>Back to Login</a></div>
+        </div>
+    </div>
 </div>
-</body></html>
+</body>
+</html>

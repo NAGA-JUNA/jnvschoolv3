@@ -1,0 +1,27 @@
+# Security: Deny access to config and includes directories
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct access to sensitive directories
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^includes/ - [F,L]
+
+    # Block access to .sql files
+    RewriteRule \.sql$ - [F,L]
+</IfModule>
+
+# Block directory listing
+Options -Indexes
+
+# Protect .htaccess itself
+<Files .htaccess>
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Block access to config files directly
+<FilesMatch "\.(php|sql)$">
+    <If "%{REQUEST_URI} =~ m#^/(config|includes)/#">
+        Require all denied
+    </If>
+</FilesMatch>

@@ -1,40 +1,13 @@
 <?php
-require_once __DIR__.'/../includes/auth.php';
-requireAdmin();
-$db=getDB();
-
-if(isset($_GET['action'])&&isset($_GET['id'])&&is_numeric($_GET['id'])){
-    if(verifyCsrf()){
-    $action=$_GET['action'];$gid=(int)$_GET['id'];
-    if(in_array($action,['approved','rejected'])){
-        $db->prepare("UPDATE gallery_items SET status=?,approved_by=? WHERE id=?")->execute([$action,currentUserId(),$gid]);
-        auditLog('gallery_'.$action,'gallery',$gid);setFlash('success','Gallery item '.$action.'.');
-    }}header('Location: /admin/gallery.php');exit;
-}
-if(isset($_GET['delete'])&&is_numeric($_GET['delete'])){
-    if(verifyCsrf()){$db->prepare("DELETE FROM gallery_items WHERE id=?")->execute([$_GET['delete']]);setFlash('success','Deleted.');}
-    header('Location: /admin/gallery.php');exit;
-}
-
-$items=$db->query("SELECT g.*,u.name as uploader FROM gallery_items g LEFT JOIN users u ON g.uploaded_by=u.id ORDER BY g.created_at DESC")->fetchAll();
-$pageTitle='Gallery';
-require_once __DIR__.'/../includes/header.php';
-?>
-<h3 class="mb-3">Gallery Approvals</h3>
-<div class="table-responsive"><table class="table table-sm">
-<thead><tr><th>Title</th><th>Category</th><th>Uploaded By</th><th>Status</th><th>Actions</th></tr></thead>
-<tbody>
-<?php foreach($items as $g): ?>
-<tr><td><?= e($g['title']) ?></td><td><?= e($g['category']) ?></td><td><?= e($g['uploader']??'—') ?></td>
-<td><span class="badge bg-<?= $g['status']==='pending'?'warning':($g['status']==='approved'?'success':'danger') ?>"><?= ucfirst($g['status']) ?></span></td>
-<td>
-<?php if($g['status']==='pending'): ?>
-<a href="?action=approved&id=<?= $g['id'] ?>&csrf_token=<?= csrfToken() ?>" class="btn btn-sm btn-success">Approve</a>
-<a href="?action=rejected&id=<?= $g['id'] ?>&csrf_token=<?= csrfToken() ?>" class="btn btn-sm btn-danger">Reject</a>
-<?php endif; ?>
-<a href="?delete=<?= $g['id'] ?>&csrf_token=<?= csrfToken() ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?')">Del</a>
-</td></tr>
-<?php endforeach; ?>
-<?php if(empty($items)): ?><tr><td colspan="5" class="text-center text-muted py-3">No gallery items</td></tr><?php endif; ?>
-</tbody></table></div>
-<?php require_once __DIR__.'/../includes/footer.php'; ?>
+$pageTitle='Gallery';require_once __DIR__.'/../includes/auth.php';requireAdmin();$db=getDB();
+if($_SERVER['REQUEST_METHOD']==='POST'&&verifyCsrf()){$gid=(int)($_POST['id']??0);$action=$_POST['action']??'';if($gid&&in_array($action,['approved','rejected','delete'])){if($action==='delete')$db->prepare("DELETE FROM gallery_items WHERE id=?")->execute([$gid]);else $db->prepare("UPDATE gallery_items SET status=?,approved_by=?,approved_at=NOW() WHERE id=?")->execute([$action,currentUserId(),$gid]);auditLog("gallery_$action",'gallery',$gid);setFlash('success','Done.');}header('Location: /admin/gallery.php');exit;}
+$statusFilter=$_GET['status']??'pending';$where=$statusFilter?"WHERE g.status=?":"";$params=$statusFilter?[$statusFilter]:[];
+$stmt=$db->prepare("SELECT g.*,u.name as uploader_name FROM gallery_items g LEFT JOIN users u ON g.uploaded_by=u.id $where ORDER BY g.created_at DESC");$stmt->execute($params);$items=$stmt->fetchAll();
+require_once __DIR__.'/../includes/header.php';?>
+<ul class="nav nav-pills mb-3"><?php foreach(['pending'=>'warning','approved'=>'success','rejected'=>'danger',''=>'secondary'] as $s=>$c):?><li class="nav-item"><a href="/admin/gallery.php?status=<?=$s?>" class="nav-link <?=$statusFilter===$s?'active':''?> btn-sm"><?=$s?ucfirst($s):'All'?></a></li><?php endforeach;?></ul>
+<div class="row g-3"><?php if(empty($items)):?><div class="col-12"><div class="card border-0 rounded-3"><div class="card-body text-center text-muted py-5">No items</div></div></div>
+<?php else:foreach($items as $g):?><div class="col-6 col-md-4 col-lg-3"><div class="card border-0 rounded-3 h-100"><img src="<?=e($g['file_path'])?>" class="card-img-top" style="height:160px;object-fit:cover;border-radius:12px 12px 0 0"><div class="card-body p-2"><h6 class="mb-1" style="font-size:.85rem"><?=e($g['title'])?></h6><small class="text-muted"><?=e($g['uploader_name']??'?')?> · <?=e($g['category'])?></small><div class="mt-2 d-flex gap-1">
+<?php if($g['status']==='pending'):?><form method="POST"><input type="hidden" name="id" value="<?=$g['id']?>"><input type="hidden" name="action" value="approved"><?=csrfField()?><button class="btn btn-sm btn-success py-0 px-2"><i class="bi bi-check"></i></button></form><form method="POST"><input type="hidden" name="id" value="<?=$g['id']?>"><input type="hidden" name="action" value="rejected"><?=csrfField()?><button class="btn btn-sm btn-danger py-0 px-2"><i class="bi bi-x"></i></button></form><?php endif;?>
+<form method="POST"><input type="hidden" name="id" value="<?=$g['id']?>"><input type="hidden" name="action" value="delete"><?=csrfField()?><button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="return confirm('Delete?')"><i class="bi bi-trash"></i></button></form></div></div></div></div>
+<?php endforeach;endif;?></div>
+<?php require_once __DIR__.'/../includes/footer.php';?>
