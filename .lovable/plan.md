@@ -1,135 +1,195 @@
 
 
-# Add Bulk Import Feature for Students and Teachers
+# Complete Notifications Management System
 
 ## Overview
-Add an "Import" button next to Export/Add on both the Students and Teachers pages. Clicking it opens a Bootstrap modal popup with:
-- A downloadable sample CSV file
-- A file upload area (CSV only)
-- A progress bar during upload/processing
-- A results summary showing how many records were added, skipped, or failed
+Rebuild the notifications system across all three panels (Admin, Teacher, Public) with a modern UI, rich features, and a new `notification_reads` table for read-tracking. This covers the admin approval workflow, teacher drafting, public popup/page views, and export capabilities.
 
 ---
 
-## 1. Students Page - Import Modal
+## Schema Changes (Migration SQL)
 
-### Button
-Add an "Import" button between Export and Add Student in `admin/students.php` (line 22):
-```php
-<button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-  <i class="bi bi-upload me-1"></i>Import
-</button>
+Add new columns to the existing `notifications` table and create a new `notification_reads` table:
+
+```sql
+-- Add new columns to notifications
+ALTER TABLE notifications
+  ADD COLUMN priority ENUM('normal','important','urgent') NOT NULL DEFAULT 'normal' AFTER type,
+  ADD COLUMN target_audience ENUM('all','students','teachers','parents','class','section') NOT NULL DEFAULT 'all' AFTER priority,
+  ADD COLUMN target_class VARCHAR(20) DEFAULT NULL AFTER target_audience,
+  ADD COLUMN target_section VARCHAR(10) DEFAULT NULL AFTER target_class,
+  ADD COLUMN reject_reason TEXT DEFAULT NULL AFTER approved_at,
+  ADD COLUMN schedule_at DATETIME DEFAULT NULL AFTER reject_reason,
+  ADD COLUMN is_pinned TINYINT(1) NOT NULL DEFAULT 0 AFTER schedule_at,
+  ADD COLUMN show_popup TINYINT(1) NOT NULL DEFAULT 0 AFTER is_pinned,
+  ADD COLUMN show_banner TINYINT(1) NOT NULL DEFAULT 0 AFTER show_popup,
+  ADD COLUMN show_marquee TINYINT(1) NOT NULL DEFAULT 0 AFTER show_banner,
+  ADD COLUMN show_dashboard TINYINT(1) NOT NULL DEFAULT 0 AFTER show_marquee,
+  ADD COLUMN view_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER show_dashboard,
+  ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0 AFTER view_count,
+  ADD COLUMN deleted_at DATETIME DEFAULT NULL AFTER is_deleted,
+  ADD COLUMN deleted_by INT UNSIGNED DEFAULT NULL AFTER deleted_at;
+
+-- Read tracking table
+CREATE TABLE notification_reads (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  notification_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY unique_read (notification_id, user_id),
+  CONSTRAINT fk_nread_notif FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE,
+  CONSTRAINT fk_nread_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### Modal Content
-- **Step 1 (Upload)**: Instructions, download sample CSV link, file input for CSV, Upload button
-- **Step 2 (Progress)**: Progress bar with percentage, status text ("Processing row 5 of 120...")
-- **Step 3 (Results)**: Summary card showing added/skipped/failed counts with a table of errors if any
-
-### Sample CSV
-The "Download Sample" link triggers a PHP endpoint that generates a CSV with headers:
-`admission_no, name, father_name, mother_name, dob, gender, class, section, roll_no, phone, email, address, blood_group, category, aadhar_no, status, admission_date`
-
-And 2 example rows.
-
-### Backend Processing (`admin/import-students.php`)
-- Accepts POST with CSV file upload
-- Validates CSV headers match expected columns
-- Loops through rows, inserting each student with try-catch for duplicates
-- Returns JSON response: `{ total: 50, added: 45, skipped: 3, failed: 2, errors: ["Row 5: Duplicate admission_no TEST123"] }`
-- Uses transactions for safety
-
-### JavaScript (AJAX Upload with Progress)
-- FormData upload via `fetch()` to `import-students.php`
-- Since CSV processing is server-side, progress is simulated: starts at 10% on upload, jumps to 90% when response arrives, 100% on complete
-- On success, parses JSON response and displays the results summary
-- On error, shows error message
+Also update `schema.sql` to include these columns for fresh installs.
 
 ---
 
-## 2. Teachers Page - Import Modal
+## 1. Admin Notifications Page (`admin/notifications.php`) -- Full Rewrite
 
-Same pattern as students but with teacher-specific columns:
-`employee_id, name, email, phone, subject, qualification, experience_years, dob, gender, address, joining_date, status`
+### Header Section
+- Page title "Notifications" with a badge counter showing pending count
+- Action buttons: "Create New" (modal), "Export" dropdown (CSV)
+- Search input for filtering by title
 
-### Backend Processing (`admin/import-teachers.php`)
-- Same pattern as student import
-- Also creates a user account for teachers with email (password: Teacher@123)
+### Tab Navigation
+- **Pending** (with count badge, yellow) | **Approved** (green) | **Rejected** (red) | **Pinned** (blue) | **All**
+- Active tab highlighted with pill style
+
+### Table Columns
+- Checkbox (bulk select)
+- Title (with pinned icon if pinned, truncated)
+- Priority (color-coded pill: Normal=gray, Important=orange, Urgent=red)
+- Type (badge: general, academic, exam, etc.)
+- Posted By (name + role badge)
+- Target Audience (icon + label)
+- Visibility icons (popup, banner, marquee, dashboard -- filled if active)
+- Status (pill: Pending=warning, Approved=success, Rejected=danger)
+- View Count
+- Posted Date
+- Actions dropdown: View, Edit, Approve, Reject, Pin/Unpin, Delete
+
+### Modal: View Notification
+- Full content display with metadata (posted by, date, type, target, priority)
+- Approval info if approved (who, when)
+- Rejection reason if rejected
+
+### Modal: Edit Notification
+- Editable fields: Title, Content, Type, Priority, Target Audience (with conditional class/section selectors), Schedule date/time, Expiry date
+- Visibility toggles: Website Popup, Notifications Page, Home Banner, Marquee, Dashboard Alert
+- Save button
+
+### Modal: Reject with Reason
+- Textarea for rejection reason
+- Submit button
+
+### Modal: Create New Notification (Admin direct post)
+- Same form as Edit but creates with status='approved' directly
+- All fields available
+
+### Bulk Actions
+- Select all checkbox in header
+- Bulk approve, bulk reject, bulk delete buttons
+
+### POST Handler Actions
+- `approve` -- set status=approved, approved_by, approved_at, is_public=1
+- `reject` -- set status=rejected, store reject_reason
+- `delete` -- soft delete (is_deleted=1, deleted_at, deleted_by)
+- `pin` / `unpin` -- toggle is_pinned
+- `edit` -- update all editable fields
+- `create` -- insert new notification as approved
+- `bulk_approve`, `bulk_reject`, `bulk_delete`
+- `export` -- generate CSV download
+
+### Pagination
+- Use existing `paginate()` and `paginationHtml()` helpers, 20 per page
 
 ---
 
-## 3. Sample CSV Download Endpoints
+## 2. Teacher Post Notification (`teacher/post-notification.php`) -- Enhanced
 
-### `admin/sample-students-csv.php`
-Generates and streams a CSV file with proper headers and 2 example rows.
+### Left Column: Create Form (Enhanced)
+- Title (required)
+- Content (required, textarea)
+- Type dropdown (General, Academic, Exam, Event, Holiday, Urgent)
+- Priority (Normal, Important, Urgent) -- new radio buttons
+- Target Audience (All, Students, Teachers, Parents, Class, Section) -- new dropdown
+  - If "Class" selected: show class input
+  - If "Section" selected: show class + section inputs
+- Attachment upload (optional, max 5MB, PDF/DOC/IMG)
+- "Show on public website" checkbox
+- Submit for Approval button
 
-### `admin/sample-teachers-csv.php`
-Same for teachers with teacher-specific columns.
+### Right Column: My Submissions (Enhanced)
+- Add priority column with color pills
+- Add target audience column
+- Add a "View" button to see full content + rejection reason if rejected
+- Keep pagination
+
+---
+
+## 3. Public Notifications Page (`public/notifications.php`) -- Enhanced
+
+### Hero Banner
+- Keep existing gradient style
+- Add unread badge counter (for logged-in users)
+
+### Filters Bar
+- Filter by Type (dropdown: All, General, Academic, Exam, etc.)
+- Filter by Date range (From / To date inputs)
+- Search by title
+
+### Notification Cards
+- Highlight unread notifications (left blue border + subtle background)
+- Show priority badge for Important/Urgent
+- Pinned notifications shown first with a pin icon
+- "Mark as Read" button (for logged-in users)
+- View count display
+- Click to expand full content (or modal)
+- Respect `expires_at` -- don't show expired notifications
+- Respect `schedule_at` -- don't show before scheduled time
+
+### Notification Popup (for website visitors)
+- On page load, check for notifications with `show_popup=1` and `status='approved'`
+- Show a Bootstrap modal with scrollable content
+- "Open Full Page" button links to `/public/notifications.php`
+- Close button
+- Remember dismissed popups in localStorage to not show again
+
+---
+
+## 4. Export Feature
+
+### CSV Export (in admin page)
+- Export currently filtered notifications as CSV
+- Columns: ID, Title, Type, Priority, Target, Posted By, Status, Created Date, Approved By, Approved Date
+- Triggered via GET parameter `?action=export&status=...`
 
 ---
 
 ## Technical Details
 
-### Files Modified
-1. `php-backend/admin/students.php` -- Add Import button and Import modal HTML/JS
-2. `php-backend/admin/teachers.php` -- Add Import button and Import modal HTML/JS
+### Files to Modify
+1. **`php-backend/schema.sql`** -- Add new columns to notifications table, add notification_reads table
+2. **`php-backend/admin/notifications.php`** -- Complete rewrite with all admin features
+3. **`php-backend/teacher/post-notification.php`** -- Enhanced with priority, target audience, attachment
+4. **`php-backend/public/notifications.php`** -- Enhanced with filters, read tracking, popup
 
-### Files Created
-3. `php-backend/admin/import-students.php` -- Backend CSV processing endpoint (returns JSON)
-4. `php-backend/admin/import-teachers.php` -- Backend CSV processing endpoint (returns JSON)
-5. `php-backend/admin/sample-students-csv.php` -- Sample CSV download
-6. `php-backend/admin/sample-teachers-csv.php` -- Sample CSV download
+### Files to Create
+5. **`php-backend/admin/notification-export.php`** -- CSV export endpoint
 
-### Import Modal UI Flow
+### Key Patterns Followed
+- Uses existing `requireAdmin()`, `requireTeacher()`, `verifyCsrf()`, `csrfField()` auth patterns
+- Uses existing `paginate()` and `paginationHtml()` helpers
+- Uses existing `auditLog()` for all actions
+- Uses existing `e()` for output escaping
+- Uses existing `setFlash()` / `getFlash()` for user feedback
+- Bootstrap 5.3 modals, pills, badges consistent with existing UI
+- Soft delete pattern (is_deleted flag) instead of hard delete
+- All queries use PDO prepared statements
 
-```text
-+----------------------------------+
-|  Import Students           [X]   |
-|----------------------------------|
-|  Step 1: Upload                  |
-|                                  |
-|  [Download Sample CSV]           |
-|                                  |
-|  Instructions:                   |
-|  - CSV format only               |
-|  - First row must be headers     |
-|  - admission_no & name required  |
-|                                  |
-|  [Choose File...]                |
-|                                  |
-|  [Cancel]  [Upload & Process]    |
-+----------------------------------+
-
-         ↓ (after upload)
-
-+----------------------------------+
-|  Import Students           [X]   |
-|----------------------------------|
-|  Step 2: Processing...           |
-|                                  |
-|  ████████████░░░░░░  75%         |
-|  Processing records...           |
-+----------------------------------+
-
-         ↓ (after complete)
-
-+----------------------------------+
-|  Import Students           [X]   |
-|----------------------------------|
-|  Step 3: Results                 |
-|                                  |
-|  [✓] 45 Added                    |
-|  [!] 3  Skipped (duplicates)     |
-|  [✗] 2  Failed                   |
-|                                  |
-|  Errors:                         |
-|  Row 5: Invalid date format      |
-|  Row 12: Missing admission_no    |
-|                                  |
-|  [Close]  [Import More]          |
-+----------------------------------+
-```
-
-### No Schema Changes Required
-Uses existing `students` and `teachers` tables as-is.
+### Migration Note
+The ALTER TABLE statements should be run on the production database before deploying the new code. They are backward-compatible (all new columns have defaults) so existing data won't break.
 
