@@ -1,132 +1,106 @@
 
 
-# Complete PHP + MySQL School Management System Rebuild
+# Enhanced Students, Teachers & Settings Pages
 
 ## Overview
-Rebuild the entire `php-backend/` directory with a modern, production-ready school management system featuring split-screen auth pages, Chart.js dashboard with trends, audit logs viewer, and your real database credentials -- all ready to upload directly to cPanel at `jnvschool.awayindia.com`.
+Upgrade the Students and Teachers list pages with a "View" button that opens a Bootstrap modal popup showing the full profile (including photo), and enhance the Settings page with additional management features like logo upload, social media links, SMS/WhatsApp config, backup, and user profile editing.
 
 ---
 
-## Design Decisions
+## 1. Students Page (`admin/students.php`) Enhancements
 
-### Auth Pages (Split Screen)
-- Left panel: school branding with gradient background, school name, tagline, and decorative illustration
-- Right panel: clean login/forgot-password/reset-password form
-- Responsive: on mobile, left panel becomes a top banner
+### New "View" Button in Actions Column
+- Add an eye icon button next to Edit and Delete
+- Clicking it opens a Bootstrap modal with all student details
 
-### Dashboard
-- 6 KPI cards with icons (matching the React layout: Students, Teachers, Pending Admissions, Pending Notifications, Pending Gallery, Upcoming Events)
-- Chart.js bar/line chart showing monthly admissions and attendance trends for the current academic year
-- Recent Activity table (last 15 audit logs)
-- Quick Actions panel with icon links to common tasks
-- Calendar showing today's date and upcoming events
+### Student Profile Modal
+- **Header**: Profile photo (or default avatar icon), student name, admission number, status badge
+- **Personal Info Section**: Father's name, Mother's name, DOB, Gender, Blood Group, Category, Aadhar
+- **Academic Info Section**: Class-Section, Roll No, Admission Date
+- **Contact Section**: Phone, Email, Address
+- **Footer**: Edit button (links to student-form.php) and Close button
+- Modal is populated via data attributes on the view button (no AJAX needed -- all data is already fetched in the PHP query)
 
-### All Admin & Teacher Pages
-- Every existing page will be rewritten with the updated header/footer, consistent Bootstrap 5.3 styling, and working CRUD
-- New page: `admin/audit-logs.php` with search, date filter, and pagination
-
----
-
-## Database
-
-### Updated schema.sql
-- Same 10 tables as current (users, students, teachers, admissions, notifications, gallery_items, events, attendance, exam_results, audit_logs, settings)
-- Add a `home_slider` table (exists in the main schema.sql but missing from php-backend)
-- Default admin user: `admin@school.com` / `Admin@123`
-- Default school settings pre-filled for JNV School
-
-### db.php
-- Will include your production credentials:
-  - Host: localhost
-  - DB: yshszsos_jnvschool
-  - User: yshszsos_Admin
-  - Password: (your provided password)
+### Additional Improvements
+- Add a "Print" button in the modal to print student profile
+- Show photo thumbnail in the table row (small 32px avatar next to name)
+- Add export button at top (link to reports page)
 
 ---
 
-## Files to Create/Rewrite (30+ files)
+## 2. Teachers Page (`admin/teachers.php`) Enhancements
 
-### Config
-1. `config/db.php` -- production credentials
-2. `config/mail.php` -- SMTP config with jnvschool.awayindia.com domain
+### Same Modal Pattern as Students
+- Add "View" eye icon button in Actions column
+- Bootstrap modal showing full teacher profile:
+  - **Header**: Photo/avatar, name, employee ID, status badge
+  - **Professional Info**: Subject, Qualification, Experience, Joining Date
+  - **Personal Info**: DOB, Gender, Phone, Email, Address
+  - **Footer**: Edit and Close buttons
 
-### Core Includes
-3. `includes/auth.php` -- session management, CSRF, role checks, audit logging, flash messages (enhanced)
-4. `includes/header.php` -- modern sidebar with active state detection, mobile hamburger menu, top bar with user dropdown, school branding from DB
-5. `includes/footer.php` -- close layout + Bootstrap JS + Chart.js CDN
+### Additional Improvements
+- Show small photo thumbnail next to name in table (if photo exists)
+- Add photo upload support to `teacher-form.php` (currently missing -- teachers table has a `photo` column in schema but the form doesn't handle it)
 
-### Auth Pages (Split Screen Design)
-6. `login.php` -- split-screen, CSRF, session regeneration
-7. `forgot-password.php` -- split-screen, email reset link
-8. `reset-password.php` -- split-screen, token validation
-9. `logout.php` -- session destroy + audit log
-10. `index.php` -- redirect to dashboard or login
+---
 
-### Admin Pages
-11. `admin/dashboard.php` -- KPI cards, Chart.js trends, recent activity, quick actions
-12. `admin/students.php` -- list with search, status/class filters, pagination, delete
-13. `admin/student-form.php` -- add/edit with all fields, photo upload
-14. `admin/teachers.php` -- list with search, pagination, delete
-15. `admin/teacher-form.php` -- add/edit with all fields
-16. `admin/admissions.php` -- list with status tabs, approve/reject/waitlist
-17. `admin/notifications.php` -- list with approve/reject, delete
-18. `admin/gallery.php` -- list with approve/reject, delete, image preview
-19. `admin/events.php` -- inline add/edit form + list
-20. `admin/reports.php` -- CSV export for students, teachers, admissions, attendance
-21. `admin/settings.php` -- school info, create user, user list
-22. `admin/audit-logs.php` -- NEW: searchable, date-filterable, paginated audit log viewer
+## 3. Settings Page (`admin/settings.php`) Enhancements
 
-### Teacher Pages
-23. `teacher/dashboard.php` -- welcome card, KPI stats
-24. `teacher/post-notification.php` -- form + my submissions list
-25. `teacher/upload-gallery.php` -- file upload form
-26. `teacher/attendance.php` -- class/date picker, mark attendance
-27. `teacher/exams.php` -- class picker, enter marks with auto-grading
+### New Sections (in addition to existing School Info and User Management):
 
-### Public Pages
-28. `public/notifications.php` -- approved public notifications
-29. `public/gallery.php` -- approved gallery grid with lightbox
-30. `public/events.php` -- upcoming public events
-31. `public/admission-form.php` -- online application
+**School Logo Upload**
+- File upload field for school logo
+- Stored in `uploads/logo/` directory
+- Saved as `school_logo` setting key
+- Preview of current logo shown
 
-### Root Files
-32. `schema.sql` -- complete database schema with home_slider table
-33. `README.md` -- deployment guide for cPanel
-34. `.htaccess` -- security rules (block config/, includes/ access)
+**Social Media Links**
+- Fields for: Facebook URL, Twitter/X URL, Instagram URL, YouTube URL, LinkedIn URL
+- Stored as settings keys (`social_facebook`, `social_twitter`, etc.)
+
+**SMS/WhatsApp Configuration**
+- WhatsApp API number field
+- SMS gateway API key field
+- Stored as settings keys
+
+**System Information Card**
+- Show PHP version, MySQL version, disk usage
+- Show total students, teachers, users count
+- Last backup date (if tracked)
+
+**User Management Improvements**
+- Add "Edit User" capability (inline modal to change name, role, toggle active/inactive)
+- Show active/inactive status with toggle switch
+- Password reset button for each user (resets to default `Reset@123`)
+
+**Danger Zone**
+- Clear all audit logs (with confirmation)
+- Reset settings to default
+
+---
+
+## 4. Teacher Form (`admin/teacher-form.php`) Update
+- Add photo upload field (matching student form pattern)
+- Upload to `uploads/photos/` with `teacher_` prefix
+- Include `photo` in the INSERT/UPDATE queries
 
 ---
 
 ## Technical Details
 
-### Header/Sidebar Improvements
-- Collapsible sidebar with hamburger toggle on mobile
-- Active link highlighting based on current URL path
-- Top bar showing logged-in user name, role badge, and logout button
-- School name/logo pulled dynamically from settings table
+### Modal Implementation
+- Uses Bootstrap 5.3 native modal component (already loaded via CDN in footer)
+- Data passed via `data-*` attributes on the view button, then JavaScript populates the modal fields
+- No additional AJAX calls needed -- all record data is in the PHP-rendered page
+- Photo displayed with fallback to a Bootstrap Icons person-circle icon if no photo exists
 
-### Dashboard Chart Implementation
-- Chart.js loaded via CDN (no npm needed)
-- Two datasets: Monthly Admissions count and Monthly Attendance rate
-- Data queried via PHP `GROUP BY MONTH()` for the current year
-- Responsive canvas that works on all screen sizes
+### Files Modified
+1. `php-backend/admin/students.php` -- Add view modal, photo thumbnail in table, view button
+2. `php-backend/admin/teachers.php` -- Add view modal, photo thumbnail in table, view button
+3. `php-backend/admin/teacher-form.php` -- Add photo upload field and handling
+4. `php-backend/admin/settings.php` -- Add logo upload, social links, SMS config, system info, enhanced user management
 
-### Audit Logs Page
-- Search by action, user name, or entity type
-- Date range filter (from/to)
-- Pagination (25 per page)
-- Shows: User, Action, Entity, Details, IP Address, Timestamp
-
-### Security
-- All forms use CSRF tokens
-- `password_hash()` / `password_verify()` for auth
-- `session_regenerate_id(true)` on login
-- All output escaped with `htmlspecialchars()`
-- `.htaccess` to deny direct access to config/ and includes/
-- Prepared statements (PDO) for all queries
-- Role-based middleware on every admin/teacher page
-
-### Photo Upload Support
-- Student form gets file upload for photo
-- Uploads stored in `uploads/photos/` with unique filenames
-- Max 5MB, accepts jpg/jpeg/png/webp
-
+### No Schema Changes Required
+- All new settings use the existing `settings` key-value table
+- Teachers `photo` column already exists in the schema
+- No new tables needed
