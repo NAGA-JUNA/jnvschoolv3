@@ -1,106 +1,98 @@
 
 
-# Enhanced Students, Teachers & Settings Pages
+# Fix Image Display, Print Layout, and Header Date/Time + Cleanup
 
 ## Overview
-Upgrade the Students and Teachers list pages with a "View" button that opens a Bootstrap modal popup showing the full profile (including photo), and enhance the Settings page with additional management features like logo upload, social media links, SMS/WhatsApp config, backup, and user profile editing.
+Fix three bugs in the student profile modal (broken photo, print layout), add date/time to the header, and remove legacy files outside `php-backend/`.
 
 ---
 
-## 1. Students Page (`admin/students.php`) Enhancements
+## 1. Fix Profile Photo in Student Modal
 
-### New "View" Button in Actions Column
-- Add an eye icon button next to Edit and Delete
-- Clicking it opens a Bootstrap modal with all student details
+**Problem**: The photo `data-photo` attribute stores `/uploads/photos/filename.jpg` but the student-form saves the full path including `/uploads/photos/` in the database. When the table row builds `$photoUrl`, it prepends `/uploads/photos/` again if `$s['photo']` already contains the full path, resulting in a double-path like `/uploads/photos//uploads/photos/file.jpg`.
 
-### Student Profile Modal
-- **Header**: Profile photo (or default avatar icon), student name, admission number, status badge
-- **Personal Info Section**: Father's name, Mother's name, DOB, Gender, Blood Group, Category, Aadhar
-- **Academic Info Section**: Class-Section, Roll No, Admission Date
-- **Contact Section**: Phone, Email, Address
-- **Footer**: Edit button (links to student-form.php) and Close button
-- Modal is populated via data attributes on the view button (no AJAX needed -- all data is already fetched in the PHP query)
+**Fix in `admin/students.php`**:
+- Change line 30 from:
+  ```php
+  $photoUrl = $s['photo'] ? '/uploads/photos/'.$s['photo'] : '';
+  ```
+  to:
+  ```php
+  $photoUrl = $s['photo'] ? (str_starts_with($s['photo'], '/uploads/') ? $s['photo'] : '/uploads/photos/'.$s['photo']) : '';
+  ```
+- This handles both cases: if the photo column stores just the filename or the full path.
 
-### Additional Improvements
-- Add a "Print" button in the modal to print student profile
-- Show photo thumbnail in the table row (small 32px avatar next to name)
-- Add export button at top (link to reports page)
+**Same fix needed in `admin/teachers.php`** for teacher photos.
 
 ---
 
-## 2. Teachers Page (`admin/teachers.php`) Enhancements
+## 2. Fix Print Layout
 
-### Same Modal Pattern as Students
-- Add "View" eye icon button in Actions column
-- Bootstrap modal showing full teacher profile:
-  - **Header**: Photo/avatar, name, employee ID, status badge
-  - **Professional Info**: Subject, Qualification, Experience, Joining Date
-  - **Personal Info**: DOB, Gender, Phone, Email, Address
-  - **Footer**: Edit and Close buttons
+**Problem**: `window.print()` prints the entire page (sidebar, top bar, table) instead of just the modal content.
 
-### Additional Improvements
-- Show small photo thumbnail next to name in table (if photo exists)
-- Add photo upload support to `teacher-form.php` (currently missing -- teachers table has a `photo` column in schema but the form doesn't handle it)
+**Fix**: Add a `@media print` CSS block in `students.php` (and `teachers.php`) that:
+- Hides the sidebar, top bar, overlay, and main page content
+- Shows only the modal content full-width
+- Removes the modal backdrop
+- Ensures the modal body is visible and properly laid out
 
----
-
-## 3. Settings Page (`admin/settings.php`) Enhancements
-
-### New Sections (in addition to existing School Info and User Management):
-
-**School Logo Upload**
-- File upload field for school logo
-- Stored in `uploads/logo/` directory
-- Saved as `school_logo` setting key
-- Preview of current logo shown
-
-**Social Media Links**
-- Fields for: Facebook URL, Twitter/X URL, Instagram URL, YouTube URL, LinkedIn URL
-- Stored as settings keys (`social_facebook`, `social_twitter`, etc.)
-
-**SMS/WhatsApp Configuration**
-- WhatsApp API number field
-- SMS gateway API key field
-- Stored as settings keys
-
-**System Information Card**
-- Show PHP version, MySQL version, disk usage
-- Show total students, teachers, users count
-- Last backup date (if tracked)
-
-**User Management Improvements**
-- Add "Edit User" capability (inline modal to change name, role, toggle active/inactive)
-- Show active/inactive status with toggle switch
-- Password reset button for each user (resets to default `Reset@123`)
-
-**Danger Zone**
-- Clear all audit logs (with confirmation)
-- Reset settings to default
+```css
+@media print {
+  .sidebar, .sidebar-overlay, .top-bar, .content-area > *:not(.modal) { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+  .modal { position: static !important; display: block !important; }
+  .modal-dialog { max-width: 100% !important; margin: 0 !important; }
+  .modal-content { border: none !important; box-shadow: none !important; }
+  .modal-footer { display: none !important; }
+  .modal-backdrop { display: none !important; }
+}
+```
 
 ---
 
-## 4. Teacher Form (`admin/teacher-form.php`) Update
-- Add photo upload field (matching student form pattern)
-- Upload to `uploads/photos/` with `teacher_` prefix
-- Include `photo` in the INSERT/UPDATE queries
+## 3. Add Date/Time to Header
+
+**Fix in `includes/header.php`**: Add a date/time display in the top bar between the page title and user info:
+```php
+<span class="text-muted" style="font-size:0.8rem;">
+  <i class="bi bi-calendar3 me-1"></i><?= date('d M Y') ?>
+  <i class="bi bi-clock ms-2 me-1"></i><?= date('h:i A') ?>
+</span>
+```
 
 ---
 
-## Technical Details
+## 4. Remove Legacy Files
 
-### Modal Implementation
-- Uses Bootstrap 5.3 native modal component (already loaded via CDN in footer)
-- Data passed via `data-*` attributes on the view button, then JavaScript populates the modal fields
-- No additional AJAX calls needed -- all record data is in the PHP-rendered page
-- Photo displayed with fallback to a Bootstrap Icons person-circle icon if no photo exists
+Delete all non-`php-backend` project files that belong to the old React/REST API system:
 
-### Files Modified
-1. `php-backend/admin/students.php` -- Add view modal, photo thumbnail in table, view button
-2. `php-backend/admin/teachers.php` -- Add view modal, photo thumbnail in table, view button
-3. `php-backend/admin/teacher-form.php` -- Add photo upload field and handling
-4. `php-backend/admin/settings.php` -- Add logo upload, social links, SMS config, system info, enhanced user management
+**Directories to remove**:
+- `api/` (old REST API)
+- `src/` (old React frontend)
+- `public/` (old React public assets)
+- `.lovable/` (old plan data)
 
-### No Schema Changes Required
-- All new settings use the existing `settings` key-value table
-- Teachers `photo` column already exists in the schema
-- No new tables needed
+**Root files to remove**:
+- `schema.sql` (duplicate; the one in php-backend is the canonical copy)
+- `BACKEND-SETUP-README.md`
+- `README.md` (root level; php-backend has its own)
+- `index.html`, `vite.config.ts`, `tsconfig*.json`, `tailwind.config.ts`, `postcss.config.js`, `eslint.config.js`, `vitest.config.ts`, `components.json`
+- `package.json`, `package-lock.json`, `bun.lockb`, `bun.lock`
+
+**Keep**: `php-backend/` folder (the entire working system) and `.gitignore`.
+
+---
+
+## Files Modified
+1. `php-backend/admin/students.php` -- fix photo path, add print CSS
+2. `php-backend/admin/teachers.php` -- fix photo path, add print CSS
+3. `php-backend/includes/header.php` -- add date and time display
+
+## Files Deleted
+- `api/` directory (all files)
+- `src/` directory (all files)
+- `public/` directory (all files)
+- `.lovable/` directory
+- Root-level config and build files (package.json, vite.config.ts, etc.)
+- Root-level schema.sql, README.md, BACKEND-SETUP-README.md, index.html
+
