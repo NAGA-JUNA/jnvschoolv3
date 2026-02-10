@@ -27,7 +27,7 @@ require_once __DIR__.'/../includes/header.php';
 <div class="card border-0 rounded-3"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Adm No</th><th>Name</th><th>Class</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>
 <?php if(empty($students)):?><tr><td colspan="6" class="text-center text-muted py-4">No students</td></tr>
 <?php else:foreach($students as $s):
-  $photoUrl = $s['photo'] ? '/uploads/photos/'.$s['photo'] : '';
+  $photoUrl = $s['photo'] ? (str_starts_with($s['photo'], '/uploads/') ? $s['photo'] : '/uploads/photos/'.$s['photo']) : '';
 ?><tr>
   <td style="font-size:.85rem" class="fw-medium"><?=e($s['admission_no'])?></td>
   <td style="font-size:.85rem">
@@ -142,4 +142,16 @@ document.querySelectorAll('.btn-view-student').forEach(btn => {
   });
 });
 </script>
+<style>
+@media print {
+  .sidebar, .sidebar-overlay, .top-bar, .content-area > *:not(#studentModal) { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+  .modal { position: static !important; display: block !important; }
+  .modal-dialog { max-width: 100% !important; margin: 0 !important; }
+  .modal-content { border: none !important; box-shadow: none !important; }
+  .modal-footer { display: none !important; }
+  .modal-backdrop { display: none !important; }
+  body { background: #fff !important; }
+}
+</style>
 <?php require_once __DIR__.'/../includes/footer.php';?>

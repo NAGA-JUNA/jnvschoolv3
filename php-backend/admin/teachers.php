@@ -14,7 +14,7 @@ require_once __DIR__.'/../includes/header.php';?>
 <div class="card border-0 rounded-3"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Emp ID</th><th>Name</th><th>Subject</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>
 <?php if(empty($teachers)):?><tr><td colspan="6" class="text-center text-muted py-4">No teachers</td></tr>
 <?php else:foreach($teachers as $t):
-  $tPhotoUrl = $t['photo'] ? '/uploads/photos/'.$t['photo'] : '';
+  $tPhotoUrl = $t['photo'] ? (str_starts_with($t['photo'], '/uploads/') ? $t['photo'] : '/uploads/photos/'.$t['photo']) : '';
 ?><tr>
   <td style="font-size:.85rem" class="fw-medium"><?=e($t['employee_id'])?></td>
   <td style="font-size:.85rem">
@@ -116,4 +116,16 @@ document.querySelectorAll('.btn-view-teacher').forEach(btn => {
   });
 });
 </script>
+<style>
+@media print {
+  .sidebar, .sidebar-overlay, .top-bar, .content-area > *:not(#teacherModal) { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+  .modal { position: static !important; display: block !important; }
+  .modal-dialog { max-width: 100% !important; margin: 0 !important; }
+  .modal-content { border: none !important; box-shadow: none !important; }
+  .modal-footer { display: none !important; }
+  .modal-backdrop { display: none !important; }
+  body { background: #fff !important; }
+}
+</style>
 <?php require_once __DIR__.'/../includes/footer.php';?>
