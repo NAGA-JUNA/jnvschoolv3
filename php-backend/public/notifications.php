@@ -1,9 +1,62 @@
 <?php
-require_once __DIR__.'/../includes/auth.php';
+require_once __DIR__ . '/../includes/auth.php';
 $db = getDB();
 $schoolName = getSetting('school_name', 'JNV School');
+$loggedIn = isLoggedIn();
+$userId = currentUserId();
 
-$notifs = $db->query("SELECT title, content, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 50")->fetchAll();
+// Mark as read
+if ($loggedIn && isset($_GET['mark_read']) && is_numeric($_GET['mark_read'])) {
+    try {
+        $db->prepare("INSERT IGNORE INTO notification_reads (notification_id, user_id) VALUES (?, ?)")->execute([(int)$_GET['mark_read'], $userId]);
+    } catch (Exception $e) {}
+    header('Location: /public/notifications.php');
+    exit;
+}
+
+// Increment view count
+if (isset($_GET['view_id']) && is_numeric($_GET['view_id'])) {
+    $db->prepare("UPDATE notifications SET view_count = view_count + 1 WHERE id=?")->execute([(int)$_GET['view_id']]);
+}
+
+// Filters
+$typeFilter = $_GET['type'] ?? '';
+$dateFrom = $_GET['from'] ?? '';
+$dateTo = $_GET['to'] ?? '';
+$searchQ = trim($_GET['q'] ?? '');
+
+$where = "WHERE n.status='approved' AND n.is_public=1 AND n.is_deleted=0 AND (n.schedule_at IS NULL OR n.schedule_at <= NOW()) AND (n.expires_at IS NULL OR n.expires_at >= CURDATE())";
+$params = [];
+
+if ($typeFilter && in_array($typeFilter, ['general','academic','exam','holiday','event','urgent'])) {
+    $where .= " AND n.type=?";
+    $params[] = $typeFilter;
+}
+if ($dateFrom) { $where .= " AND DATE(n.created_at) >= ?"; $params[] = $dateFrom; }
+if ($dateTo) { $where .= " AND DATE(n.created_at) <= ?"; $params[] = $dateTo; }
+if ($searchQ) { $where .= " AND n.title LIKE ?"; $params[] = "%$searchQ%"; }
+
+$stmt = $db->prepare("SELECT n.* FROM notifications n $where ORDER BY n.is_pinned DESC, n.created_at DESC LIMIT 50");
+$stmt->execute($params);
+$notifs = $stmt->fetchAll();
+
+// Get read IDs for logged-in user
+$readIds = [];
+if ($loggedIn && $userId) {
+    $r = $db->prepare("SELECT notification_id FROM notification_reads WHERE user_id=?");
+    $r->execute([$userId]);
+    $readIds = $r->fetchAll(PDO::FETCH_COLUMN);
+}
+
+$unreadCount = 0;
+if ($loggedIn) {
+    $uc = $db->prepare("SELECT COUNT(*) FROM notifications n WHERE n.status='approved' AND n.is_public=1 AND n.is_deleted=0 AND (n.schedule_at IS NULL OR n.schedule_at <= NOW()) AND (n.expires_at IS NULL OR n.expires_at >= CURDATE()) AND n.id NOT IN (SELECT notification_id FROM notification_reads WHERE user_id=?)");
+    $uc->execute([$userId]);
+    $unreadCount = $uc->fetchColumn();
+}
+
+// Popup notifications
+$popupNotifs = $db->query("SELECT id, title, content, type FROM notifications WHERE status='approved' AND is_public=1 AND is_deleted=0 AND show_popup=1 AND (schedule_at IS NULL OR schedule_at <= NOW()) AND (expires_at IS NULL OR expires_at >= CURDATE()) ORDER BY created_at DESC LIMIT 3")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,20 +71,30 @@ $notifs = $db->query("SELECT title, content, type, created_at FROM notifications
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
         .hero-banner { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); color: #fff; padding: 3rem 0; }
-        .notif-card { border: none; border-radius: 12px; transition: transform 0.2s; }
+        .notif-card { border: none; border-radius: 12px; transition: transform 0.2s; border-left: 4px solid transparent; }
         .notif-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+        .notif-card.unread { border-left-color: #3b82f6; background: #eff6ff; }
+        .notif-card.pinned { border-left-color: #f59e0b; }
         .type-badge { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .unread-badge { position: relative; top: -1px; }
     </style>
 </head>
 <body>
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark" style="background:#0f172a;">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/public/notifications.php"><i class="bi bi-mortarboard-fill me-2"></i><?= e($schoolName) ?></a>
+        <a class="navbar-brand fw-bold" href="/"><i class="bi bi-mortarboard-fill me-2"></i><?= e($schoolName) ?></a>
         <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#pubNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="pubNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link active" href="/public/notifications.php">Notifications</a></li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/public/notifications.php">
+                        Notifications
+                        <?php if ($unreadCount > 0): ?>
+                            <span class="badge bg-danger rounded-pill unread-badge"><?= $unreadCount ?></span>
+                        <?php endif; ?>
+                    </a>
+                </li>
                 <li class="nav-item"><a class="nav-link" href="/public/gallery.php">Gallery</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/events.php">Events</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/admission-form.php">Apply Now</a></li>
@@ -44,13 +107,50 @@ $notifs = $db->query("SELECT title, content, type, created_at FROM notifications
 <!-- Hero -->
 <div class="hero-banner">
     <div class="container">
-        <h1 class="fw-bold mb-2"><i class="bi bi-bell-fill me-2"></i>Notifications</h1>
+        <h1 class="fw-bold mb-2">
+            <i class="bi bi-bell-fill me-2"></i>Notifications
+            <?php if ($unreadCount > 0): ?>
+                <span class="badge bg-danger fs-6"><?= $unreadCount ?> new</span>
+            <?php endif; ?>
+        </h1>
         <p class="mb-0 opacity-75">Stay updated with the latest announcements from <?= e($schoolName) ?></p>
     </div>
 </div>
 
-<!-- Content -->
-<div class="container py-4">
+<!-- Filters -->
+<div class="container py-3">
+    <form class="card border-0 shadow-sm mb-3" method="GET">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Search</label>
+                    <input type="text" name="q" class="form-control form-control-sm" placeholder="Search title..." value="<?= e($searchQ) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Type</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                        <?php foreach (['general','academic','exam','event','holiday','urgent'] as $t): ?>
+                            <option value="<?= $t ?>" <?= $typeFilter === $t ? 'selected' : '' ?>><?= ucfirst($t) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">From</label>
+                    <input type="date" name="from" class="form-control form-control-sm" value="<?= e($dateFrom) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">To</label>
+                    <input type="date" name="to" class="form-control form-control-sm" value="<?= e($dateTo) ?>">
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search me-1"></i>Filter</button>
+                    <a href="/public/notifications.php" class="btn btn-outline-secondary btn-sm">Clear</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
     <?php if (empty($notifs)): ?>
         <div class="text-center py-5">
             <i class="bi bi-bell-slash display-1 text-muted"></i>
@@ -60,20 +160,69 @@ $notifs = $db->query("SELECT title, content, type, created_at FROM notifications
         <?php foreach ($notifs as $n):
             $typeColors = ['urgent' => 'danger', 'exam' => 'warning', 'academic' => 'info', 'event' => 'success', 'holiday' => 'purple'];
             $color = $typeColors[$n['type']] ?? 'secondary';
+            $isUnread = $loggedIn && !in_array($n['id'], $readIds);
+            $isPinned = $n['is_pinned'] ?? 0;
+            $prColor = ['normal' => 'secondary', 'important' => 'warning', 'urgent' => 'danger'];
         ?>
-        <div class="card notif-card mb-3">
+        <div class="card notif-card mb-3 <?= $isUnread ? 'unread' : '' ?> <?= $isPinned ? 'pinned' : '' ?>">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="fw-semibold mb-0"><?= e($n['title']) ?></h5>
-                    <span class="badge bg-<?= $color ?> type-badge"><?= e(ucfirst($n['type'])) ?></span>
+                    <div>
+                        <?php if ($isPinned): ?><span class="badge bg-warning-subtle text-warning me-1"><i class="bi bi-pin-fill"></i> Pinned</span><?php endif; ?>
+                        <?php if ($isUnread): ?><span class="badge bg-primary-subtle text-primary me-1">New</span><?php endif; ?>
+                        <h5 class="fw-semibold mb-0 d-inline"><?= e($n['title']) ?></h5>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <?php if (($n['priority'] ?? 'normal') !== 'normal'): ?>
+                            <span class="badge bg-<?= $prColor[$n['priority']] ?>-subtle text-<?= $prColor[$n['priority']] ?> type-badge"><?= ucfirst($n['priority']) ?></span>
+                        <?php endif; ?>
+                        <span class="badge bg-<?= $color ?> type-badge"><?= ucfirst(e($n['type'])) ?></span>
+                    </div>
                 </div>
-                <small class="text-muted"><i class="bi bi-calendar3 me-1"></i><?= date('d M Y, h:i A', strtotime($n['created_at'])) ?></small>
-                <p class="mt-2 mb-0"><?= nl2br(e($n['content'])) ?></p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-calendar3 me-1"></i><?= date('d M Y, h:i A', strtotime($n['created_at'])) ?>
+                        <span class="ms-2"><i class="bi bi-eye me-1"></i><?= $n['view_count'] ?? 0 ?> views</span>
+                    </small>
+                    <div class="d-flex gap-2">
+                        <?php if ($loggedIn && $isUnread): ?>
+                            <a href="/public/notifications.php?mark_read=<?= $n['id'] ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-check2 me-1"></i>Mark Read</a>
+                        <?php endif; ?>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleContent(<?= $n['id'] ?>)"><i class="bi bi-chevron-down"></i></button>
+                    </div>
+                </div>
+                <div class="mt-2 collapse" id="content-<?= $n['id'] ?>">
+                    <hr>
+                    <p class="mb-0" style="white-space:pre-wrap;"><?= nl2br(e($n['content'])) ?></p>
+                    <?php if ($n['attachment'] ?? ''): ?>
+                        <div class="mt-2"><a href="/uploads/documents/<?= e($n['attachment']) ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-paperclip me-1"></i>Attachment</a></div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<!-- Popup Modal -->
+<?php if (!empty($popupNotifs)): ?>
+<div class="modal fade" id="notifPopup" tabindex="-1"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="bi bi-bell-fill me-2"></i>Important Notifications</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <?php foreach ($popupNotifs as $pn): ?>
+            <div class="mb-3 pb-3 border-bottom">
+                <h6 class="fw-bold"><?= e($pn['title']) ?></h6>
+                <span class="badge bg-<?= ($typeColors[$pn['type']] ?? 'secondary') ?> mb-2"><?= ucfirst(e($pn['type'])) ?></span>
+                <p class="mb-0 small"><?= nl2br(e(substr($pn['content'], 0, 200))) ?><?= strlen($pn['content']) > 200 ? '...' : '' ?></p>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <div class="modal-footer">
+        <a href="/public/notifications.php" class="btn btn-primary btn-sm"><i class="bi bi-arrow-right me-1"></i>View All</a>
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+    </div>
+</div></div></div>
+<?php endif; ?>
 
 <!-- Footer -->
 <footer class="bg-dark text-white py-4 mt-5">
@@ -84,5 +233,26 @@ $notifs = $db->query("SELECT title, content, type, created_at FROM notifications
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleContent(id) {
+    const el = document.getElementById('content-' + id);
+    if (el) new bootstrap.Collapse(el, {toggle: true});
+}
+
+// Show popup if not dismissed
+<?php if (!empty($popupNotifs)): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    const popupIds = <?= json_encode(array_column($popupNotifs, 'id')) ?>;
+    const dismissKey = 'notif_popup_dismissed_' + popupIds.join('_');
+    if (!localStorage.getItem(dismissKey)) {
+        const m = new bootstrap.Modal(document.getElementById('notifPopup'));
+        m.show();
+        document.getElementById('notifPopup').addEventListener('hidden.bs.modal', function() {
+            localStorage.setItem(dismissKey, '1');
+        });
+    }
+});
+<?php endif; ?>
+</script>
 </body>
 </html>

@@ -131,14 +131,28 @@ CREATE TABLE `notifications` (
   `title` VARCHAR(200) NOT NULL,
   `content` TEXT NOT NULL,
   `type` ENUM('general','academic','exam','holiday','event','urgent') NOT NULL DEFAULT 'general',
-  `target` ENUM('all','students','teachers','parents') NOT NULL DEFAULT 'all',
+  `priority` ENUM('normal','important','urgent') NOT NULL DEFAULT 'normal',
+  `target_audience` ENUM('all','students','teachers','parents','class','section') NOT NULL DEFAULT 'all',
+  `target_class` VARCHAR(20) DEFAULT NULL,
+  `target_section` VARCHAR(10) DEFAULT NULL,
   `attachment` VARCHAR(255) DEFAULT NULL,
   `is_public` TINYINT(1) NOT NULL DEFAULT 0,
   `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   `posted_by` INT UNSIGNED DEFAULT NULL,
   `approved_by` INT UNSIGNED DEFAULT NULL,
   `approved_at` DATETIME DEFAULT NULL,
+  `reject_reason` TEXT DEFAULT NULL,
+  `schedule_at` DATETIME DEFAULT NULL,
   `expires_at` DATE DEFAULT NULL,
+  `is_pinned` TINYINT(1) NOT NULL DEFAULT 0,
+  `show_popup` TINYINT(1) NOT NULL DEFAULT 0,
+  `show_banner` TINYINT(1) NOT NULL DEFAULT 0,
+  `show_marquee` TINYINT(1) NOT NULL DEFAULT 0,
+  `show_dashboard` TINYINT(1) NOT NULL DEFAULT 0,
+  `view_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `deleted_at` DATETIME DEFAULT NULL,
+  `deleted_by` INT UNSIGNED DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -147,6 +161,20 @@ CREATE TABLE `notifications` (
   KEY `approved_by` (`approved_by`),
   CONSTRAINT `fk_notif_poster` FOREIGN KEY (`posted_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_notif_approver` FOREIGN KEY (`approved_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Notification Read Tracking
+-- --------------------------------------------------------
+CREATE TABLE `notification_reads` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `notification_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED NOT NULL,
+  `read_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_read` (`notification_id`, `user_id`),
+  CONSTRAINT `fk_nread_notif` FOREIGN KEY (`notification_id`) REFERENCES `notifications`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_nread_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
