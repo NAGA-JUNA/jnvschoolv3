@@ -153,6 +153,10 @@ function navActive(string $path): string {
             <h5 class="mb-0 fw-semibold" style="font-size: 1.1rem;"><?= e($pageTitle) ?></h5>
         </div>
         <div class="user-info">
+            <span class="text-muted d-none d-md-inline" style="font-size:0.8rem;">
+                <i class="bi bi-calendar3 me-1"></i><?= date('d M Y') ?>
+                <i class="bi bi-clock ms-2 me-1"></i><span id="headerClock"><?= date('h:i A') ?></span>
+            </span>
             <span class="badge bg-primary-subtle text-primary rounded-pill"><?= e(ucfirst(str_replace('_', ' ', currentRole()))) ?></span>
             <div class="dropdown">
                 <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
