@@ -8,7 +8,10 @@ $stmt=$db->prepare("SELECT * FROM teachers $w ORDER BY created_at DESC LIMIT {$p
 require_once __DIR__.'/../includes/header.php';?>
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
   <span class="text-muted" style="font-size:.85rem"><?=$total?> teacher(s)</span>
-  <a href="/admin/teacher-form.php" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Teacher</a>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importTeacherModal"><i class="bi bi-upload me-1"></i>Import</button>
+    <a href="/admin/teacher-form.php" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Teacher</a>
+  </div>
 </div>
 <div class="card border-0 rounded-3 mb-3"><div class="card-body py-2"><form class="row g-2 align-items-end" method="GET"><div class="col-md-5"><input type="text" name="search" class="form-control form-control-sm" placeholder="Search..." value="<?=e($search)?>"></div><div class="col-md-3"><select name="status" class="form-select form-select-sm"><option value="">All</option><?php foreach(['active','inactive','resigned','retired'] as $st):?><option value="<?=$st?>" <?=$statusFilter===$st?'selected':''?>><?=ucfirst($st)?></option><?php endforeach;?></select></div><div class="col-md-2"><button class="btn btn-sm btn-dark w-100">Filter</button></div><div class="col-md-2"><a href="/admin/teachers.php" class="btn btn-sm btn-outline-secondary w-100">Clear</a></div></form></div></div>
 <div class="card border-0 rounded-3"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Emp ID</th><th>Name</th><th>Subject</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>
@@ -128,4 +131,123 @@ document.querySelectorAll('.btn-view-teacher').forEach(btn => {
   body { background: #fff !important; }
 }
 </style>
+<!-- Import Teacher Modal -->
+<div class="modal fade" id="importTeacherModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content border-0 rounded-3">
+  <div class="modal-header border-0">
+    <h5 class="modal-title fw-bold"><i class="bi bi-upload me-2"></i>Import Teachers</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <div id="t-import-step1">
+      <div class="alert alert-info py-2" style="font-size:.85rem">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>Instructions:</strong>
+        <ul class="mb-0 mt-1 ps-3">
+          <li>CSV format only</li>
+          <li>First row must be column headers</li>
+          <li><strong>employee_id</strong> &amp; <strong>name</strong> are required</li>
+          <li>If email is provided, a login account will be created (password: Teacher@123)</li>
+          <li>Duplicate employee IDs will be skipped</li>
+        </ul>
+      </div>
+      <a href="/admin/sample-teachers-csv.php" class="btn btn-outline-success btn-sm mb-3"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Download Sample CSV</a>
+      <div class="mb-3">
+        <label class="form-label fw-medium">Select CSV File</label>
+        <input type="file" class="form-control" id="tImportFile" accept=".csv">
+      </div>
+    </div>
+    <div id="t-import-step2" class="d-none text-center py-4">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <h6 class="fw-semibold">Processing...</h6>
+      <div class="progress mt-3" style="height:8px"><div class="progress-bar progress-bar-striped progress-bar-animated" id="tImportProgress" style="width:10%"></div></div>
+      <small class="text-muted mt-2 d-block" id="tImportStatusText">Uploading file...</small>
+    </div>
+    <div id="t-import-step3" class="d-none">
+      <div class="text-center mb-3">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:3rem"></i>
+        <h5 class="fw-bold mt-2">Import Complete</h5>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-4"><div class="card border-0 bg-success bg-opacity-10 text-center p-2"><h4 class="mb-0 text-success" id="t-res-added">0</h4><small class="text-muted">Added</small></div></div>
+        <div class="col-4"><div class="card border-0 bg-warning bg-opacity-10 text-center p-2"><h4 class="mb-0 text-warning" id="t-res-skipped">0</h4><small class="text-muted">Skipped</small></div></div>
+        <div class="col-4"><div class="card border-0 bg-danger bg-opacity-10 text-center p-2"><h4 class="mb-0 text-danger" id="t-res-failed">0</h4><small class="text-muted">Failed</small></div></div>
+      </div>
+      <div id="t-res-errors" class="d-none">
+        <h6 class="fw-semibold text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Errors</h6>
+        <div class="border rounded p-2" style="max-height:150px;overflow-y:auto;font-size:.8rem" id="t-res-errors-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer border-0">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="tImportCancelBtn">Cancel</button>
+    <button type="button" class="btn btn-primary btn-sm" id="tImportUploadBtn" disabled><i class="bi bi-upload me-1"></i>Upload &amp; Process</button>
+    <button type="button" class="btn btn-outline-primary btn-sm d-none" id="tImportMoreBtn">Import More</button>
+  </div>
+</div></div></div>
+
+<script>
+(function(){
+  const fileInput = document.getElementById('tImportFile');
+  const uploadBtn = document.getElementById('tImportUploadBtn');
+  const cancelBtn = document.getElementById('tImportCancelBtn');
+  const moreBtn = document.getElementById('tImportMoreBtn');
+  const step1 = document.getElementById('t-import-step1');
+  const step2 = document.getElementById('t-import-step2');
+  const step3 = document.getElementById('t-import-step3');
+  const progress = document.getElementById('tImportProgress');
+
+  fileInput.addEventListener('change', () => { uploadBtn.disabled = !fileInput.files.length; });
+
+  function resetModal() {
+    step1.classList.remove('d-none'); step2.classList.add('d-none'); step3.classList.add('d-none');
+    uploadBtn.classList.remove('d-none'); uploadBtn.disabled = true; moreBtn.classList.add('d-none');
+    cancelBtn.textContent = 'Cancel'; fileInput.value = '';
+    progress.style.width = '10%';
+  }
+
+  document.getElementById('importTeacherModal').addEventListener('hidden.bs.modal', resetModal);
+  moreBtn.addEventListener('click', resetModal);
+
+  uploadBtn.addEventListener('click', function() {
+    if (!fileInput.files.length) return;
+    step1.classList.add('d-none'); step2.classList.remove('d-none');
+    uploadBtn.classList.add('d-none');
+
+    const fd = new FormData();
+    fd.append('csv_file', fileInput.files[0]);
+
+    progress.style.width = '30%';
+    document.getElementById('tImportStatusText').textContent = 'Processing records...';
+
+    let prog = 30;
+    const iv = setInterval(() => { if (prog < 85) { prog += 5; progress.style.width = prog+'%'; } }, 300);
+
+    fetch('/admin/import-teachers.php', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => {
+        clearInterval(iv);
+        progress.style.width = '100%';
+        setTimeout(() => {
+          step2.classList.add('d-none'); step3.classList.remove('d-none');
+          moreBtn.classList.remove('d-none'); cancelBtn.textContent = 'Close';
+          document.getElementById('t-res-added').textContent = data.added || 0;
+          document.getElementById('t-res-skipped').textContent = data.skipped || 0;
+          document.getElementById('t-res-failed').textContent = data.failed || 0;
+          if (data.errors && data.errors.length) {
+            document.getElementById('t-res-errors').classList.remove('d-none');
+            document.getElementById('t-res-errors-list').innerHTML = data.errors.map(e => '<div class="text-danger">'+e+'</div>').join('');
+          } else {
+            document.getElementById('t-res-errors').classList.add('d-none');
+          }
+        }, 500);
+      })
+      .catch(err => {
+        clearInterval(iv);
+        step2.classList.add('d-none'); step1.classList.remove('d-none');
+        uploadBtn.classList.remove('d-none');
+        alert('Import failed: ' + err.message);
+      });
+  });
+})();
+</script>
 <?php require_once __DIR__.'/../includes/footer.php';?>
