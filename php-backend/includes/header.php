@@ -99,7 +99,7 @@ function navActive(string $path): string {
 <nav class="sidebar" id="sidebar">
     <div class="brand">
         <?php if ($schoolLogo): ?>
-            <img src="<?= e($schoolLogo) ?>" alt="Logo">
+            <img src="/uploads/logo/<?= e($schoolLogo) ?>" alt="Logo">
         <?php else: ?>
             <div style="width:40px;height:40px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">
                 <?= strtoupper(substr($schoolName, 0, 1)) ?>
@@ -117,20 +117,35 @@ function navActive(string $path): string {
         <a href="/admin/dashboard.php" class="nav-link <?= navActive('/admin/dashboard') ?>"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
         <a href="/admin/students.php" class="nav-link <?= navActive('/admin/students') ?><?= navActive('/admin/student-form') ?>"><i class="bi bi-mortarboard-fill"></i> Students</a>
         <a href="/admin/teachers.php" class="nav-link <?= navActive('/admin/teachers') ?><?= navActive('/admin/teacher-form') ?>"><i class="bi bi-person-badge-fill"></i> Teachers</a>
+        <?php if (isSuperAdmin() || getSetting('feature_admissions', '1') === '1'): ?>
         <a href="/admin/admissions.php" class="nav-link <?= navActive('/admin/admissions') ?>"><i class="bi bi-file-earmark-plus-fill"></i> Admissions</a>
+        <?php endif; ?>
+        <?php if (isSuperAdmin() || getSetting('feature_notifications', '1') === '1'): ?>
         <a href="/admin/notifications.php" class="nav-link <?= navActive('/admin/notifications') ?>"><i class="bi bi-bell-fill"></i> Notifications</a>
+        <?php endif; ?>
+        <?php if (isSuperAdmin() || getSetting('feature_gallery', '1') === '1'): ?>
         <a href="/admin/gallery.php" class="nav-link <?= navActive('/admin/gallery') ?>"><i class="bi bi-images"></i> Gallery</a>
+        <?php endif; ?>
+        <?php if (isSuperAdmin() || getSetting('feature_events', '1') === '1'): ?>
         <a href="/admin/events.php" class="nav-link <?= navActive('/admin/events') ?>"><i class="bi bi-calendar-event-fill"></i> Events</a>
+        <?php endif; ?>
+        <?php if (isSuperAdmin() || getSetting('feature_slider', '1') === '1'): ?>
         <a href="/admin/slider.php" class="nav-link <?= navActive('/admin/slider') ?>"><i class="bi bi-collection-play-fill"></i> Home Slider</a>
+        <?php endif; ?>
     </div>
     <div class="nav-section">
         <div class="nav-section-title">Reports & Logs</div>
+        <?php if (isSuperAdmin() || getSetting('feature_reports', '1') === '1'): ?>
         <a href="/admin/reports.php" class="nav-link <?= navActive('/admin/reports') ?>"><i class="bi bi-file-earmark-bar-graph-fill"></i> Reports</a>
+        <?php endif; ?>
+        <?php if (isSuperAdmin() || getSetting('feature_audit_logs', '1') === '1'): ?>
         <a href="/admin/audit-logs.php" class="nav-link <?= navActive('/admin/audit-logs') ?>"><i class="bi bi-clock-history"></i> Audit Logs</a>
+        <?php endif; ?>
     </div>
     <div class="nav-section">
         <div class="nav-section-title">Configuration</div>
         <a href="/admin/settings.php" class="nav-link <?= navActive('/admin/settings') ?>"><i class="bi bi-gear-fill"></i> Settings</a>
+        <a href="/admin/support.php" class="nav-link <?= navActive('/admin/support') ?>"><i class="bi bi-headset"></i> Support</a>
     </div>
     <?php else: ?>
     <div class="nav-section">
