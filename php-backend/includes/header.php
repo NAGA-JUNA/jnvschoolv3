@@ -1,67 +1,185 @@
 <?php
+// Header include — requires auth.php already loaded
+$schoolName = getSetting('school_name', 'JNV School');
+$schoolLogo = getSetting('school_logo', '');
+$primaryColor = getSetting('primary_color', '#1e40af');
+$pageTitle = $pageTitle ?? 'Dashboard';
 $flash = getFlash();
-$schoolName = 'School Admin';
-try {
-    $db = getDB();
-    $s = $db->query("SELECT setting_value FROM settings WHERE setting_key='school_name' LIMIT 1");
-    $r = $s->fetch();
-    if ($r) $schoolName = $r['setting_value'];
-} catch (Exception $ex) {}
+
+// Determine active nav
+$currentPath = $_SERVER['REQUEST_URI'] ?? '';
+function navActive(string $path): string {
+    global $currentPath;
+    return str_contains($currentPath, $path) ? 'active' : '';
+}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= e($pageTitle ?? 'Dashboard') ?> — <?= e($schoolName) ?></title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<style>
-  .sidebar{min-height:100vh;background:#1e293b;color:#fff}
-  .sidebar a{color:#cbd5e1;text-decoration:none;padding:10px 20px;display:block}
-  .sidebar a:hover,.sidebar a.active{background:#334155;color:#fff}
-  .content{padding:24px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= e($pageTitle) ?> — <?= e($schoolName) ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: <?= e($primaryColor) ?>;
+            --sidebar-width: 260px;
+        }
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #f1f5f9; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1040;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar .brand {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .sidebar .brand img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+        .sidebar .brand h5 { color: #fff; margin: 0; font-size: 1rem; font-weight: 600; }
+        .sidebar .brand small { color: #94a3b8; font-size: 0.7rem; }
+        .sidebar .nav-section { padding: 0.5rem 0; }
+        .sidebar .nav-section-title { color: #64748b; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.75rem 1.25rem 0.25rem; font-weight: 600; }
+        .sidebar .nav-link {
+            color: #cbd5e1; padding: 0.55rem 1.25rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.75rem;
+            border-radius: 0; transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .sidebar .nav-link.active { color: #fff; background: var(--primary); font-weight: 500; }
+        .sidebar .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; }
+
+        /* Main content */
+        .main-content { margin-left: var(--sidebar-width); min-height: 100vh; }
+        .top-bar {
+            background: #fff; border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 1030;
+        }
+        .top-bar .user-info { display: flex; align-items: center; gap: 0.5rem; }
+        .content-area { padding: 1.5rem; }
+
+        /* Mobile */
+        .sidebar-toggle { display: none; background: none; border: none; font-size: 1.5rem; color: #334155; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1035; }
+        @media (max-width: 991.98px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .sidebar-overlay.show { display: block; }
+            .main-content { margin-left: 0; }
+            .sidebar-toggle { display: inline-block; }
+        }
+
+        /* Cards */
+        .kpi-card { border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+
+        /* Table styles */
+        .table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; }
+        .badge { font-weight: 500; }
+    </style>
 </head>
 <body>
 <?php if (isLoggedIn()): ?>
-<div class="d-flex">
-  <nav class="sidebar d-none d-md-block" style="width:240px">
-    <div class="p-3 fw-bold fs-5"><?= e($schoolName) ?></div>
-    <hr class="border-secondary mx-3">
-    <?php if (isAdmin()): ?>
-      <a href="/admin/dashboard.php" class="<?= str_contains($_SERVER['PHP_SELF'],'admin/dashboard') ? 'active' : '' ?>"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-      <a href="/admin/students.php"><i class="bi bi-people me-2"></i>Students</a>
-      <a href="/admin/teachers.php"><i class="bi bi-person-badge me-2"></i>Teachers</a>
-      <a href="/admin/admissions.php"><i class="bi bi-person-plus me-2"></i>Admissions</a>
-      <a href="/admin/notifications.php"><i class="bi bi-bell me-2"></i>Notifications</a>
-      <a href="/admin/gallery.php"><i class="bi bi-images me-2"></i>Gallery</a>
-      <a href="/admin/events.php"><i class="bi bi-calendar-event me-2"></i>Events</a>
-      <a href="/admin/reports.php"><i class="bi bi-file-earmark-bar-graph me-2"></i>Reports</a>
-      <a href="/admin/settings.php"><i class="bi bi-gear me-2"></i>Settings</a>
-    <?php else: ?>
-      <a href="/teacher/dashboard.php"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-      <a href="/teacher/post-notification.php"><i class="bi bi-megaphone me-2"></i>Post Notification</a>
-      <a href="/teacher/upload-gallery.php"><i class="bi bi-upload me-2"></i>Upload Gallery</a>
-      <a href="/teacher/attendance.php"><i class="bi bi-check2-square me-2"></i>Attendance</a>
-      <a href="/teacher/exams.php"><i class="bi bi-journal-text me-2"></i>Exams</a>
-    <?php endif; ?>
-    <hr class="border-secondary mx-3">
-    <a href="/logout.php"><i class="bi bi-box-arrow-left me-2"></i>Logout</a>
-  </nav>
-  <main class="content flex-grow-1">
-    <?php if ($flash): ?>
-      <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show">
-        <?= e($flash['message']) ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    <?php endif; ?>
-<?php else: ?>
-<div class="container py-4">
-  <?php if ($flash): ?>
-    <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show">
-      <?= e($flash['message']) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<!-- Sidebar Overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+    <div class="brand">
+        <?php if ($schoolLogo): ?>
+            <img src="<?= e($schoolLogo) ?>" alt="Logo">
+        <?php else: ?>
+            <div style="width:40px;height:40px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">
+                <?= strtoupper(substr($schoolName, 0, 1)) ?>
+            </div>
+        <?php endif; ?>
+        <div>
+            <h5><?= e($schoolName) ?></h5>
+            <small>Management System</small>
+        </div>
     </div>
-  <?php endif; ?>
+
+    <?php if (isAdmin()): ?>
+    <div class="nav-section">
+        <div class="nav-section-title">Administration</div>
+        <a href="/admin/dashboard.php" class="nav-link <?= navActive('/admin/dashboard') ?>"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        <a href="/admin/students.php" class="nav-link <?= navActive('/admin/students') ?><?= navActive('/admin/student-form') ?>"><i class="bi bi-mortarboard-fill"></i> Students</a>
+        <a href="/admin/teachers.php" class="nav-link <?= navActive('/admin/teachers') ?><?= navActive('/admin/teacher-form') ?>"><i class="bi bi-person-badge-fill"></i> Teachers</a>
+        <a href="/admin/admissions.php" class="nav-link <?= navActive('/admin/admissions') ?>"><i class="bi bi-file-earmark-plus-fill"></i> Admissions</a>
+        <a href="/admin/notifications.php" class="nav-link <?= navActive('/admin/notifications') ?>"><i class="bi bi-bell-fill"></i> Notifications</a>
+        <a href="/admin/gallery.php" class="nav-link <?= navActive('/admin/gallery') ?>"><i class="bi bi-images"></i> Gallery</a>
+        <a href="/admin/events.php" class="nav-link <?= navActive('/admin/events') ?>"><i class="bi bi-calendar-event-fill"></i> Events</a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Reports & Logs</div>
+        <a href="/admin/reports.php" class="nav-link <?= navActive('/admin/reports') ?>"><i class="bi bi-file-earmark-bar-graph-fill"></i> Reports</a>
+        <a href="/admin/audit-logs.php" class="nav-link <?= navActive('/admin/audit-logs') ?>"><i class="bi bi-clock-history"></i> Audit Logs</a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Configuration</div>
+        <a href="/admin/settings.php" class="nav-link <?= navActive('/admin/settings') ?>"><i class="bi bi-gear-fill"></i> Settings</a>
+    </div>
+    <?php else: ?>
+    <div class="nav-section">
+        <div class="nav-section-title">Teacher Panel</div>
+        <a href="/teacher/dashboard.php" class="nav-link <?= navActive('/teacher/dashboard') ?>"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        <a href="/teacher/attendance.php" class="nav-link <?= navActive('/teacher/attendance') ?>"><i class="bi bi-check2-square"></i> Attendance</a>
+        <a href="/teacher/exams.php" class="nav-link <?= navActive('/teacher/exams') ?>"><i class="bi bi-journal-text"></i> Exam Results</a>
+        <a href="/teacher/post-notification.php" class="nav-link <?= navActive('/teacher/post-notification') ?>"><i class="bi bi-megaphone-fill"></i> Post Notification</a>
+        <a href="/teacher/upload-gallery.php" class="nav-link <?= navActive('/teacher/upload-gallery') ?>"><i class="bi bi-camera-fill"></i> Upload Gallery</a>
+    </div>
+    <?php endif; ?>
+</nav>
+
+<!-- Main Content -->
+<div class="main-content">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="d-flex align-items-center gap-3">
+            <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+            <h5 class="mb-0 fw-semibold" style="font-size: 1.1rem;"><?= e($pageTitle) ?></h5>
+        </div>
+        <div class="user-info">
+            <span class="badge bg-primary-subtle text-primary rounded-pill"><?= e(ucfirst(str_replace('_', ' ', currentRole()))) ?></span>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle"></i> <?= e(currentUser()['name'] ?? 'User') ?>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/admin/settings.php"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <main class="content-area">
+        <?php if ($flash): ?>
+            <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : e($flash['type']) ?> alert-dismissible fade show" role="alert">
+                <?= e($flash['message']) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+<?php else: ?>
+<div>
 <?php endif; ?>
+
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebar')?.classList.toggle('show');
+    document.getElementById('sidebarOverlay')?.classList.toggle('show');
+}
+</script>

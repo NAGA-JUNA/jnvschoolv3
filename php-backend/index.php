@@ -5,3 +5,4 @@ if (isLoggedIn()) {
     exit;
 }
 header('Location: /login.php');
+exit;

@@ -1,9 +1,9 @@
 <?php
-// Database Configuration — Update with your cPanel credentials
+// Database Configuration — Production (jnvschool.awayindia.com)
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'YOUR_DB_NAME');       // e.g. cpuser_schooldb
-define('DB_USER', 'YOUR_DB_USER');       // e.g. cpuser_schooluser
-define('DB_PASS', 'YOUR_DB_PASSWORD');
+define('DB_NAME', 'yshszsos_jnvschool');
+define('DB_USER', 'yshszsos_Admin');
+define('DB_PASS', 'c5oNh1Hu!c,5)_[h');
 define('DB_CHARSET', 'utf8mb4');
 
 function getDB(): PDO {

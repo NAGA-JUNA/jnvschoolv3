@@ -1,5 +1,6 @@
 -- ============================================
--- JSchoolAdmin — Full Database Schema
+-- JNV School Management System — Full Database Schema v2.0
+-- Domain: jnvschool.awayindia.com
 -- Run this in phpMyAdmin after creating database
 -- ============================================
 
@@ -52,12 +53,18 @@ CREATE TABLE `students` (
   `address` TEXT DEFAULT NULL,
   `photo` VARCHAR(255) DEFAULT NULL,
   `blood_group` VARCHAR(5) DEFAULT NULL,
-  `status` ENUM('active','inactive','alumni','transferred') NOT NULL DEFAULT 'active',
+  `category` VARCHAR(30) DEFAULT NULL,
+  `aadhar_no` VARCHAR(20) DEFAULT NULL,
+  `status` ENUM('active','inactive','alumni','tc_issued') NOT NULL DEFAULT 'active',
   `admission_date` DATE DEFAULT NULL,
+  `leaving_date` DATE DEFAULT NULL,
+  `created_by` INT UNSIGNED DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `admission_no` (`admission_no`)
+  UNIQUE KEY `admission_no` (`admission_no`),
+  KEY `idx_class` (`class`),
+  KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -78,12 +85,13 @@ CREATE TABLE `teachers` (
   `address` TEXT DEFAULT NULL,
   `photo` VARCHAR(255) DEFAULT NULL,
   `joining_date` DATE DEFAULT NULL,
-  `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  `status` ENUM('active','inactive','resigned','retired') NOT NULL DEFAULT 'active',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `employee_id` (`employee_id`),
   KEY `user_id` (`user_id`),
+  KEY `idx_status` (`status`),
   CONSTRAINT `fk_teacher_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -106,9 +114,11 @@ CREATE TABLE `admissions` (
   `status` ENUM('pending','approved','rejected','waitlisted') NOT NULL DEFAULT 'pending',
   `remarks` TEXT DEFAULT NULL,
   `reviewed_by` INT UNSIGNED DEFAULT NULL,
+  `reviewed_at` DATETIME DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
   KEY `reviewed_by` (`reviewed_by`),
   CONSTRAINT `fk_admission_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -120,15 +130,19 @@ CREATE TABLE `notifications` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(200) NOT NULL,
   `content` TEXT NOT NULL,
-  `type` ENUM('general','academic','exam','holiday','event') NOT NULL DEFAULT 'general',
+  `type` ENUM('general','academic','exam','holiday','event','urgent') NOT NULL DEFAULT 'general',
+  `target` ENUM('all','students','teachers','parents') NOT NULL DEFAULT 'all',
   `attachment` VARCHAR(255) DEFAULT NULL,
   `is_public` TINYINT(1) NOT NULL DEFAULT 0,
   `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   `posted_by` INT UNSIGNED DEFAULT NULL,
   `approved_by` INT UNSIGNED DEFAULT NULL,
+  `approved_at` DATETIME DEFAULT NULL,
+  `expires_at` DATE DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
   KEY `posted_by` (`posted_by`),
   KEY `approved_by` (`approved_by`),
   CONSTRAINT `fk_notif_poster` FOREIGN KEY (`posted_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
@@ -142,14 +156,16 @@ CREATE TABLE `gallery_items` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(200) NOT NULL,
   `description` TEXT DEFAULT NULL,
-  `category` VARCHAR(50) DEFAULT 'general',
+  `category` VARCHAR(50) DEFAULT 'General',
   `file_path` VARCHAR(255) NOT NULL,
   `file_type` ENUM('image','video') NOT NULL DEFAULT 'image',
   `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   `uploaded_by` INT UNSIGNED DEFAULT NULL,
   `approved_by` INT UNSIGNED DEFAULT NULL,
+  `approved_at` DATETIME DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
   KEY `uploaded_by` (`uploaded_by`),
   CONSTRAINT `fk_gallery_uploader` FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -162,14 +178,17 @@ CREATE TABLE `events` (
   `title` VARCHAR(200) NOT NULL,
   `description` TEXT DEFAULT NULL,
   `event_date` DATE NOT NULL,
+  `end_date` DATE DEFAULT NULL,
   `event_time` TIME DEFAULT NULL,
   `location` VARCHAR(200) DEFAULT NULL,
+  `type` ENUM('academic','cultural','sports','holiday','exam','meeting','other') NOT NULL DEFAULT 'other',
   `image` VARCHAR(255) DEFAULT NULL,
   `is_public` TINYINT(1) NOT NULL DEFAULT 1,
   `created_by` INT UNSIGNED DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  KEY `idx_date` (`event_date`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `fk_event_creator` FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -188,6 +207,7 @@ CREATE TABLE `attendance` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_attendance` (`student_id`, `date`),
+  KEY `idx_class_date` (`class`, `date`),
   KEY `marked_by` (`marked_by`),
   CONSTRAINT `fk_attendance_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_attendance_marker` FOREIGN KEY (`marked_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
@@ -201,6 +221,7 @@ CREATE TABLE `exam_results` (
   `student_id` INT UNSIGNED NOT NULL,
   `exam_name` VARCHAR(100) NOT NULL,
   `subject` VARCHAR(100) NOT NULL,
+  `class` VARCHAR(20) NOT NULL,
   `max_marks` INT NOT NULL DEFAULT 100,
   `obtained_marks` INT NOT NULL DEFAULT 0,
   `grade` VARCHAR(5) DEFAULT NULL,
@@ -209,6 +230,7 @@ CREATE TABLE `exam_results` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_result` (`student_id`, `exam_name`, `subject`),
+  KEY `idx_exam_class` (`exam_name`, `class`),
   KEY `entered_by` (`entered_by`),
   CONSTRAINT `fk_result_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_result_teacher` FOREIGN KEY (`entered_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
@@ -228,6 +250,8 @@ CREATE TABLE `audit_logs` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
+  KEY `idx_action` (`action`),
+  KEY `idx_created` (`created_at`),
   CONSTRAINT `fk_audit_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -244,11 +268,31 @@ CREATE TABLE `settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
-('school_name', 'My School'),
-('school_email', 'info@school.com'),
-('school_phone', ''),
-('school_address', ''),
+('school_name', 'Jawahar Navodaya Vidyalaya'),
+('school_short_name', 'JNV'),
+('school_tagline', 'Nurturing Talent, Shaping Future'),
+('school_email', 'info@jnvschool.awayindia.com'),
+('school_phone', '+91-XXXXXXXXXX'),
+('school_address', 'India'),
 ('school_logo', ''),
-('academic_year', '2025-2026');
+('primary_color', '#1e40af'),
+('secondary_color', '#3b82f6'),
+('academic_year', '2025-2026'),
+('admission_open', '1');
+
+-- --------------------------------------------------------
+-- Home Slider
+-- --------------------------------------------------------
+CREATE TABLE `home_slider` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(200) DEFAULT NULL,
+  `subtitle` TEXT DEFAULT NULL,
+  `image_path` VARCHAR(255) NOT NULL,
+  `link_url` VARCHAR(255) DEFAULT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 COMMIT;
