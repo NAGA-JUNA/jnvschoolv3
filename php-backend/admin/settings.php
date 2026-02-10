@@ -28,6 +28,14 @@ if($action==='sms_whatsapp'){
   }auditLog('update_sms_config','settings');setFlash('success','SMS/WhatsApp config updated.');
 }
 
+if($action==='feature_access'&&isSuperAdmin()){
+  $features=['feature_admissions','feature_gallery','feature_events','feature_slider','feature_notifications','feature_reports','feature_audit_logs'];
+  foreach($features as $k){
+    $v=isset($_POST[$k])?'1':'0';
+    $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
+  }auditLog('update_feature_access','settings');setFlash('success','Feature access updated.');
+}
+
 if($action==='create_user'){$name=trim($_POST['user_name']??'');$email=trim($_POST['user_email']??'');$pass=$_POST['user_password']??'';$role=$_POST['user_role']??'teacher';if($name&&$email&&strlen($pass)>=6){try{$db->prepare("INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)")->execute([$name,$email,password_hash($pass,PASSWORD_DEFAULT),$role]);auditLog('create_user','user',(int)$db->lastInsertId(),$email);setFlash('success',"User created.");}catch(PDOException $e){if($e->getCode()==23000)setFlash('error','Email exists.');else setFlash('error',$e->getMessage());}}else setFlash('error','All fields required, password min 6.');}
 
 if($action==='edit_user'){
@@ -49,8 +57,15 @@ header('Location: /admin/settings.php');exit;}
 $settings=[];$stmt=$db->query("SELECT setting_key,setting_value FROM settings");while($r=$stmt->fetch())$settings[$r['setting_key']]=$r['setting_value'];
 $users=$db->query("SELECT id,name,email,role,is_active,last_login FROM users ORDER BY created_at DESC")->fetchAll();
 $totalStudents=$db->query("SELECT COUNT(*) FROM students")->fetchColumn();
+$activeStudents=$db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
 $totalTeachers=$db->query("SELECT COUNT(*) FROM teachers")->fetchColumn();
+$activeTeachers=$db->query("SELECT COUNT(*) FROM teachers WHERE is_active=1")->fetchColumn();
 $totalUsers=count($users);
+$totalNotifications=$db->query("SELECT COUNT(*) FROM notifications")->fetchColumn();
+$totalEvents=$db->query("SELECT COUNT(*) FROM events")->fetchColumn();
+$mysqlVersion=$db->query("SELECT VERSION()")->fetchColumn();
+$dbTablesCount=$db->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();
+$dbSize=$db->query("SELECT ROUND(SUM(data_length + index_length)/1024/1024, 2) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();
 require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
 <!-- Row 1: School Info + Logo & Branding -->
@@ -62,7 +77,20 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="school_email" class="form-control" value="<?=e($s['school_email']??'')?>"></div>
 <div class="col-md-6"><label class="form-label">Phone</label><input type="tel" name="school_phone" class="form-control" value="<?=e($s['school_phone']??'')?>"></div>
 <div class="col-12"><label class="form-label">Address</label><textarea name="school_address" class="form-control" rows="2"><?=e($s['school_address']??'')?></textarea></div>
-<div class="col-md-4"><label class="form-label">Color</label><input type="color" name="primary_color" class="form-control form-control-color" value="<?=e($s['primary_color']??'#1e40af')?>"></div>
+<div class="col-md-4">
+  <label class="form-label">Theme Color</label>
+  <input type="color" name="primary_color" id="primaryColorPicker" class="form-control form-control-color" value="<?=e($s['primary_color']??'#1e40af')?>">
+  <div class="d-flex flex-wrap gap-1 mt-2">
+    <?php
+    $presets = [
+      'Navy' => '#1e40af', 'Emerald' => '#059669', 'Purple' => '#7c3aed', 'Rose' => '#e11d48',
+      'Amber' => '#d97706', 'Slate' => '#334155', 'Teal' => '#0d9488', 'Indigo' => '#4f46e5'
+    ];
+    foreach ($presets as $label => $hex): ?>
+    <button type="button" class="btn p-0 border-2 rounded-circle theme-swatch" style="width:28px;height:28px;background:<?=$hex?>;min-width:28px;" onclick="document.getElementById('primaryColorPicker').value='<?=$hex?>'" title="<?=$label?>"></button>
+    <?php endforeach; ?>
+  </div>
+</div>
 <div class="col-md-4"><label class="form-label">Academic Year</label><input type="text" name="academic_year" class="form-control" value="<?=e($s['academic_year']??'')?>"></div>
 <div class="col-md-4"><label class="form-label">Admissions</label><select name="admission_open" class="form-select"><option value="1" <?=($s['admission_open']??'1')==='1'?'selected':''?>>Open</option><option value="0" <?=($s['admission_open']??'1')==='0'?'selected':''?>>Closed</option></select></div>
 <div class="col-12"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Settings</button></div></div></form></div></div></div>
@@ -77,15 +105,45 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
     </form>
   </div></div>
 
-  <!-- System Information -->
-  <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-info-circle me-2"></i>System Info</h6></div><div class="card-body p-0">
-    <table class="table table-sm mb-0">
-      <tr><td class="text-muted ps-3">PHP Version</td><td class="fw-medium"><?=phpversion()?></td></tr>
-      <tr><td class="text-muted ps-3">Total Students</td><td class="fw-medium"><?=$totalStudents?></td></tr>
-      <tr><td class="text-muted ps-3">Total Teachers</td><td class="fw-medium"><?=$totalTeachers?></td></tr>
-      <tr><td class="text-muted ps-3">Total Users</td><td class="fw-medium"><?=$totalUsers?></td></tr>
-      <tr><td class="text-muted ps-3">Server</td><td class="fw-medium"><?=$_SERVER['SERVER_SOFTWARE']??'N/A'?></td></tr>
-    </table>
+  <!-- Enhanced System Information -->
+  <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-cpu me-2"></i>System Information</h6></div><div class="card-body">
+    <!-- Server Info -->
+    <h6 class="text-muted fw-semibold" style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;"><i class="bi bi-hdd-rack me-1"></i>Server</h6>
+    <div class="row g-2 mb-3">
+      <div class="col-6"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">PHP</small><strong style="font-size:.8rem"><?=phpversion()?></strong></div></div>
+      <div class="col-6"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">MySQL</small><strong style="font-size:.8rem"><?=e($mysqlVersion)?></strong></div></div>
+      <div class="col-12"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">Server Software</small><strong style="font-size:.75rem"><?=e(explode(' ', $_SERVER['SERVER_SOFTWARE']??'N/A')[0])?></strong></div></div>
+    </div>
+
+    <!-- Database -->
+    <h6 class="text-muted fw-semibold" style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;"><i class="bi bi-database me-1"></i>Database</h6>
+    <div class="row g-2 mb-3">
+      <div class="col-4"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">Tables</small><strong style="font-size:.85rem"><?=$dbTablesCount?></strong></div></div>
+      <div class="col-4"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">Size</small><strong style="font-size:.85rem"><?=$dbSize?> MB</strong></div></div>
+      <div class="col-4"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">DB Name</small><strong style="font-size:.7rem"><?=e(DB_NAME)?></strong></div></div>
+    </div>
+
+    <!-- Application Stats -->
+    <h6 class="text-muted fw-semibold" style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;"><i class="bi bi-bar-chart me-1"></i>Application</h6>
+    <div class="mb-2">
+      <div class="d-flex justify-content-between" style="font-size:.75rem"><span>Students</span><span class="fw-semibold"><?=$activeStudents?> / <?=$totalStudents?> active</span></div>
+      <div class="progress" style="height:6px"><div class="progress-bar bg-primary" style="width:<?=$totalStudents?round($activeStudents/$totalStudents*100,0):0?>%"></div></div>
+    </div>
+    <div class="mb-2">
+      <div class="d-flex justify-content-between" style="font-size:.75rem"><span>Teachers</span><span class="fw-semibold"><?=$activeTeachers?> / <?=$totalTeachers?> active</span></div>
+      <div class="progress" style="height:6px"><div class="progress-bar bg-success" style="width:<?=$totalTeachers?round($activeTeachers/$totalTeachers*100,0):0?>%"></div></div>
+    </div>
+    <div class="row g-2 mt-1">
+      <div class="col-4"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">Users</small><strong style="font-size:.85rem"><?=$totalUsers?></strong></div></div>
+      <div class="col-4"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">Notices</small><strong style="font-size:.85rem"><?=$totalNotifications?></strong></div></div>
+      <div class="col-4"><div class="bg-light rounded-3 p-2 text-center"><small class="text-muted d-block" style="font-size:.65rem">Events</small><strong style="font-size:.85rem"><?=$totalEvents?></strong></div></div>
+    </div>
+
+    <!-- Server Time -->
+    <div class="mt-3 bg-light rounded-3 p-2 text-center">
+      <small class="text-muted d-block" style="font-size:.65rem">Server Time</small>
+      <strong style="font-size:.8rem"><i class="bi bi-clock me-1"></i><?=date('d M Y, h:i A T')?></strong>
+    </div>
   </div></div>
 </div>
 </div>
@@ -111,6 +169,49 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
   </div></form>
 </div></div></div>
 </div>
+
+<!-- Feature Access Control (Super Admin Only) -->
+<?php if(isSuperAdmin()):?>
+<div class="card border-0 rounded-3 mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-shield-lock me-2"></i>Feature Access Control <span class="badge bg-warning text-dark ms-2" style="font-size:.6rem">Super Admin</span></h6></div>
+  <div class="card-body">
+    <p class="text-muted mb-3" style="font-size:.8rem">Toggle modules ON/OFF for non-super-admin users. Disabled modules will be hidden from the sidebar and inaccessible.</p>
+    <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="feature_access">
+    <div class="row g-3">
+      <?php
+      $featureList = [
+        'feature_admissions' => ['Admissions', 'bi-file-earmark-plus-fill', 'Manage admission applications'],
+        'feature_gallery' => ['Gallery', 'bi-images', 'Photo gallery management'],
+        'feature_events' => ['Events', 'bi-calendar-event-fill', 'School events calendar'],
+        'feature_slider' => ['Home Slider', 'bi-collection-play-fill', 'Homepage slider management'],
+        'feature_notifications' => ['Notifications', 'bi-bell-fill', 'Notification management'],
+        'feature_reports' => ['Reports', 'bi-file-earmark-bar-graph-fill', 'Reports & exports'],
+        'feature_audit_logs' => ['Audit Logs', 'bi-clock-history', 'System activity logs'],
+      ];
+      foreach ($featureList as $key => [$label, $icon, $desc]):
+        $checked = getSetting($key, '1') === '1';
+      ?>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center justify-content-between bg-light rounded-3 p-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi <?=$icon?> text-primary"></i>
+            <div>
+              <div class="fw-semibold" style="font-size:.85rem"><?=$label?></div>
+              <small class="text-muted" style="font-size:.7rem"><?=$desc?></small>
+            </div>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" name="<?=$key?>" id="<?=$key?>" <?=$checked?'checked':''?> style="width:2.5em;height:1.25em;">
+          </div>
+        </div>
+      </div>
+      <?php endforeach; ?>
+      <div class="col-12"><button class="btn btn-primary btn-sm"><i class="bi bi-shield-check me-1"></i>Save Feature Access</button></div>
+    </div>
+    </form>
+  </div>
+</div>
+<?php endif;?>
 
 <!-- Row 3: User Management -->
 <div class="row g-3 mb-3">
@@ -160,6 +261,7 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
   </div>
 </div></div></div>
 
+<style>.theme-swatch{cursor:pointer;transition:transform .15s,box-shadow .15s}.theme-swatch:hover{transform:scale(1.2);box-shadow:0 0 0 3px rgba(0,0,0,.2)}</style>
 <script>
 document.querySelectorAll('.btn-edit-user').forEach(btn => {
   btn.addEventListener('click', function() {
