@@ -56,16 +56,16 @@ header('Location: /admin/settings.php');exit;}
 
 $settings=[];$stmt=$db->query("SELECT setting_key,setting_value FROM settings");while($r=$stmt->fetch())$settings[$r['setting_key']]=$r['setting_value'];
 $users=$db->query("SELECT id,name,email,role,is_active,last_login FROM users ORDER BY created_at DESC")->fetchAll();
-$totalStudents=$db->query("SELECT COUNT(*) FROM students")->fetchColumn();
-$activeStudents=$db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
-$totalTeachers=$db->query("SELECT COUNT(*) FROM teachers")->fetchColumn();
-$activeTeachers=$db->query("SELECT COUNT(*) FROM teachers WHERE is_active=1")->fetchColumn();
+try{$totalStudents=$db->query("SELECT COUNT(*) FROM students")->fetchColumn();}catch(Exception $e){$totalStudents=0;}
+try{$activeStudents=$db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();}catch(Exception $e){$activeStudents=0;}
+try{$totalTeachers=$db->query("SELECT COUNT(*) FROM teachers")->fetchColumn();}catch(Exception $e){$totalTeachers=0;}
+try{$activeTeachers=$db->query("SELECT COUNT(*) FROM teachers WHERE is_active=1")->fetchColumn();}catch(Exception $e){$activeTeachers=0;}
 $totalUsers=count($users);
-$totalNotifications=$db->query("SELECT COUNT(*) FROM notifications")->fetchColumn();
-$totalEvents=$db->query("SELECT COUNT(*) FROM events")->fetchColumn();
-$mysqlVersion=$db->query("SELECT VERSION()")->fetchColumn();
-$dbTablesCount=$db->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();
-$dbSize=$db->query("SELECT ROUND(SUM(data_length + index_length)/1024/1024, 2) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();
+try{$totalNotifications=$db->query("SELECT COUNT(*) FROM notifications")->fetchColumn();}catch(Exception $e){$totalNotifications=0;}
+try{$totalEvents=$db->query("SELECT COUNT(*) FROM events")->fetchColumn();}catch(Exception $e){$totalEvents=0;}
+try{$mysqlVersion=$db->query("SELECT VERSION()")->fetchColumn();}catch(Exception $e){$mysqlVersion='N/A';}
+try{$dbTablesCount=$db->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();}catch(Exception $e){$dbTablesCount='N/A';}
+try{$dbSize=$db->query("SELECT ROUND(SUM(data_length + index_length)/1024/1024, 2) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();}catch(Exception $e){$dbSize='N/A';}
 require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
 <!-- Row 1: School Info + Logo & Branding -->

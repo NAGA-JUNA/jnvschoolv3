@@ -5,14 +5,14 @@ require_once __DIR__.'/../includes/header.php';?>
 <div class="row g-4">
   <!-- Header -->
   <div class="col-12">
-    <div class="card border-0 rounded-3 bg-gradient" style="background:linear-gradient(135deg,#0f172a,#1e40af)">
+    <div class="card border-0 rounded-3" style="background:linear-gradient(135deg,#1e3a5f,#2563eb)">
       <div class="card-body text-center text-white py-5">
-        <div class="d-inline-flex align-items-center justify-content-center bg-white bg-opacity-10 rounded-circle mb-3" style="width:80px;height:80px">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width:80px;height:80px;background:rgba(255,255,255,0.15)">
           <i class="bi bi-gear-wide-connected" style="font-size:2.5rem"></i>
         </div>
         <h3 class="fw-bold mb-1">JNV Tech</h3>
-        <p class="mb-0 opacity-75" style="font-size:1.1rem">Journey to New Value</p>
-        <p class="mb-0 mt-2 opacity-50" style="font-size:.8rem">School Management System v2.0</p>
+        <p class="mb-0" style="font-size:1.1rem;opacity:0.9">Journey to New Value</p>
+        <p class="mb-0 mt-2" style="font-size:.8rem;opacity:0.75">School Management System v2.0</p>
       </div>
     </div>
   </div>
