@@ -289,6 +289,8 @@ CREATE TABLE `home_slider` (
   `subtitle` TEXT DEFAULT NULL,
   `image_path` VARCHAR(255) NOT NULL,
   `link_url` VARCHAR(255) DEFAULT NULL,
+  `badge_text` VARCHAR(50) DEFAULT NULL,
+  `cta_text` VARCHAR(50) DEFAULT NULL,
   `sort_order` INT NOT NULL DEFAULT 0,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

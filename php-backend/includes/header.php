@@ -121,6 +121,7 @@ function navActive(string $path): string {
         <a href="/admin/notifications.php" class="nav-link <?= navActive('/admin/notifications') ?>"><i class="bi bi-bell-fill"></i> Notifications</a>
         <a href="/admin/gallery.php" class="nav-link <?= navActive('/admin/gallery') ?>"><i class="bi bi-images"></i> Gallery</a>
         <a href="/admin/events.php" class="nav-link <?= navActive('/admin/events') ?>"><i class="bi bi-calendar-event-fill"></i> Events</a>
+        <a href="/admin/slider.php" class="nav-link <?= navActive('/admin/slider') ?>"><i class="bi bi-collection-play-fill"></i> Home Slider</a>
     </div>
     <div class="nav-section">
         <div class="nav-section-title">Reports & Logs</div>
