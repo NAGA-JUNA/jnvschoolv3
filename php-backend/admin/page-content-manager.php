@@ -253,6 +253,367 @@ require_once __DIR__ . '/../includes/header.php';
                 <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#resetModal"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset to Default</button>
             </div>
         </form>
+
+        <?php if ($activePage === 'teachers'): ?>
+        <!-- ═══════════ PRINCIPAL PROFILE EDITOR ═══════════ -->
+        <div class="mt-4">
+            <div class="card border rounded-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#principalPanel">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2 text-primary"></i>Principal Profile Editor</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="collapse show" id="principalPanel">
+                    <div class="card-body" id="principalEditorBody">
+                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════ TEACHERS GRID MANAGER ═══════════ -->
+        <div class="mt-3">
+            <div class="card border rounded-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#teachersGridPanel">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2 text-primary"></i>Manage Teachers</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="collapse show" id="teachersGridPanel">
+                    <div class="card-body" id="teachersGridBody">
+                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teacher Add/Edit Modal -->
+        <div class="modal fade" id="teacherModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="teacherModalTitle">Add Teacher</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="teacherForm" enctype="multipart/form-data">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="save_teacher">
+                            <input type="hidden" name="id" id="tf_id" value="0">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="name" id="tf_name" required maxlength="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Designation</label>
+                                    <input type="text" class="form-control" name="designation" id="tf_designation" value="Teacher" maxlength="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Subject / Role</label>
+                                    <input type="text" class="form-control" name="subject" id="tf_subject" maxlength="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Qualification</label>
+                                    <input type="text" class="form-control" name="qualification" id="tf_qualification" maxlength="100">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Short Bio</label>
+                                    <textarea class="form-control" name="bio" id="tf_bio" rows="2" maxlength="1000"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Profile Photo</label>
+                                    <input type="file" class="form-control" name="photo" id="tf_photo" accept="image/*">
+                                    <div id="tf_photo_preview" class="mt-2"></div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Visible</label>
+                                    <div class="form-check form-switch mt-1">
+                                        <input class="form-check-input" type="checkbox" name="is_visible" id="tf_is_visible" value="1" checked>
+                                        <label class="form-check-label" for="tf_is_visible">Show on public page</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Featured</label>
+                                    <div class="form-check form-switch mt-1">
+                                        <input class="form-check-input" type="checkbox" name="is_featured" id="tf_is_featured" value="1">
+                                        <label class="form-check-label" for="tf_is_featured">Featured badge</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveTeacherBtn"><i class="bi bi-check-lg me-1"></i>Save Teacher</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .teacher-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem; background: #fff; transition: box-shadow 0.2s; }
+        .teacher-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .teacher-row .drag-handle { cursor: grab; color: #94a3b8; font-size: 1.1rem; }
+        .teacher-row .drag-handle:active { cursor: grabbing; }
+        .teacher-row.dragging { opacity: 0.5; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .teacher-row .t-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #e2e8f0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .teacher-row .t-thumb img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+        .teacher-row .t-info { flex: 1; min-width: 0; }
+        .teacher-row .t-info strong { font-size: 0.88rem; }
+        .teacher-row .t-info small { color: #64748b; font-size: 0.78rem; }
+        .teacher-row .t-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .principal-photo-preview { width: 120px; height: 150px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; }
+        </style>
+
+        <script>
+        const CSRF = '<?= csrfToken() ?>';
+        const AJAX_URL = '/admin/ajax/teacher-actions.php';
+
+        function showToast(msg, type='success') {
+            const t = document.createElement('div');
+            t.className = `alert alert-${type} position-fixed top-0 end-0 m-3 shadow-sm`;
+            t.style.zIndex = '9999';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // ══════ PRINCIPAL EDITOR ══════
+        async function loadPrincipal() {
+            const body = document.getElementById('principalEditorBody');
+            try {
+                const res = await fetch(AJAX_URL + '?action=get_principal');
+                const data = await res.json();
+                const p = data.principal;
+                const photoSrc = p && p.photo ? (p.photo.startsWith('/uploads/') ? p.photo : '/uploads/photos/' + p.photo) : '';
+                body.innerHTML = `
+                    <form id="principalForm" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="${CSRF}">
+                        <input type="hidden" name="action" value="save_principal">
+                        <input type="hidden" name="id" value="${p ? p.id : 0}">
+                        <div class="row g-3 align-items-start">
+                            <div class="col-md-3 text-center">
+                                <div id="princPhotoPreview">
+                                    ${photoSrc ? `<img src="${photoSrc}" class="principal-photo-preview">` : `<div class="principal-photo-preview d-flex align-items-center justify-content-center bg-light mx-auto"><i class="bi bi-person-fill" style="font-size:2.5rem;color:#94a3b8;"></i></div>`}
+                                </div>
+                                <input type="file" name="photo" id="princPhoto" accept="image/*" class="form-control form-control-sm mt-2">
+                                ${photoSrc ? `<button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="document.getElementById('princRemovePhoto').value='1';this.previousElementSibling.previousElementSibling.querySelector('img,div').style.opacity='0.3';this.textContent='Will be removed'"><i class="bi bi-trash me-1"></i>Remove</button>` : ''}
+                                <input type="hidden" name="remove_photo" id="princRemovePhoto" value="0">
+                            </div>
+                            <div class="col-md-9">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" name="name" value="${p ? escHtml(p.name) : ''}" required maxlength="100">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Designation</label>
+                                        <input type="text" class="form-control form-control-sm" name="designation" value="${p ? escHtml(p.designation || 'Principal') : 'Principal'}" maxlength="100">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Qualification</label>
+                                        <input type="text" class="form-control form-control-sm" name="qualification" value="${p ? escHtml(p.qualification || '') : ''}" maxlength="100">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold small">Message / Quote</label>
+                                        <textarea class="form-control form-control-sm" name="bio" rows="4" maxlength="2000">${p ? escHtml(p.bio || '') : ''}</textarea>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm mt-3" onclick="savePrincipal()"><i class="bi bi-check-lg me-1"></i>Save Principal</button>
+                            </div>
+                        </div>
+                    </form>`;
+
+                // Image preview
+                document.getElementById('princPhoto').addEventListener('change', function(e) {
+                    if (e.target.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = ev => {
+                            document.getElementById('princPhotoPreview').innerHTML = `<img src="${ev.target.result}" class="principal-photo-preview">`;
+                            document.getElementById('princRemovePhoto').value = '0';
+                        };
+                        reader.readAsDataURL(e.target.files[0]);
+                    }
+                });
+            } catch(err) {
+                body.innerHTML = '<div class="text-danger">Failed to load principal data.</div>';
+            }
+        }
+
+        async function savePrincipal() {
+            const form = document.getElementById('principalForm');
+            const fd = new FormData(form);
+            try {
+                const res = await fetch(AJAX_URL, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) { showToast('Principal saved successfully!'); loadPrincipal(); }
+                else showToast(data.message || 'Error saving', 'danger');
+            } catch(err) { showToast('Network error', 'danger'); }
+        }
+
+        // ══════ TEACHERS GRID MANAGER ══════
+        let teachersList = [];
+        async function loadTeachers(search='') {
+            const body = document.getElementById('teachersGridBody');
+            try {
+                const res = await fetch(AJAX_URL + '?action=list_teachers&search=' + encodeURIComponent(search));
+                const data = await res.json();
+                teachersList = data.teachers || [];
+                renderTeachersList();
+            } catch(err) {
+                body.innerHTML = '<div class="text-danger">Failed to load teachers.</div>';
+            }
+        }
+
+        function renderTeachersList() {
+            const body = document.getElementById('teachersGridBody');
+            let html = `<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div class="input-group" style="max-width:300px;">
+                    <input type="text" class="form-control form-control-sm" placeholder="Search teachers..." id="teacherSearch" oninput="debounceSearch(this.value)">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openTeacherModal()"><i class="bi bi-plus-lg me-1"></i>Add Teacher</button>
+            </div>`;
+
+            if (teachersList.length === 0) {
+                html += '<div class="text-center text-muted py-4"><i class="bi bi-people" style="font-size:2rem;"></i><p class="mt-2">No teachers found.</p></div>';
+            } else {
+                html += '<div id="teacherSortableList">';
+                teachersList.forEach((t, i) => {
+                    const photo = t.photo ? (t.photo.startsWith('/uploads/') ? t.photo : '/uploads/photos/' + t.photo) : '';
+                    html += `<div class="teacher-row" draggable="true" data-id="${t.id}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropRow(event)" ondragend="dragEnd(event)">
+                        <span class="drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        <div class="t-thumb">
+                            ${photo ? `<img src="${photo}" alt="">` : `<i class="bi bi-person-fill text-muted"></i>`}
+                        </div>
+                        <div class="t-info">
+                            <strong>${escHtml(t.name)}</strong>
+                            ${t.is_featured == 1 ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">Featured</span>' : ''}
+                            <br><small>${escHtml(t.subject || t.designation || 'Teacher')}</small>
+                        </div>
+                        <div class="t-actions">
+                            <div class="form-check form-switch" title="Visible on public page">
+                                <input class="form-check-input" type="checkbox" ${t.is_visible == 1 ? 'checked' : ''} onchange="toggleVis(${t.id})">
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick='editTeacher(${JSON.stringify(t).replace(/'/g, "\\'")})'><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTeacher(${t.id}, '${escHtml(t.name)}')"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+            body.innerHTML = html;
+        }
+
+        // Search debounce
+        let searchTimer;
+        function debounceSearch(val) {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => loadTeachers(val), 300);
+        }
+
+        // ── Drag & Drop ──
+        let draggedEl = null;
+        function dragStart(e) { draggedEl = e.currentTarget; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+        function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const target = e.currentTarget; if (target !== draggedEl && target.classList.contains('teacher-row')) { const rect = target.getBoundingClientRect(); const mid = rect.top + rect.height / 2; target.parentNode.insertBefore(draggedEl, e.clientY < mid ? target : target.nextSibling); } }
+        function dropRow(e) { e.preventDefault(); saveOrder(); }
+        function dragEnd(e) { e.currentTarget.classList.remove('dragging'); draggedEl = null; }
+
+        async function saveOrder() {
+            const rows = document.querySelectorAll('#teacherSortableList .teacher-row');
+            const order = Array.from(rows).map(r => r.dataset.id);
+            const fd = new FormData();
+            fd.append('csrf_token', CSRF);
+            fd.append('action', 'reorder');
+            fd.append('order', JSON.stringify(order));
+            await fetch(AJAX_URL, { method: 'POST', body: fd });
+        }
+
+        // ── Toggle Visibility ──
+        async function toggleVis(id) {
+            const fd = new FormData();
+            fd.append('csrf_token', CSRF);
+            fd.append('action', 'toggle_visibility');
+            fd.append('id', id);
+            await fetch(AJAX_URL, { method: 'POST', body: fd });
+        }
+
+        // ── Modal ──
+        function openTeacherModal(teacher = null) {
+            document.getElementById('teacherModalTitle').textContent = teacher ? 'Edit Teacher' : 'Add Teacher';
+            document.getElementById('tf_id').value = teacher ? teacher.id : 0;
+            document.getElementById('tf_name').value = teacher ? teacher.name : '';
+            document.getElementById('tf_designation').value = teacher ? (teacher.designation || 'Teacher') : 'Teacher';
+            document.getElementById('tf_subject').value = teacher ? (teacher.subject || '') : '';
+            document.getElementById('tf_qualification').value = teacher ? (teacher.qualification || '') : '';
+            document.getElementById('tf_bio').value = teacher ? (teacher.bio || '') : '';
+            document.getElementById('tf_is_visible').checked = teacher ? teacher.is_visible == 1 : true;
+            document.getElementById('tf_is_featured').checked = teacher ? teacher.is_featured == 1 : false;
+            document.getElementById('tf_photo').value = '';
+            const preview = document.getElementById('tf_photo_preview');
+            if (teacher && teacher.photo) {
+                const src = teacher.photo.startsWith('/uploads/') ? teacher.photo : '/uploads/photos/' + teacher.photo;
+                preview.innerHTML = `<img src="${src}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;">`;
+            } else {
+                preview.innerHTML = '';
+            }
+            new bootstrap.Modal(document.getElementById('teacherModal')).show();
+        }
+
+        function editTeacher(t) { openTeacherModal(t); }
+
+        document.getElementById('saveTeacherBtn').addEventListener('click', async () => {
+            const form = document.getElementById('teacherForm');
+            if (!document.getElementById('tf_name').value.trim()) { showToast('Name is required', 'warning'); return; }
+            const fd = new FormData(form);
+            fd.set('is_visible', document.getElementById('tf_is_visible').checked ? '1' : '0');
+            fd.set('is_featured', document.getElementById('tf_is_featured').checked ? '1' : '0');
+            try {
+                const res = await fetch(AJAX_URL, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Teacher saved!');
+                    bootstrap.Modal.getInstance(document.getElementById('teacherModal')).hide();
+                    loadTeachers();
+                } else showToast(data.message || 'Error', 'danger');
+            } catch(err) { showToast('Network error', 'danger'); }
+        });
+
+        // Image preview in modal
+        document.getElementById('tf_photo').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    document.getElementById('tf_photo_preview').innerHTML = `<img src="${ev.target.result}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;">`;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        async function deleteTeacher(id, name) {
+            if (!confirm(`Delete teacher "${name}"? This cannot be undone.`)) return;
+            const fd = new FormData();
+            fd.append('csrf_token', CSRF);
+            fd.append('action', 'delete_teacher');
+            fd.append('id', id);
+            try {
+                const res = await fetch(AJAX_URL, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) { showToast('Teacher deleted'); loadTeachers(); }
+                else showToast(data.message || 'Error', 'danger');
+            } catch(err) { showToast('Network error', 'danger'); }
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+        }
+
+        // Init
+        loadPrincipal();
+        loadTeachers();
+        </script>
+        <?php endif; ?>
+
     </div>
 </div>
 

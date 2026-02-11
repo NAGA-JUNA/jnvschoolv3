@@ -25,7 +25,7 @@ if (isLoggedIn()) {
 }
 
 // Get all active teachers
-$teachers = $db->query("SELECT * FROM teachers WHERE status='active' ORDER BY is_core_team DESC, name ASC")->fetchAll();
+$teachers = $db->query("SELECT * FROM teachers WHERE status='active' AND is_visible=1 ORDER BY display_order ASC, is_core_team DESC, name ASC")->fetchAll();
 $totalTeachers = count($teachers);
 
 // Get principal for message section
@@ -385,12 +385,12 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
                     <div class="teacher-card-inner">
                         <div class="teacher-card-front">
                             <?php if ($tPhoto): ?>
-                                <img src="<?= e($tPhoto) ?>" alt="<?= e($t['name']) ?>">
+                                <img src="<?= e($tPhoto) ?>" alt="<?= e($t['name']) ?>" loading="lazy">
                             <?php else: ?>
                                 <div class="no-photo"><i class="bi bi-person-fill"></i></div>
                             <?php endif; ?>
                             <div class="info">
-                                <h6><?= e($t['name']) ?></h6>
+                                <h6><?= e($t['name']) ?> <?php if (!empty($t['is_featured'])): ?><span class="badge bg-warning text-dark" style="font-size:0.6rem;vertical-align:middle;">★ Featured</span><?php endif; ?></h6>
                                 <small><?= e($t['designation'] ?? 'Teacher') ?></small>
                             </div>
                         </div>
