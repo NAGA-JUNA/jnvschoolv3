@@ -173,16 +173,18 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
             50% { box-shadow: 0 4px 30px rgba(37,211,102,0.7); }
         }
 
-        /* Gradient Footer */
-        .site-footer { background: linear-gradient(135deg, #6a11cb 0%, #1e8a7a 100%); color: #fff; border-radius: 30px 30px 0 0; margin-top: 3rem; }
-        .footer-heading { text-transform: uppercase; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; position: relative; padding-bottom: 0.5rem; }
-        .footer-heading::after { content: ''; position: absolute; bottom: 0; left: 0; width: 30px; height: 2px; background: rgba(255,255,255,0.5); }
-        .footer-social a { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4); color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.3s; font-size: 0.9rem; }
-        .footer-social a:hover { background: #fff; color: #6a11cb; border-color: #fff; }
-        .footer-newsletter-input { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; }
-        .footer-newsletter-input::placeholder { color: rgba(255,255,255,0.6); }
-        .footer-newsletter-input:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); color: #fff; box-shadow: none; }
-        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.15); }
+        /* Dark Footer */
+        .site-footer { background: #1a1a2e; color: #fff; margin-top: 0; }
+        .footer-cta { background: #0f2557; padding: 4rem 0; text-align: center; }
+        .footer-cta h2 { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 2.2rem; color: #fff; margin-bottom: 1rem; }
+        .footer-cta p { color: rgba(255,255,255,0.7); max-width: 600px; margin: 0 auto 1.5rem; }
+        .footer-heading { text-transform: uppercase; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; position: relative; padding-bottom: 0.5rem; color: #fff; }
+        .footer-heading::after { content: ''; position: absolute; bottom: 0; left: 0; width: 30px; height: 2px; background: var(--theme-primary); }
+        .footer-link { color: rgba(255,255,255,0.65); text-decoration: none; transition: color 0.2s; font-size: 0.9rem; }
+        .footer-link:hover { color: #fff; }
+        .footer-social a { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.3s; font-size: 0.9rem; }
+        .footer-social a:hover { background: var(--theme-primary); border-color: var(--theme-primary); }
+        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); }
 
         /* Tap to flip for touch */
         .teacher-card.flipped .teacher-card-inner { transform: rotateY(180deg); }
@@ -422,43 +424,26 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     </div>
 </section>
 
-<!-- Gradient Footer -->
+<!-- Footer CTA -->
+<section class="footer-cta">
+    <div class="container">
+        <h2>Become a Part of <?= e($schoolName) ?></h2>
+        <p>Give your child the gift of quality education. Contact us today to learn more about admissions.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="/public/admission-form.php" class="btn btn-danger rounded-pill px-4 fw-semibold">Get In Touch <i class="bi bi-arrow-right ms-1"></i></a>
+            <a href="/public/about.php" class="btn btn-outline-light rounded-pill px-4 fw-semibold">Learn More</a>
+        </div>
+    </div>
+</section>
 <footer class="site-footer">
     <div class="container">
         <div class="row g-4 py-5">
             <div class="col-lg-3 col-md-6">
-                <div style="background:linear-gradient(135deg,rgba(106,17,203,0.3),rgba(139,92,246,0.3));border:2px solid rgba(255,255,255,0.2);border-radius:16px;padding:1.5rem;text-align:center;">
-                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:60px;height:60px;border-radius:12px;object-fit:cover;margin-bottom:0.8rem;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;"></i><?php endif; ?>
-                    <h5 class="fw-bold mb-1" style="font-size:1rem;"><?= e($schoolName) ?></h5>
-                    <small class="opacity-75">India</small>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:42px;height:42px;border-radius:10px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.8rem;"></i><?php endif; ?>
+                    <div><h6 class="fw-bold mb-0" style="font-size:0.95rem;"><?= e($schoolName) ?></h6><?php if ($schoolAddress): ?><small class="opacity-50" style="font-size:0.75rem;"><?= e(explode(',', $schoolAddress)[0] ?? '') ?></small><?php endif; ?></div>
                 </div>
-                <?php if ($schoolAddress): ?><p class="small opacity-75 mt-3 mb-0"><?= e($schoolAddress) ?></p><?php endif; ?>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <h6 class="footer-heading">About Us</h6>
-                <ul class="list-unstyled small">
-                    <?php if ($schoolAddress): ?><li class="mb-2 opacity-75"><i class="bi bi-geo-alt me-2"></i><?= e($schoolAddress) ?></li><?php endif; ?>
-                    <?php if ($schoolEmail): ?><li class="mb-2 opacity-75"><i class="bi bi-envelope me-2"></i><?= e($schoolEmail) ?></li><?php endif; ?>
-                    <?php if ($schoolPhone): ?><li class="mb-2 opacity-75"><i class="bi bi-telephone me-2"></i><?= e($schoolPhone) ?></li><?php endif; ?>
-                </ul>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <h6 class="footer-heading">Quick Links</h6>
-                <ul class="list-unstyled small">
-                    <li class="mb-1"><a href="/" class="text-white text-decoration-none opacity-75">Home</a></li>
-                    <li class="mb-1"><a href="/public/about.php" class="text-white text-decoration-none opacity-75">About Us</a></li>
-                    <li class="mb-1"><a href="/public/teachers.php" class="text-white text-decoration-none opacity-75">Our Teachers</a></li>
-                    <li class="mb-1"><a href="/public/gallery.php" class="text-white text-decoration-none opacity-75">Gallery</a></li>
-                    <li class="mb-1"><a href="/public/events.php" class="text-white text-decoration-none opacity-75">Events</a></li>
-                    <li class="mb-1"><a href="/public/admission-form.php" class="text-white text-decoration-none opacity-75">Apply Now</a></li>
-                </ul>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <h6 class="footer-heading">Newsletter</h6>
-                <div class="input-group mb-3">
-                    <input type="email" class="form-control footer-newsletter-input" placeholder="Your email">
-                    <button class="btn btn-light" type="button"><i class="bi bi-arrow-right"></i></button>
-                </div>
+                <p class="small opacity-60 mb-3">A professional and modern school with years of experience in nurturing children with senior teachers and a clean environment.</p>
                 <div class="footer-social d-flex gap-2 flex-wrap">
                     <?php if ($socialFacebook): ?><a href="<?= e($socialFacebook) ?>" target="_blank"><i class="bi bi-facebook"></i></a><?php endif; ?>
                     <?php if ($socialTwitter): ?><a href="<?= e($socialTwitter) ?>" target="_blank"><i class="bi bi-twitter-x"></i></a><?php endif; ?>
@@ -467,11 +452,41 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
                     <?php if ($socialLinkedin): ?><a href="<?= e($socialLinkedin) ?>" target="_blank"><i class="bi bi-linkedin"></i></a><?php endif; ?>
                 </div>
             </div>
+            <div class="col-lg-3 col-md-6">
+                <h6 class="footer-heading">Quick Links</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="/public/about.php" class="footer-link">About Us</a></li>
+                    <li class="mb-2"><a href="/public/teachers.php" class="footer-link">Our Teachers</a></li>
+                    <li class="mb-2"><a href="/public/admission-form.php" class="footer-link">Admissions</a></li>
+                    <li class="mb-2"><a href="/public/gallery.php" class="footer-link">Gallery</a></li>
+                    <li class="mb-2"><a href="/public/events.php" class="footer-link">Events</a></li>
+                    <li class="mb-2"><a href="/login.php" class="footer-link">Admin Login</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <h6 class="footer-heading">Programs</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><span class="footer-link">Pre-Primary (LKG & UKG)</span></li>
+                    <li class="mb-2"><span class="footer-link">Primary School (1-5)</span></li>
+                    <li class="mb-2"><span class="footer-link">Upper Primary (6-8)</span></li>
+                    <li class="mb-2"><span class="footer-link">Co-Curricular Activities</span></li>
+                    <li class="mb-2"><span class="footer-link">Sports Programs</span></li>
+                </ul>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <h6 class="footer-heading">Contact Info</h6>
+                <ul class="list-unstyled">
+                    <?php if ($schoolAddress): ?><li class="mb-2"><i class="bi bi-geo-alt text-danger me-2"></i><span class="footer-link"><?= e($schoolAddress) ?></span></li><?php endif; ?>
+                    <?php if ($schoolPhone): ?><li class="mb-2"><i class="bi bi-telephone text-success me-2"></i><a href="tel:<?= e($schoolPhone) ?>" class="footer-link"><?= e($schoolPhone) ?></a></li><?php endif; ?>
+                    <?php if ($schoolEmail): ?><li class="mb-2"><i class="bi bi-envelope text-warning me-2"></i><a href="mailto:<?= e($schoolEmail) ?>" class="footer-link"><?= e($schoolEmail) ?></a></li><?php endif; ?>
+                    <li class="mb-2"><i class="bi bi-clock text-info me-2"></i><span class="footer-link">Mon - Sat: 8:00 AM - 5:00 PM</span></li>
+                </ul>
+            </div>
         </div>
     </div>
     <div class="footer-bottom">
         <div class="container text-center py-3">
-            <small class="opacity-75">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.</small>
+            <small class="opacity-50">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.</small>
         </div>
     </div>
 </footer>
