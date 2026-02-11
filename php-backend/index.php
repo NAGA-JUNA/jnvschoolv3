@@ -8,6 +8,7 @@ $schoolPhone = getSetting('school_phone', '');
 $schoolAddress = getSetting('school_address', '');
 $admissionOpen = getSetting('admission_open', '0');
 $whatsappNumber = getSetting('whatsapp_api_number', '');
+$primaryColor = getSetting('primary_color', '#1e40af');
 
 // Social links
 $socialFacebook = getSetting('social_facebook', '');
@@ -61,8 +62,9 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
     <meta name="description" content="<?= e($schoolName) ?> — <?= e($schoolTagline) ?>. Official school website for admissions, notifications, gallery, and events.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
+        :root { --theme-primary: <?= e($primaryColor) ?>; }
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
 
@@ -157,7 +159,7 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
         .section-title { font-weight: 700; position: relative; display: inline-block; margin-bottom: 1.5rem; }
         .section-title::after {
             content: ''; position: absolute; bottom: -6px; left: 0;
-            width: 50px; height: 3px; background: #1e40af; border-radius: 2px;
+            width: 50px; height: 3px; background: var(--theme-primary); border-radius: 2px;
         }
         .feature-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
         .info-card { border: none; border-radius: 14px; transition: transform 0.2s, box-shadow 0.2s; }
@@ -241,7 +243,7 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
 <body>
 
 <!-- Top Bar -->
-<div class="top-bar">
+<div class="top-bar d-none d-lg-block">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center">
             <div class="marquee-text flex-grow-1 me-3">
@@ -259,15 +261,16 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
 <!-- Main Navbar -->
 <nav class="main-navbar navbar navbar-expand-lg sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-white" href="/">
+        <a class="navbar-brand d-flex align-items-center text-white" href="/">
             <?php if ($navLogo): ?>
-                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
             <?php else: ?>
-                <i class="bi bi-mortarboard-fill"></i>
+                <i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i>
             <?php endif; ?>
-            <?= e($schoolName) ?>
         </a>
-        <button class="navbar-toggler border-0" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler border-0 p-1" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <i class="bi bi-list text-white" style="font-size:1.8rem;"></i>
+        </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
@@ -518,39 +521,53 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
 
 <!-- Our Core Team -->
 <?php if (!empty($coreTeam)): ?>
-<section class="py-5">
+<section class="py-5" style="background:#f8fafc;">
     <div class="container">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-            <h4 class="section-title fw-bold mb-0" style="font-size:1.6rem;">Our Core Team</h4>
-            <a href="/public/teachers.php" class="btn btn-warning fw-bold px-4 rounded-1 text-uppercase" style="font-size:0.8rem;letter-spacing:1px;">View Our Teachers</a>
+        <div class="text-center mb-4">
+            <h4 style="font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;font-weight:700;color:#1a1a2e;">Our Core Team</h4>
+            <p class="text-muted mt-2">Meet the dedicated leaders guiding our school's vision and mission.</p>
         </div>
-        <div class="row g-4 justify-content-center">
-            <?php foreach ($coreTeam as $ct):
-                $ctPhoto = $ct['photo'] ? (str_starts_with($ct['photo'], '/uploads/') ? $ct['photo'] : '/uploads/photos/'.$ct['photo']) : '';
-            ?>
-            <div class="col-sm-6 col-md-4 col-lg-4">
-                <div class="card border-0 shadow-sm text-center h-100" style="border-radius:14px;">
-                    <div class="card-body p-4">
+        <div class="position-relative">
+            <?php if (count($coreTeam) > 3): ?>
+            <button class="btn btn-light shadow-sm rounded-circle position-absolute start-0 top-50 translate-middle-y" style="z-index:10;width:44px;height:44px;" onclick="scrollTeam(-1)"><i class="bi bi-chevron-left"></i></button>
+            <button class="btn btn-light shadow-sm rounded-circle position-absolute end-0 top-50 translate-middle-y" style="z-index:10;width:44px;height:44px;" onclick="scrollTeam(1)"><i class="bi bi-chevron-right"></i></button>
+            <?php endif; ?>
+            <div class="d-flex gap-4 overflow-auto pb-3 px-4" id="coreTeamScroll" style="scroll-behavior:smooth;scroll-snap-type:x mandatory;-ms-overflow-style:none;scrollbar-width:none;">
+                <?php foreach ($coreTeam as $ct):
+                    $ctPhoto = $ct['photo'] ? (str_starts_with($ct['photo'], '/uploads/') ? $ct['photo'] : '/uploads/photos/'.$ct['photo']) : '';
+                ?>
+                <div class="flex-shrink-0" style="width:300px;scroll-snap-align:start;">
+                    <div class="card border-0 shadow-sm text-center h-100" style="border-radius:16px;overflow:hidden;">
                         <?php if ($ctPhoto): ?>
-                            <img src="<?= e($ctPhoto) ?>" alt="<?= e($ct['name']) ?>" class="rounded mb-3" style="width:100%;height:280px;object-fit:cover;">
+                            <img src="<?= e($ctPhoto) ?>" alt="<?= e($ct['name']) ?>" style="width:100%;height:300px;object-fit:cover;">
                         <?php else: ?>
-                            <div class="d-flex align-items-center justify-content-center mb-3 mx-auto" style="width:100%;height:280px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);border-radius:10px;">
+                            <div class="d-flex align-items-center justify-content-center" style="width:100%;height:300px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);">
                                 <i class="bi bi-person-fill" style="font-size:5rem;color:#94a3b8;"></i>
                             </div>
                         <?php endif; ?>
-                        <h6 class="fw-bold mb-1"><?= e($ct['name']) ?></h6>
-                        <small class="text-primary d-block mb-2"><?= e($ct['designation'] ?? 'Teacher') ?></small>
-                        <?php if ($ct['email']): ?>
-                            <hr class="my-2">
-                            <small class="text-muted"><i class="bi bi-envelope me-1"></i><?= e($ct['email']) ?></small>
-                        <?php endif; ?>
+                        <div class="card-body p-3">
+                            <h6 class="fw-bold mb-1"><?= e($ct['name']) ?></h6>
+                            <small class="d-block mb-2" style="color:var(--theme-primary);font-weight:600;"><?= e($ct['designation'] ?? 'Teacher') ?></small>
+                            <?php if ($ct['email']): ?>
+                                <small class="text-muted"><i class="bi bi-envelope me-1"></i><?= e($ct['email']) ?></small>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
+        </div>
+        <div class="text-center mt-4">
+            <a href="/public/teachers.php" class="btn fw-bold px-4 rounded-1 text-uppercase" style="font-size:0.8rem;letter-spacing:1px;background:var(--theme-primary);color:#fff;">View Our Teachers</a>
         </div>
     </div>
 </section>
+<script>
+function scrollTeam(dir) {
+    const c = document.getElementById('coreTeamScroll');
+    c.scrollBy({ left: dir * 320, behavior: 'smooth' });
+}
+</script>
 <?php endif; ?>
 
 <!-- Contact Info -->
@@ -593,9 +610,12 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
     <div class="container">
         <div class="row g-4 py-5">
             <div class="col-lg-3 col-md-6">
-                <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:50px;height:50px;border-radius:10px;object-fit:cover;margin-bottom:0.8rem;"><?php endif; ?>
-                <h5 class="fw-bold mb-2"><?= e($schoolName) ?></h5>
-                <p class="small opacity-75 mb-0"><?= e($schoolAddress ?: $schoolTagline) ?></p>
+                <div style="background:linear-gradient(135deg,rgba(106,17,203,0.3),rgba(139,92,246,0.3));border:2px solid rgba(255,255,255,0.2);border-radius:16px;padding:1.5rem;text-align:center;">
+                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:60px;height:60px;border-radius:12px;object-fit:cover;margin-bottom:0.8rem;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;"></i><?php endif; ?>
+                    <h5 class="fw-bold mb-1" style="font-size:1rem;"><?= e($schoolName) ?></h5>
+                    <small class="opacity-75">India</small>
+                </div>
+                <?php if ($schoolAddress): ?><p class="small opacity-75 mt-3 mb-0"><?= e($schoolAddress) ?></p><?php endif; ?>
             </div>
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">About Us</h6>
