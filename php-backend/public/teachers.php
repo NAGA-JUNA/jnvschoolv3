@@ -317,8 +317,8 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     <div class="container position-relative" style="z-index:2;">
         <div class="text-center mb-4">
             <div class="hero-badge"><i class="bi bi-people-fill me-2"></i>Our Educators</div>
-            <h1 class="mb-3" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:3rem;">Our Teachers</h1>
-            <p class="lead opacity-75 mx-auto" style="max-width:600px;">Meet our dedicated team of qualified educators who inspire, guide, and shape the future of every student.</p>
+            <h1 class="mb-3" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:3rem;"><?= e(getSetting('teachers_hero_title', 'Our Teachers')) ?></h1>
+            <p class="lead opacity-75 mx-auto" style="max-width:600px;"><?= e(getSetting('teachers_hero_subtitle', 'Meet our dedicated team of qualified educators who inspire, guide, and shape the future of every student.')) ?></p>
         </div>
         <div class="row g-3 justify-content-center mt-4">
             <div class="col-6 col-md-4"><div class="hero-stat-card"><div class="num"><?= $totalTeachers ?>+</div><div class="label">Expert Teachers</div></div></div>
@@ -425,87 +425,12 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     </div>
 </section>
 
-<!-- Footer CTA -->
-<section class="footer-cta">
-    <div class="container">
-        <h2>Become a Part of <?= e($schoolName) ?></h2>
-        <p>Give your child the gift of quality education. Contact us today to learn more about admissions.</p>
-        <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="/public/admission-form.php" class="btn btn-danger rounded-pill px-4 fw-semibold">Get In Touch <i class="bi bi-arrow-right ms-1"></i></a>
-            <a href="/public/about.php" class="btn btn-outline-light rounded-pill px-4 fw-semibold">Learn More</a>
-        </div>
-    </div>
-</section>
-<footer class="site-footer">
-    <div class="container">
-        <div class="row g-4 py-5">
-            <div class="col-lg-3 col-md-6">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:42px;height:42px;border-radius:10px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.8rem;"></i><?php endif; ?>
-                    <div><h6 class="fw-bold mb-0" style="font-size:0.95rem;"><?= e($schoolName) ?></h6><?php if ($schoolAddress): ?><small class="opacity-50" style="font-size:0.75rem;"><?= e(explode(',', $schoolAddress)[0] ?? '') ?></small><?php endif; ?></div>
-                </div>
-                <p class="small opacity-60 mb-3">A professional and modern school with years of experience in nurturing children with senior teachers and a clean environment.</p>
-                <div class="footer-social d-flex gap-2 flex-wrap">
-                    <?php if ($socialFacebook): ?><a href="<?= e($socialFacebook) ?>" target="_blank"><i class="bi bi-facebook"></i></a><?php endif; ?>
-                    <?php if ($socialTwitter): ?><a href="<?= e($socialTwitter) ?>" target="_blank"><i class="bi bi-twitter-x"></i></a><?php endif; ?>
-                    <?php if ($socialInstagram): ?><a href="<?= e($socialInstagram) ?>" target="_blank"><i class="bi bi-instagram"></i></a><?php endif; ?>
-                    <?php if ($socialYoutube): ?><a href="<?= e($socialYoutube) ?>" target="_blank"><i class="bi bi-youtube"></i></a><?php endif; ?>
-                    <?php if ($socialLinkedin): ?><a href="<?= e($socialLinkedin) ?>" target="_blank"><i class="bi bi-linkedin"></i></a><?php endif; ?>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <h6 class="footer-heading">Quick Links</h6>
-                <ul class="list-unstyled">
-                    <li class="mb-2"><a href="/public/about.php" class="footer-link">About Us</a></li>
-                    <li class="mb-2"><a href="/public/teachers.php" class="footer-link">Our Teachers</a></li>
-                    <li class="mb-2"><a href="/public/admission-form.php" class="footer-link">Admissions</a></li>
-                    <li class="mb-2"><a href="/public/gallery.php" class="footer-link">Gallery</a></li>
-                    <li class="mb-2"><a href="/public/events.php" class="footer-link">Events</a></li>
-                    <li class="mb-2"><a href="/login.php" class="footer-link">Admin Login</a></li>
-                </ul>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <h6 class="footer-heading">Programs</h6>
-                <ul class="list-unstyled">
-                    <li class="mb-2"><span class="footer-link">Pre-Primary (LKG & UKG)</span></li>
-                    <li class="mb-2"><span class="footer-link">Primary School (1-5)</span></li>
-                    <li class="mb-2"><span class="footer-link">Upper Primary (6-8)</span></li>
-                    <li class="mb-2"><span class="footer-link">Co-Curricular Activities</span></li>
-                    <li class="mb-2"><span class="footer-link">Sports Programs</span></li>
-                </ul>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <h6 class="footer-heading">Contact Info</h6>
-                <ul class="list-unstyled">
-                    <?php if ($schoolAddress): ?><li class="mb-2"><i class="bi bi-geo-alt text-danger me-2"></i><span class="footer-link"><?= e($schoolAddress) ?></span></li><?php endif; ?>
-                    <?php if ($schoolPhone): ?><li class="mb-2"><i class="bi bi-telephone text-success me-2"></i><a href="tel:<?= e($schoolPhone) ?>" class="footer-link"><?= e($schoolPhone) ?></a></li><?php endif; ?>
-                    <?php if ($schoolEmail): ?><li class="mb-2"><i class="bi bi-envelope text-warning me-2"></i><a href="mailto:<?= e($schoolEmail) ?>" class="footer-link"><?= e($schoolEmail) ?></a></li><?php endif; ?>
-                    <li class="mb-2"><i class="bi bi-clock text-info me-2"></i><span class="footer-link">Mon - Sat: 8:00 AM - 5:00 PM</span></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        <div class="container text-center py-3">
-            <small class="opacity-50">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.</small>
-        </div>
-    </div>
-</footer>
-
-<!-- WhatsApp Float -->
-<?php if ($whatsappNumber): ?>
-<a href="https://wa.me/<?= e(preg_replace('/[^0-9]/', '', $whatsappNumber)) ?>" target="_blank" class="whatsapp-float" title="Chat on WhatsApp">
-    <i class="bi bi-whatsapp"></i>
-</a>
-<?php endif; ?>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<?php include __DIR__ . '/../includes/public-footer.php'; ?>
 <script>
 // Tap-to-flip for touch devices
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     document.querySelectorAll('.teacher-card').forEach(function(card) {
         card.addEventListener('click', function(e) {
-            // Close any other flipped cards
             document.querySelectorAll('.teacher-card.flipped').forEach(function(c) {
                 if (c !== card) c.classList.remove('flipped');
             });
