@@ -1,78 +1,150 @@
 
 
-## Reorganize Admin Settings into Tabbed Sub-Pages with Enhanced Color Picker
+## Plan: Favicon Upload, Inspirational Quote System, and About Page Enhancements
 
-### Overview
+### 1. Favicon Upload (Settings > General Tab)
 
-The current `settings.php` is a single long page with all sections stacked vertically. This plan splits it into organized **tab-based navigation** using Bootstrap 5 pills/tabs, so each section is its own "page" within settings. The color picker will also be enhanced with a live preview.
+Add a favicon upload card next to the existing School Logo card in the General tab of `admin/settings.php`.
 
-### New Settings Page Layout
+**Backend handler** (top of settings.php): New `form_action === 'favicon_upload'` block that:
+- Accepts .ico, .png, .svg, .jpg files
+- Saves to `uploads/logo/favicon.*`
+- Stores filename in settings key `school_favicon`
 
-The settings page will have a horizontal tab bar at the top with these tabs:
+**Frontend**: A new card in the `col-lg-4` area (or split the right column into two stacked cards: Logo + Favicon).
 
-| Tab | Icon | Contents |
-|-----|------|----------|
-| General | bi-building | School info, academic year, admissions toggle |
-| Appearance | bi-palette | Theme color picker with live preview, logo upload, preset swatches |
-| Content | bi-file-text | About page content (History, Vision, Mission) |
-| Social & SMS | bi-share | Social media links + WhatsApp/SMS config |
-| Popup Ad | bi-megaphone | Popup advertisement settings |
-| Users | bi-people | Create user + user list table |
-| Access Control | bi-shield-lock | Feature toggles (Super Admin only) |
-| System | bi-cpu | System info, database stats, danger zone |
+**All public pages** (index.php + 6 public pages): Add `<link rel="icon" href="/uploads/logo/<?= e($favicon) ?>" type="image/...">` in `<head>` dynamically from settings.
 
-Each tab shows/hides its content area using Bootstrap's built-in `nav-pills` and `tab-content` with `tab-pane` -- no page reloads needed.
+### 2. Inspirational Quote System
 
-### Enhanced Color Picker (Appearance Tab)
+#### Database: New `site_quotes` table
 
-The Appearance tab will include:
-- Native HTML5 `<input type="color">` picker (already exists)
-- 8 preset color swatches (already exists) -- will be enlarged and improved
-- **Live preview panel**: A small card showing how the selected color looks on a navbar, button, and link in real-time as the user picks colors
-- The preview updates instantly via JavaScript `oninput` event on the color picker
+```sql
+CREATE TABLE `site_quotes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `quote_text` TEXT NOT NULL,
+  `author_name` VARCHAR(200) DEFAULT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `updated_by` INT UNSIGNED DEFAULT NULL,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_quote_user` FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
 
-### What Changes
+Insert a default quote:
+```sql
+INSERT INTO `site_quotes` (`quote_text`, `author_name`, `updated_by`) VALUES
+('Education is the most powerful weapon which you can use to change the world.', 'Nelson Mandela', 1);
+```
 
-**Single file modified**: `php-backend/admin/settings.php`
+#### Admin Page: `admin/quote-highlight.php`
 
-The file will be restructured as follows:
+A new standalone admin page (not inside settings) with:
+- Textarea for quote text (required, validated)
+- Input for author name (optional)
+- Live preview card showing how it will look on the About page
+- Save/Update button
+- Success/error flash messages
+- Only accessible to Super Admin and Admin roles
+- Audit log on save
 
-1. **Tab navigation bar** at the top using Bootstrap `nav nav-pills` with icons for each section
-2. **Tab content area** with `tab-pane` divs wrapping each existing form section
-3. **Appearance tab** gets the enhanced color picker with:
-   - Larger color input
-   - Preset swatches in a grid
-   - Live preview mini-card showing navbar bar, button, and accent text in the selected color
-   - JavaScript: `document.getElementById('primaryColorPicker').addEventListener('input', ...)` updates preview elements in real-time
-4. **System tab** gets the system info card + danger zone (for super admins)
-5. All existing form handlers (PHP POST processing at top of file) remain unchanged -- only the HTML layout is reorganized
-6. URL hash support: clicking a tab updates `window.location.hash`, and on page load, the correct tab is activated from the hash (so after form submit + redirect, the user returns to the same tab)
+Add a sidebar link under "Configuration" section: "Quote Highlight" with `bi-quote` icon.
+
+#### About Page: Dynamic Quote Banner (`public/about.php`)
+
+Insert a full-width highlighted quote section between "What Makes Us Special?" (Core Values) and the Footer CTA:
+
+- Light grey background (`#f8f9fa`), premium card style with subtle left border accent
+- Large quotation mark icon decoratively placed
+- Center-aligned quote text in italic/serif font
+- Author name below with a dash prefix
+- "Last updated" small text below author
+- Scroll animation using CSS `@keyframes fadeInUp` triggered by IntersectionObserver
+
+### 3. Content Tab Enhancement (Settings > Content)
+
+Add a "Core Values" section to the Content tab so admins can edit the 4 core values (Excellence, Integrity, Innovation, Community) that appear on the About page. Currently these are hardcoded.
+
+New settings keys: `core_value_1_title`, `core_value_1_desc`, etc. (4 pairs).
+
+The About page will read these dynamically instead of showing hardcoded text.
+
+### 4. Sidebar Navigation Update
+
+Add "Quote Highlight" link to the admin sidebar in `includes/header.php` under the Configuration section with icon `bi-quote`.
+
+---
+
+### Files to Create
+| File | Purpose |
+|------|---------|
+| `admin/quote-highlight.php` | New admin page for managing the inspirational quote |
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `admin/settings.php` | Add favicon upload handler + favicon upload card in General tab + core values fields in Content tab |
+| `includes/header.php` | Add "Quote Highlight" sidebar link under Configuration |
+| `public/about.php` | Dynamic quote banner section + dynamic core values + favicon link in head |
+| `index.php` | Favicon link in head |
+| `public/teachers.php` | Favicon link in head |
+| `public/notifications.php` | Favicon link in head |
+| `public/gallery.php` | Favicon link in head |
+| `public/events.php` | Favicon link in head |
+| `public/admission-form.php` | Favicon link in head |
+| `schema.sql` | Add `site_quotes` table + default data + `school_favicon` setting + core value settings |
 
 ### Technical Details
 
-**Tab persistence after form submit**: Since each form POSTs and redirects back to `settings.php`, a hash fragment will be used:
-- Each form's submit button gets an `onclick` that sets `window.location.hash` before submit
-- On page load, JavaScript reads `window.location.hash` and activates the matching tab
-- Example: submitting the Social Links form sets `#social` hash, and on reload, the Social tab is auto-selected
-
-**Live color preview JavaScript**:
-```javascript
-colorInput.addEventListener('input', function() {
-    preview.querySelector('.preview-navbar').style.background = this.value;
-    preview.querySelector('.preview-btn').style.background = this.value;
-    preview.querySelector('.preview-link').style.color = this.value;
-});
-```
-
-**Tab navigation HTML structure**:
+**Quote banner HTML structure on About page:**
 ```text
-[General] [Appearance] [Content] [Social & SMS] [Popup Ad] [Users] [Access] [System]
-+---------------------------------------------------------------------------+
-|                                                                           |
-|   (Active tab content shown here -- only one visible at a time)          |
-|                                                                           |
-+---------------------------------------------------------------------------+
++------------------------------------------------------------------+
+|  (light grey bg, max-width card, centered)                       |
+|                                                                  |
+|          "  (large decorative quote icon)                        |
+|                                                                  |
+|   "Education is the most powerful weapon which you can           |
+|    use to change the world."                                     |
+|                                                                  |
+|          -- Nelson Mandela                                       |
+|     Last updated: 10 Feb 2026, 03:30 PM                         |
++------------------------------------------------------------------+
 ```
 
-**Files to modify**: `php-backend/admin/settings.php` (single file, layout reorganization only)
+**Quote admin page layout:**
+```text
++------------------------------------------------------------------+
+|  Quote Highlight Manager                                         |
+|                                                                  |
+|  [Textarea: Quote Message *]                                     |
+|  [Input: Author Name]                                            |
+|                                                                  |
+|  Preview:                                                        |
+|  +------------------------------------------------------------+ |
+|  |  (mini preview of the quote card as it will appear)         | |
+|  +------------------------------------------------------------+ |
+|                                                                  |
+|  [Save Quote]                                                    |
++------------------------------------------------------------------+
+```
+
+**Favicon upload card (General tab):**
+```text
++----------------------------+
+|  Favicon                   |
+|  [current favicon preview] |
+|  [file input .ico/.png]    |
+|  [Upload Favicon]          |
++----------------------------+
+```
+
+**IntersectionObserver for scroll animation:**
+```javascript
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('animate-in'); });
+}, { threshold: 0.2 });
+document.querySelectorAll('.quote-banner').forEach(el => observer.observe(el));
+```
 
