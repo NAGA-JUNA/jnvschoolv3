@@ -17,6 +17,9 @@ if (isLoggedIn()) {
 // Get active slides
 $slides = $db->query("SELECT * FROM home_slider WHERE is_active=1 ORDER BY sort_order ASC, id ASC")->fetchAll();
 
+// Get core team members
+$coreTeam = $db->query("SELECT * FROM teachers WHERE status='active' AND is_core_team=1 ORDER BY FIELD(designation,'Principal','Director','Correspondent','Vice Principal','Teacher'), name ASC")->fetchAll();
+
 // Get upcoming events (next 3)
 $events = $db->query("SELECT title, event_date, location FROM events WHERE is_public=1 AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 3")->fetchAll();
 
@@ -155,6 +158,7 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="/public/teachers.php">Our Teachers</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/notifications.php">Notifications</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/gallery.php">Gallery</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/events.php">Events</a></li>
@@ -342,6 +346,43 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
         </div>
     </div>
 </section>
+
+<!-- Our Core Team -->
+<?php if (!empty($coreTeam)): ?>
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+            <h4 class="section-title fw-bold mb-0" style="font-size:1.6rem;">Our Core Team</h4>
+            <a href="/public/teachers.php" class="btn btn-warning fw-bold px-4 rounded-1 text-uppercase" style="font-size:0.8rem;letter-spacing:1px;">View Our Teachers</a>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($coreTeam as $ct):
+                $ctPhoto = $ct['photo'] ? (str_starts_with($ct['photo'], '/uploads/') ? $ct['photo'] : '/uploads/photos/'.$ct['photo']) : '';
+            ?>
+            <div class="col-sm-6 col-md-4 col-lg-4">
+                <div class="card border-0 shadow-sm text-center h-100" style="border-radius:14px;">
+                    <div class="card-body p-4">
+                        <?php if ($ctPhoto): ?>
+                            <img src="<?= e($ctPhoto) ?>" alt="<?= e($ct['name']) ?>" class="rounded mb-3" style="width:100%;height:280px;object-fit:cover;">
+                        <?php else: ?>
+                            <div class="d-flex align-items-center justify-content-center mb-3 mx-auto" style="width:100%;height:280px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);border-radius:10px;">
+                                <i class="bi bi-person-fill" style="font-size:5rem;color:#94a3b8;"></i>
+                            </div>
+                        <?php endif; ?>
+                        <h6 class="fw-bold mb-1"><?= e($ct['name']) ?></h6>
+                        <small class="text-primary d-block mb-2"><?= e($ct['designation'] ?? 'Teacher') ?></small>
+                        <?php if ($ct['email']): ?>
+                            <hr class="my-2">
+                            <small class="text-muted"><i class="bi bi-envelope me-1"></i><?= e($ct['email']) ?></small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- Contact Info -->
 <section class="py-5">

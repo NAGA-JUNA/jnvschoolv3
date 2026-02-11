@@ -14,8 +14,8 @@ require_once __DIR__.'/../includes/header.php';?>
   </div>
 </div>
 <div class="card border-0 rounded-3 mb-3"><div class="card-body py-2"><form class="row g-2 align-items-end" method="GET"><div class="col-md-5"><input type="text" name="search" class="form-control form-control-sm" placeholder="Search..." value="<?=e($search)?>"></div><div class="col-md-3"><select name="status" class="form-select form-select-sm"><option value="">All</option><?php foreach(['active','inactive','resigned','retired'] as $st):?><option value="<?=$st?>" <?=$statusFilter===$st?'selected':''?>><?=ucfirst($st)?></option><?php endforeach;?></select></div><div class="col-md-2"><button class="btn btn-sm btn-dark w-100">Filter</button></div><div class="col-md-2"><a href="/admin/teachers.php" class="btn btn-sm btn-outline-secondary w-100">Clear</a></div></form></div></div>
-<div class="card border-0 rounded-3"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Emp ID</th><th>Name</th><th>Subject</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-<?php if(empty($teachers)):?><tr><td colspan="6" class="text-center text-muted py-4">No teachers</td></tr>
+<div class="card border-0 rounded-3"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Emp ID</th><th>Name</th><th>Designation</th><th>Subject</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+<?php if(empty($teachers)):?><tr><td colspan="7" class="text-center text-muted py-4">No teachers</td></tr>
 <?php else:foreach($teachers as $t):
   $tPhotoUrl = $t['photo'] ? (str_starts_with($t['photo'], '/uploads/') ? $t['photo'] : '/uploads/photos/'.$t['photo']) : '';
 ?><tr>
@@ -24,8 +24,10 @@ require_once __DIR__.'/../includes/header.php';?>
     <div class="d-flex align-items-center gap-2">
       <?php if($tPhotoUrl):?><img src="<?=$tPhotoUrl?>" class="rounded-circle" style="width:32px;height:32px;object-fit:cover" alt=""><?php else:?><i class="bi bi-person-circle text-muted" style="font-size:1.5rem"></i><?php endif;?>
       <?=e($t['name'])?>
+      <?php if(!empty($t['is_core_team'])):?><span class="badge bg-warning-subtle text-warning" style="font-size:.65rem"><i class="bi bi-star-fill me-1"></i>Core</span><?php endif;?>
     </div>
   </td>
+  <td style="font-size:.85rem"><?=e($t['designation']??'Teacher')?></td>
   <td style="font-size:.85rem"><?=e($t['subject']??'-')?></td>
   <td style="font-size:.85rem"><?=e($t['phone']??'-')?></td>
   <td><span class="badge bg-<?=$t['status']==='active'?'success':'secondary'?>-subtle text-<?=$t['status']==='active'?'success':'secondary'?>"><?=ucfirst($t['status'])?></span></td>
