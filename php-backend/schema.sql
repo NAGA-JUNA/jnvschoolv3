@@ -15,7 +15,7 @@
 -- ⚠️ WARNING: This uses DROP TABLE IF EXISTS — it will DELETE
 --    all existing data if tables already exist. BACK UP FIRST!
 --
--- TOTAL TABLES: 14
+-- TOTAL TABLES: 15
 --   1. users           — Admin/teacher/office accounts
 --   2. students        — Student records with photos
 --   3. teachers        — Teacher records linked to user accounts
@@ -28,8 +28,9 @@
 --  10. exam_results    — Exam marks with auto-grading
 --  11. audit_logs      — System action logs
 --  12. settings        — Key-value school settings
---  13. home_slider     — Homepage slider with animations & overlays
---  14. site_quotes     — Inspirational quotes for About page
+--  13. leadership_profiles — Leadership profiles for About page
+--  14. home_slider     — Homepage slider with animations & overlays
+--  15. site_quotes     — Inspirational quotes for About page
 -- ============================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -50,6 +51,7 @@ DROP TABLE IF EXISTS `notifications`;
 DROP TABLE IF EXISTS `admissions`;
 DROP TABLE IF EXISTS `home_slider`;
 DROP TABLE IF EXISTS `site_quotes`;
+DROP TABLE IF EXISTS `leadership_profiles`;
 DROP TABLE IF EXISTS `settings`;
 DROP TABLE IF EXISTS `teachers`;
 DROP TABLE IF EXISTS `students`;
@@ -425,6 +427,9 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('about_vision_mission_show', '1'),
 ('about_core_values_show', '1'),
 ('about_quote_show', '1'),
+('about_leadership_show', '1'),
+('about_leadership_title', 'Meet Our Leadership'),
+('about_leadership_subtitle', 'With dedication and passion, our team creates an environment where every student thrives.'),
 ('about_footer_cta_show', '1'),
 ('teachers_hero_title', 'Our Teachers'),
 ('teachers_hero_subtitle', 'Meet our dedicated team of qualified educators who inspire, guide, and shape the future of every student.'),
@@ -471,7 +476,24 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('footer_social_linkedin', '');
 
 -- --------------------------------------------------------
--- 13. Home Slider (with animations, overlays, text position)
+-- 13. Leadership Profiles (About Us page)
+-- --------------------------------------------------------
+CREATE TABLE `leadership_profiles` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `designation` VARCHAR(100) DEFAULT NULL,
+  `photo` VARCHAR(255) DEFAULT NULL,
+  `bio` TEXT DEFAULT NULL,
+  `display_order` INT NOT NULL DEFAULT 0,
+  `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_display_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 14. Home Slider (with animations, overlays, text position)
 -- --------------------------------------------------------
 CREATE TABLE `home_slider` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
