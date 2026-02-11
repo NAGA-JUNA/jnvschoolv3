@@ -16,6 +16,18 @@ if($action==='logo_upload'){
   }
 }
 
+if($action==='favicon_upload'){
+  if(!empty($_FILES['school_favicon']['name'])&&$_FILES['school_favicon']['error']===UPLOAD_ERR_OK){
+    $ext=strtolower(pathinfo($_FILES['school_favicon']['name'],PATHINFO_EXTENSION));
+    if(in_array($ext,['ico','png','svg','jpg','jpeg'])){
+      @mkdir(__DIR__.'/../uploads/logo',0755,true);
+      $fname='favicon.'.$ext;move_uploaded_file($_FILES['school_favicon']['tmp_name'],__DIR__.'/../uploads/logo/'.$fname);
+      $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('school_favicon',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
+      auditLog('update_favicon','settings');setFlash('success','Favicon updated.');
+    }else setFlash('error','Favicon must be ICO, PNG, SVG or JPG.');
+  }
+}
+
 if($action==='social_links'){
   foreach(['social_facebook','social_twitter','social_instagram','social_youtube','social_linkedin'] as $k){
     $v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
@@ -26,6 +38,15 @@ if($action==='about_content'){
   foreach(['about_history','about_vision','about_mission'] as $k){
     $v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
   }auditLog('update_about','settings');setFlash('success','About page content updated.');
+}
+
+if($action==='core_values'){
+  for($i=1;$i<=4;$i++){
+    foreach(['title','desc'] as $f){
+      $k="core_value_{$i}_{$f}";$v=trim($_POST[$k]??'');
+      $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
+    }
+  }auditLog('update_core_values','settings');setFlash('success','Core values updated.');
 }
 
 if($action==='sms_whatsapp'){
@@ -158,11 +179,20 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
       </div></div>
     </div>
     <div class="col-lg-4">
-      <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-image me-2"></i>School Logo</h6></div><div class="card-body">
+      <div class="card border-0 rounded-3 mb-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-image me-2"></i>School Logo</h6></div><div class="card-body">
         <form method="POST" enctype="multipart/form-data"><?=csrfField()?><input type="hidden" name="form_action" value="logo_upload">
         <?php if(!empty($s['school_logo'])):?><div class="mb-3 text-center"><img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="School Logo" style="max-height:80px" class="rounded"></div><?php endif;?>
         <input type="file" name="school_logo" class="form-control form-control-sm mb-2" accept=".jpg,.jpeg,.png,.webp,.svg">
         <button class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload Logo</button>
+        </form>
+      </div></div>
+
+      <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-window-desktop me-2"></i>Favicon</h6></div><div class="card-body">
+        <form method="POST" enctype="multipart/form-data"><?=csrfField()?><input type="hidden" name="form_action" value="favicon_upload">
+        <?php if(!empty($s['school_favicon'])):?><div class="mb-3 text-center"><img src="/uploads/logo/<?=e($s['school_favicon'])?>" alt="Favicon" style="max-height:48px" class="rounded"></div><?php endif;?>
+        <input type="file" name="school_favicon" class="form-control form-control-sm mb-2" accept=".ico,.png,.svg,.jpg,.jpeg">
+        <small class="text-muted d-block mb-2" style="font-size:.7rem">Recommended: 32×32 or 64×64px. ICO, PNG, SVG, JPG.</small>
+        <button class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload Favicon</button>
         </form>
       </div></div>
     </div>
@@ -264,13 +294,41 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
 <!-- ========== CONTENT TAB ========== -->
 <div class="tab-pane fade" id="tab-content" role="tabpanel">
-  <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-file-text me-2"></i>About Page Content</h6></div><div class="card-body">
+  <div class="card border-0 rounded-3 mb-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-file-text me-2"></i>About Page Content</h6></div><div class="card-body">
     <p class="text-muted mb-3" style="font-size:.8rem">This content appears on the public About Us page. Leave empty to use default placeholder text.</p>
     <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="about_content"><div class="row g-3">
     <div class="col-12"><label class="form-label fw-semibold">School History</label><textarea name="about_history" class="form-control" rows="4" placeholder="Tell the story of your school..."><?=e($s['about_history']??'')?></textarea></div>
     <div class="col-md-6"><label class="form-label fw-semibold">Vision Statement</label><textarea name="about_vision" class="form-control" rows="3" placeholder="Your school's vision..."><?=e($s['about_vision']??'')?></textarea></div>
     <div class="col-md-6"><label class="form-label fw-semibold">Mission Statement</label><textarea name="about_mission" class="form-control" rows="3" placeholder="Your school's mission..."><?=e($s['about_mission']??'')?></textarea></div>
     <div class="col-12"><button class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save About Content</button></div>
+    </div></form>
+  </div></div>
+
+  <!-- Core Values -->
+  <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-trophy me-2"></i>Core Values</h6></div><div class="card-body">
+    <p class="text-muted mb-3" style="font-size:.8rem">Edit the 4 core values displayed on the About Us page. Leave empty to use defaults.</p>
+    <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="core_values"><div class="row g-3">
+    <?php
+    $defaultValues = [
+      1 => ['Excellence', 'We strive for the highest standards in academics, character, and personal growth.'],
+      2 => ['Integrity', 'We foster honesty, transparency, and ethical behavior in all our actions.'],
+      3 => ['Innovation', 'We embrace creativity and modern teaching methods to inspire learning.'],
+      4 => ['Community', 'We build a supportive, inclusive environment where everyone belongs.'],
+    ];
+    for ($i = 1; $i <= 4; $i++):
+      $defTitle = $defaultValues[$i][0];
+      $defDesc = $defaultValues[$i][1];
+    ?>
+    <div class="col-md-6">
+      <div class="bg-light rounded-3 p-3">
+        <label class="form-label fw-semibold mb-1">Value <?=$i?> — Title</label>
+        <input type="text" name="core_value_<?=$i?>_title" class="form-control form-control-sm mb-2" value="<?=e($s['core_value_'.$i.'_title']??$defTitle)?>" placeholder="<?=$defTitle?>">
+        <label class="form-label fw-semibold mb-1">Description</label>
+        <textarea name="core_value_<?=$i?>_desc" class="form-control form-control-sm" rows="2" placeholder="<?=$defDesc?>"><?=e($s['core_value_'.$i.'_desc']??$defDesc)?></textarea>
+      </div>
+    </div>
+    <?php endfor; ?>
+    <div class="col-12"><button class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save Core Values</button></div>
     </div></form>
   </div></div>
 </div>
