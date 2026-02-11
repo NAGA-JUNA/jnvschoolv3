@@ -1,48 +1,78 @@
 
 
-## Update README.md and schema.sql
+## Reorganize Admin Settings into Tabbed Sub-Pages with Enhanced Color Picker
 
-### 1. README.md Updates
+### Overview
 
-**Version bump**: v3.0 to v3.2 throughout the document.
+The current `settings.php` is a single long page with all sections stacked vertically. This plan splits it into organized **tab-based navigation** using Bootstrap 5 pills/tabs, so each section is its own "page" within settings. The color picker will also be enhanced with a live preview.
 
-**Feature Summary updates** to reflect all recent changes:
-- Navbar redesign: logo-only brand (no school name text), hidden top bar on mobile, custom hamburger icon
-- Footer redesign: dark gradient footer (#1a1a2e) with branded logo card, 4-column layout (Logo/Socials, Quick Links, Programs, Contact), "Become a Part of..." CTA section
-- Core Team carousel on homepage with horizontal scroll, left/right arrows, sample data from `is_core_team=1` teachers
-- Dynamic theme color via `--theme-primary` CSS variable controlled from admin settings `primary_color`
-- Mobile responsiveness: hidden top bar on mobile, tap-to-flip teacher cards, swipe-to-close lightbox, touch-friendly tap targets
-- Teachers page: Playfair Display serif headings, "Principal's Message" badge, reduced stat cards
-- About page: content-managed History, Vision, Mission, Core Values sections
+### New Settings Page Layout
 
-**Public Website feature list** rewritten to include:
-- Two-tier navbar (top bar hidden on mobile) with logo-only brand
-- Dynamic hero slider with animations
-- Core Team horizontal carousel with arrow navigation
-- Dark gradient footer with branded card and social links
-- WhatsApp floating button
-- Notification bell popup
-- Dynamic color theming from admin settings
+The settings page will have a horizontal tab bar at the top with these tabs:
 
-**Settings section** updated to mention:
-- `primary_color` controls frontend theme
-- `whatsapp_api_number` for WhatsApp button
-- SMS/WhatsApp configuration section in admin
+| Tab | Icon | Contents |
+|-----|------|----------|
+| General | bi-building | School info, academic year, admissions toggle |
+| Appearance | bi-palette | Theme color picker with live preview, logo upload, preset swatches |
+| Content | bi-file-text | About page content (History, Vision, Mission) |
+| Social & SMS | bi-share | Social media links + WhatsApp/SMS config |
+| Popup Ad | bi-megaphone | Popup advertisement settings |
+| Users | bi-people | Create user + user list table |
+| Access Control | bi-shield-lock | Feature toggles (Super Admin only) |
+| System | bi-cpu | System info, database stats, danger zone |
 
-### 2. schema.sql Updates
+Each tab shows/hides its content area using Bootstrap's built-in `nav-pills` and `tab-content` with `tab-pane` -- no page reloads needed.
 
-Add missing default settings that are used in the codebase but not in the schema's INSERT:
+### Enhanced Color Picker (Appearance Tab)
 
-```sql
--- Add to the settings INSERT block:
-('whatsapp_api_number', ''),
-('sms_gateway_key', ''),
+The Appearance tab will include:
+- Native HTML5 `<input type="color">` picker (already exists)
+- 8 preset color swatches (already exists) -- will be enlarged and improved
+- **Live preview panel**: A small card showing how the selected color looks on a navbar, button, and link in real-time as the user picks colors
+- The preview updates instantly via JavaScript `oninput` event on the color picker
+
+### What Changes
+
+**Single file modified**: `php-backend/admin/settings.php`
+
+The file will be restructured as follows:
+
+1. **Tab navigation bar** at the top using Bootstrap `nav nav-pills` with icons for each section
+2. **Tab content area** with `tab-pane` divs wrapping each existing form section
+3. **Appearance tab** gets the enhanced color picker with:
+   - Larger color input
+   - Preset swatches in a grid
+   - Live preview mini-card showing navbar bar, button, and accent text in the selected color
+   - JavaScript: `document.getElementById('primaryColorPicker').addEventListener('input', ...)` updates preview elements in real-time
+4. **System tab** gets the system info card + danger zone (for super admins)
+5. All existing form handlers (PHP POST processing at top of file) remain unchanged -- only the HTML layout is reorganized
+6. URL hash support: clicking a tab updates `window.location.hash`, and on page load, the correct tab is activated from the hash (so after form submit + redirect, the user returns to the same tab)
+
+### Technical Details
+
+**Tab persistence after form submit**: Since each form POSTs and redirects back to `settings.php`, a hash fragment will be used:
+- Each form's submit button gets an `onclick` that sets `window.location.hash` before submit
+- On page load, JavaScript reads `window.location.hash` and activates the matching tab
+- Example: submitting the Social Links form sets `#social` hash, and on reload, the Social tab is auto-selected
+
+**Live color preview JavaScript**:
+```javascript
+colorInput.addEventListener('input', function() {
+    preview.querySelector('.preview-navbar').style.background = this.value;
+    preview.querySelector('.preview-btn').style.background = this.value;
+    preview.querySelector('.preview-link').style.color = this.value;
+});
 ```
 
-Update the schema header comment version from v3.0 to v3.2.
+**Tab navigation HTML structure**:
+```text
+[General] [Appearance] [Content] [Social & SMS] [Popup Ad] [Users] [Access] [System]
++---------------------------------------------------------------------------+
+|                                                                           |
+|   (Active tab content shown here -- only one visible at a time)          |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
 
-Update the upgrade section at the bottom of README to include v3.1 to v3.2 migration notes (the new settings keys).
+**Files to modify**: `php-backend/admin/settings.php` (single file, layout reorganization only)
 
-### Files to modify
-- `php-backend/README.md` -- Full content update with new features, version bump, updated file tree and feature descriptions
-- `php-backend/schema.sql` -- Add missing settings keys, update version in header comment
