@@ -182,13 +182,41 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
         .footer-newsletter-input:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); color: #fff; box-shadow: none; }
         .footer-bottom { border-top: 1px solid rgba(255,255,255,0.15); }
 
+        /* Tap to flip for touch */
+        .teacher-card.flipped .teacher-card-inner { transform: rotateY(180deg); }
+
         @media (max-width: 767.98px) {
             .teachers-hero { padding: 3rem 0 2.5rem; }
             .teachers-hero h1 { font-size: 2rem; }
             .teacher-card { height: 350px; }
             .teacher-card-front img, .teacher-card-front .no-photo { height: 230px; }
-            .principal-photo { max-width: 250px; }
+            .principal-photo { max-width: 250px; margin: 0 auto; }
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
+            .hero-stat-card .num { font-size: 2rem; }
+        }
+        @media (max-width: 575.98px) {
+            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
+            .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
+            .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
+            .teachers-hero { padding: 2.5rem 0 2rem; }
+            .teachers-hero h1 { font-size: 1.8rem; }
+            .teacher-card { height: 300px; }
+            .teacher-card-front img, .teacher-card-front .no-photo { height: 200px; }
+            .teacher-card-back { padding: 1rem; }
+            .teacher-card-back .back-icon { width: 50px; height: 50px; font-size: 1.5rem; margin-bottom: 0.5rem; }
+            .teacher-card-back h6 { font-size: 0.95rem; }
+            .teacher-card-back .detail { font-size: 0.75rem; }
+            .hero-stat-card { padding: 1rem; }
+            .hero-stat-card .num { font-size: 1.5rem; }
+            .hero-stat-card .label { font-size: 0.7rem; }
+            .principal-photo { max-width: 200px; }
+            .quote-box { padding: 1.2rem; }
+            .site-footer .row > div { text-align: center; }
+            .footer-heading::after { left: 50%; transform: translateX(-50%); }
+            .footer-social { justify-content: center; }
+            .site-footer { border-radius: 20px 20px 0 0; }
+            .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
         }
     </style>
 </head>
@@ -451,5 +479,19 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
 <?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Tap-to-flip for touch devices
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    document.querySelectorAll('.teacher-card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            // Close any other flipped cards
+            document.querySelectorAll('.teacher-card.flipped').forEach(function(c) {
+                if (c !== card) c.classList.remove('flipped');
+            });
+            card.classList.toggle('flipped');
+        });
+    });
+}
+</script>
 </body>
 </html>

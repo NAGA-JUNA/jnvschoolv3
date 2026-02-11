@@ -79,7 +79,25 @@ $categories = $db->query("SELECT DISTINCT category FROM gallery_items WHERE stat
         .footer-newsletter-input::placeholder { color: rgba(255,255,255,0.6); }
         .footer-newsletter-input:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); color: #fff; box-shadow: none; }
         .footer-bottom { border-top: 1px solid rgba(255,255,255,0.15); }
-        @media (max-width: 767.98px) { .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; } }
+        @media (max-width: 767.98px) {
+            .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
+            .gallery-item img { height: 160px; }
+        }
+        @media (max-width: 575.98px) {
+            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
+            .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
+            .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
+            .hero-banner { padding: 2rem 0; }
+            .hero-banner h1 { font-size: 1.5rem; }
+            .gallery-item img { height: 140px; }
+            .lightbox .close-btn { top: 0.5rem; right: 0.8rem; font-size: 2.5rem; padding: 0.5rem; }
+            .site-footer .row > div { text-align: center; }
+            .footer-heading::after { left: 50%; transform: translateX(-50%); }
+            .footer-social { justify-content: center; }
+            .site-footer { border-radius: 20px 20px 0 0; }
+            .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -265,6 +283,16 @@ $categories = $db->query("SELECT DISTINCT category FROM gallery_items WHERE stat
 function openLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.add('show'); }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+// Swipe to close lightbox on touch
+(function(){
+    var startX = 0;
+    var lb = document.getElementById('lightbox');
+    lb.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive:true});
+    lb.addEventListener('touchend', function(e){
+        var diff = Math.abs(e.changedTouches[0].clientX - startX);
+        if (diff > 80) closeLightbox();
+    });
+})();
 </script>
 </body>
 </html>
