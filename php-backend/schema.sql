@@ -132,12 +132,16 @@ CREATE TABLE `teachers` (
   `status` ENUM('active','inactive','resigned','retired') NOT NULL DEFAULT 'active',
   `is_core_team` TINYINT(1) NOT NULL DEFAULT 0,
   `bio` TEXT DEFAULT NULL,
+  `display_order` INT NOT NULL DEFAULT 0,
+  `is_visible` TINYINT(1) NOT NULL DEFAULT 1,
+  `is_featured` TINYINT(1) NOT NULL DEFAULT 0,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `employee_id` (`employee_id`),
   KEY `user_id` (`user_id`),
   KEY `idx_status` (`status`),
+  KEY `idx_display_order` (`display_order`),
   CONSTRAINT `fk_teacher_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
