@@ -34,7 +34,7 @@ function navActive(string $path): string {
         .sidebar {
             width: var(--sidebar-width);
             background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-            min-height: 100vh;
+            height: 100vh;
             position: fixed;
             top: 0; left: 0;
             z-index: 1040;
