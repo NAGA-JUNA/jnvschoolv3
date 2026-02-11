@@ -1,61 +1,107 @@
 
 
-## Plan: Sync Public Page Headers + Improve Ad Popup
+## Plan: About Us Page + Modern Gradient Footer
 
-### Problem
-The four public pages (Notifications, Gallery, Events, Apply Now) still use the old single-row navbar, while the homepage has the updated two-tier navbar with top bar, logo, notification bell, and WhatsApp button. The ad popup also needs better sizing.
+### What This Plan Does
 
-### Changes
+1. **New "About Us" Page (`public/about.php`)** — A dedicated page with the two-tier navbar, featuring sections for School History, Vision, Mission, and core values. Uses the same design language as the existing teachers page.
 
-#### 1. Update all 4 public pages with the two-tier navbar
+2. **Modern Gradient Footer (All Public Pages)** — Replaces the current simple dark footer with a professional gradient footer (purple-to-teal, matching the reference screenshot) with 4 columns:
+   - **Column 1**: School logo + address
+   - **Column 2**: About Us — address, email, phone
+   - **Column 3**: Services/Quick Links — Home, About, Teachers, Gallery, Events, Contact
+   - **Column 4**: Newsletter email input + social media icons (Facebook, Twitter/X, Instagram, YouTube, LinkedIn)
+   - **Bottom bar**: Copyright text
 
-Each of these files will get the same header structure as `index.php`:
-- `public/notifications.php`
-- `public/gallery.php`
-- `public/events.php`
-- `public/admission-form.php`
+3. **Navigation Update** — Add "About Us" link to the navbar on all public pages.
 
-For each page, the changes include:
-- Add PHP queries at the top for: school logo, tagline, WhatsApp number, notification count, bell notifications (5 latest)
-- Replace the single `<nav>` with the **two-tier layout**: dark top bar (marquee + quick links) and main navbar (logo, menu links, red notification bell with badge, login button)
-- Add the **Notification Modal** (Bootstrap modal with 5 latest notifications, close button, "View All" link)
-- Add the **WhatsApp floating button** at the bottom
-- Add matching CSS for top-bar, main-navbar, notification bell, WhatsApp button
-- Add "Home" and "Our Teachers" links to the navigation menu
-- Update footer to include the school logo
-
-#### 2. Improve Ad Popup sizing
-
-Update the ad popup CSS in `index.php` to be better centered and sized:
-- Change `max-width` from `600px` to `550px` for a more compact, professional look
-- Add `max-height: 80vh` with `object-fit: contain` on the image so it doesn't overflow on smaller screens
-- Add a subtle entrance animation (fade + scale) for a polished feel
+---
 
 ### Technical Details
 
-**Files to modify:**
+#### A. Database Changes
+
+Add social media and about page settings:
+
+```sql
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
+('about_history', ''),
+('about_vision', ''),
+('about_mission', ''),
+('social_facebook', ''),
+('social_twitter', ''),
+('social_instagram', ''),
+('social_youtube', ''),
+('social_linkedin', '');
+```
+
+Note: Some social settings may already exist — we use INSERT IGNORE.
+
+#### B. Files to Create
+
+| File | Purpose |
+|------|---------|
+| `public/about.php` | Public About Us page with history, vision, mission sections |
+
+#### C. Files to Modify
 
 | File | Changes |
 |------|---------|
-| `public/notifications.php` | Replace old navbar (lines 83-105) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries for logo/tagline/whatsapp/bell notifs |
-| `public/gallery.php` | Replace old navbar (lines 40-54) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries |
-| `public/events.php` | Replace old navbar (lines 29-43) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries |
-| `public/admission-form.php` | Replace old navbar (lines 70-84) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries |
-| `index.php` | Tweak ad popup CSS for better sizing and animation |
+| `index.php` | Replace footer with gradient footer, add "About Us" nav link |
+| `public/teachers.php` | Replace footer with gradient footer, add "About Us" nav link |
+| `public/notifications.php` | Replace footer with gradient footer, add "About Us" nav link |
+| `public/gallery.php` | Replace footer with gradient footer, add "About Us" nav link |
+| `public/events.php` | Replace footer with gradient footer, add "About Us" nav link |
+| `public/admission-form.php` | Replace footer with gradient footer, add "About Us" nav link |
+| `admin/settings.php` | Add fields for About page content (history, vision, mission) and social links if not already present |
+| `schema.sql` | Add new setting keys |
 
-**New navbar HTML structure (applied to all 4 pages):**
+#### D. About Us Page Design
+
+- **Hero Section**: Gradient background (same as teachers hero), "About Us" heading with badge
+- **History Section**: Card with icon, school founding story and milestones
+- **Vision Section**: Card with eye icon, the school's vision statement
+- **Mission Section**: Card with target icon, the school's mission statement
+- **Values Grid**: 4 cards showing core values (Excellence, Integrity, Innovation, Community)
+- All content pulled dynamically from settings so admin can update via backend
+
+#### E. Gradient Footer Design (matching reference screenshot)
 
 ```text
-+----------------------------------------------------------+
-| Welcome marquee text          Admissions | Gallery | Events |  <-- top bar
-+----------------------------------------------------------+
-| [Logo] School   Home | Teachers | Notifs... | [Bell] Login |  <-- main nav
-+----------------------------------------------------------+
++-------------------------------------------------------------------+
+|  [gradient: purple (#6a11cb) -> teal (#1e8a7a)]                   |
+|                                                                   |
+|  [Logo]              ABOUT US           SERVICES     NEWSLETTER   |
+|  School Name         Address            Home         [Email input] |
+|  Address line 1      Email              About        [->]         |
+|  City, State         Phone              Teachers                  |
+|                                         Gallery      [Social Icons]|
+|                                         Events       f x ig yt in |
+|                                         Contact                   |
++-------------------------------------------------------------------+
+|          (c) 2026 School Name. All Rights Reserved.               |
++-------------------------------------------------------------------+
 ```
 
-**Ad popup improvements:**
-- Max-width: 550px (from 600px)
-- Max-height on image: 80vh with object-fit: contain
-- Fade-in + scale animation on appearance
-- Slightly rounded corners and shadow refinements
+- CSS: `background: linear-gradient(135deg, #6a11cb 0%, #1e8a7a 100%);`
+- White text, rounded top corners on the footer container
+- Social icons as circular white-bordered buttons
+- Newsletter input with arrow submit button (decorative, no backend needed initially)
+
+#### F. Footer CSS (shared across all pages)
+
+The footer CSS will be added inline in each page's `<style>` block (following existing pattern). Key styles:
+- `.site-footer`: gradient background, white text, padding, rounded-top corners
+- `.footer-heading`: uppercase, underlined headings
+- `.footer-social a`: circular bordered icons
+- `.footer-newsletter input`: transparent-bordered input with submit button
+- `.footer-bottom`: border-top separator with copyright
+
+#### G. Admin Settings Updates
+
+Add a new "About Page Content" section in `admin/settings.php` with:
+- School History textarea
+- Vision Statement textarea  
+- Mission Statement textarea
+- Social media URL fields (if not already present)
 
