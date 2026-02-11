@@ -176,8 +176,9 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
             position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000;
             display: flex; align-items: center; justify-content: center;
         }
-        .ad-popup-content { position: relative; max-width: 600px; width: 90%; }
-        .ad-popup-content img { width: 100%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .ad-popup-content { position: relative; max-width: 550px; width: 90%; animation: adPopupIn 0.4s ease-out; }
+        .ad-popup-content img { width: 100%; max-height: 80vh; object-fit: contain; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+        @keyframes adPopupIn { 0% { opacity: 0; transform: scale(0.85); } 100% { opacity: 1; transform: scale(1); } }
         .ad-popup-close {
             position: absolute; top: -12px; right: -12px; width: 36px; height: 36px;
             border-radius: 50%; background: #dc3545; color: #fff; border: 3px solid #fff;
