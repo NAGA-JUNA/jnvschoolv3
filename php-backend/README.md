@@ -255,6 +255,12 @@ ALTER TABLE `home_slider`
   ADD COLUMN `text_position` VARCHAR(10) NOT NULL DEFAULT 'left' AFTER `overlay_style`,
   ADD COLUMN `overlay_opacity` INT NOT NULL DEFAULT 70 AFTER `text_position`;
 
+-- Add teacher core team fields
+ALTER TABLE `teachers`
+  ADD COLUMN `designation` VARCHAR(100) DEFAULT 'Teacher' AFTER `name`,
+  ADD COLUMN `is_core_team` TINYINT(1) NOT NULL DEFAULT 0 AFTER `status`,
+  ADD COLUMN `bio` TEXT DEFAULT NULL AFTER `is_core_team`;
+
 -- Add social media settings (if not already present)
 INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('facebook_url', ''),
