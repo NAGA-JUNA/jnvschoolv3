@@ -2,6 +2,14 @@
 require_once __DIR__.'/../includes/auth.php';
 $db = getDB();
 $schoolName = getSetting('school_name', 'JNV School');
+$schoolTagline = getSetting('school_tagline', 'Nurturing Talent, Shaping Future');
+$whatsappNumber = getSetting('whatsapp_api_number', '');
+$navLogo = getSetting('school_logo', '');
+$logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
+
+// Bell notifications
+$bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 5")->fetchAll();
+$notifCount = $db->query("SELECT COUNT(*) FROM notifications WHERE status='approved' AND is_public=1 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
 
 $category = $_GET['category'] ?? '';
 $where = "WHERE status='approved'";
@@ -26,6 +34,23 @@ $categories = $db->query("SELECT DISTINCT category FROM gallery_items WHERE stat
     <style>
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
+        .top-bar { background: #0a0f1a; color: #fff; padding: 0.4rem 0; font-size: 0.78rem; }
+        .top-bar a { color: rgba(255,255,255,0.8); text-decoration: none; transition: color 0.2s; }
+        .top-bar a:hover { color: #fff; }
+        .marquee-text { white-space: nowrap; overflow: hidden; }
+        .marquee-text span { display: inline-block; animation: marqueeScroll 20s linear infinite; }
+        @keyframes marqueeScroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .main-navbar { background: #0f172a; padding: 0.5rem 0; }
+        .main-navbar .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 0.9rem; padding: 0.5rem 0.8rem; }
+        .main-navbar .nav-link:hover, .main-navbar .nav-link.active { color: #fff; }
+        .notif-bell-btn { background: #dc3545; color: #fff; border: none; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; position: relative; transition: background 0.2s; }
+        .notif-bell-btn:hover { background: #c82333; }
+        .notif-badge { position: absolute; top: -6px; right: -8px; background: #ffc107; color: #000; font-size: 0.65rem; font-weight: 700; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+        .login-nav-btn { background: transparent; border: 1.5px solid rgba(255,255,255,0.5); color: #fff; border-radius: 8px; padding: 0.4rem 1.2rem; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+        .login-nav-btn:hover { background: #fff; color: #0f172a; }
+        .whatsapp-float { position: fixed; bottom: 24px; right: 24px; z-index: 9999; width: 60px; height: 60px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.8rem; text-decoration: none; box-shadow: 0 4px 20px rgba(37,211,102,0.4); transition: transform 0.3s; animation: whatsappPulse 2s infinite; }
+        .whatsapp-float:hover { transform: scale(1.1); color: #fff; }
+        @keyframes whatsappPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.4); } 50% { box-shadow: 0 4px 30px rgba(37,211,102,0.7); } }
         .hero-banner { background: linear-gradient(135deg, #059669 0%, #0891b2 100%); color: #fff; padding: 3rem 0; }
         .gallery-item { border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
         .gallery-item:hover { transform: scale(1.03); }
@@ -34,24 +59,85 @@ $categories = $db->query("SELECT DISTINCT category FROM gallery_items WHERE stat
         .lightbox.show { display: flex; }
         .lightbox img { max-width: 90%; max-height: 90vh; border-radius: 8px; }
         .lightbox .close-btn { position: absolute; top: 1rem; right: 1.5rem; color: #fff; font-size: 2rem; cursor: pointer; }
+        @media (max-width: 767.98px) { .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; } }
     </style>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark" style="background:#0f172a;">
+
+<!-- Top Bar -->
+<div class="top-bar">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/public/notifications.php"><i class="bi bi-mortarboard-fill me-2"></i><?= e($schoolName) ?></a>
-        <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#pubNav"><span class="navbar-toggler-icon"></span></button>
-        <div class="collapse navbar-collapse" id="pubNav">
-            <ul class="navbar-nav ms-auto">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="marquee-text flex-grow-1 me-3"><span>🎓 Welcome to <?= e($schoolName) ?> — <?= e($schoolTagline) ?></span></div>
+            <div class="d-flex gap-3 flex-shrink-0">
+                <a href="/public/admission-form.php"><i class="bi bi-mortarboard me-1"></i>Admissions</a>
+                <a href="/public/gallery.php"><i class="bi bi-images me-1"></i>Gallery</a>
+                <a href="/public/events.php"><i class="bi bi-calendar-event me-1"></i>Events</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Navbar -->
+<nav class="main-navbar navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-white" href="/">
+            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:36px;height:36px;border-radius:8px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill"></i><?php endif; ?>
+            <?= e($schoolName) ?>
+        </a>
+        <button class="navbar-toggler border-0" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="/public/teachers.php">Our Teachers</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/notifications.php">Notifications</a></li>
                 <li class="nav-item"><a class="nav-link active" href="/public/gallery.php">Gallery</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/events.php">Events</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/admission-form.php">Apply Now</a></li>
-                <li class="nav-item"><a class="nav-link btn btn-sm btn-outline-light ms-lg-2 px-3" href="/login.php">Login</a></li>
             </ul>
+            <div class="d-flex align-items-center gap-2">
+                <button class="notif-bell-btn" data-bs-toggle="modal" data-bs-target="#notifBellModal">
+                    <i class="bi bi-bell-fill me-1"></i> Notifications
+                    <?php if ($notifCount > 0): ?><span class="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span><?php endif; ?>
+                </button>
+                <a href="/login.php" class="login-nav-btn"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+            </div>
         </div>
     </div>
 </nav>
+
+<!-- Bell Notification Modal -->
+<div class="modal fade" id="notifBellModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold"><i class="bi bi-bell-fill text-danger me-2"></i>Latest Notifications</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <?php if (empty($bellNotifs)): ?>
+                    <p class="text-muted text-center py-3">No recent notifications.</p>
+                <?php else: ?>
+                    <?php foreach ($bellNotifs as $bn):
+                        $typeColors = ['urgent' => 'danger', 'exam' => 'warning', 'academic' => 'info', 'event' => 'success'];
+                        $bColor = $typeColors[$bn['type']] ?? 'secondary';
+                    ?>
+                    <div class="d-flex justify-content-between align-items-start p-2 rounded-3 mb-2" style="background:#f8fafc;">
+                        <div>
+                            <div class="fw-semibold" style="font-size:0.88rem;"><?= e($bn['title']) ?></div>
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i><?= date('d M Y', strtotime($bn['created_at'])) ?></small>
+                        </div>
+                        <span class="badge bg-<?= $bColor ?>" style="font-size:0.7rem;"><?= e(ucfirst($bn['type'])) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <a href="/public/notifications.php" class="btn btn-primary btn-sm w-100 rounded-3"><i class="bi bi-list-ul me-1"></i>View All Notifications</a>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="hero-banner">
     <div class="container">
@@ -97,12 +183,19 @@ $categories = $db->query("SELECT DISTINCT category FROM gallery_items WHERE stat
     <img id="lightboxImg" src="" alt="Gallery Image">
 </div>
 
+<!-- Footer -->
 <footer class="bg-dark text-white py-4 mt-5">
     <div class="container text-center">
+        <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:48px;height:48px;border-radius:10px;object-fit:cover;margin-bottom:0.5rem;"><?php endif; ?>
         <p class="mb-1">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.</p>
         <small class="text-muted">Powered by JNV School Management System</small>
     </div>
 </footer>
+
+<!-- WhatsApp Float -->
+<?php if ($whatsappNumber): ?>
+<a href="https://wa.me/<?= e(preg_replace('/[^0-9]/', '', $whatsappNumber)) ?>" target="_blank" class="whatsapp-float" title="Chat on WhatsApp"><i class="bi bi-whatsapp"></i></a>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
