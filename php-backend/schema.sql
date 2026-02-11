@@ -1,7 +1,34 @@
 -- ============================================
--- JNV School Management System — Full Database Schema v2.0
+-- JNV School Management System — Full Database Schema v3.0
 -- Domain: jnvschool.awayindia.com
 -- Run this in phpMyAdmin after creating database
+-- ============================================
+-- 
+-- IMPORT INSTRUCTIONS:
+-- 1. Log in to cPanel → phpMyAdmin
+-- 2. Select your database (e.g., yshszsos_jnvschool)
+-- 3. Click the "Import" tab at the top
+-- 4. Click "Choose File" → select this schema.sql file
+-- 5. Set "Format" to SQL (default)
+-- 6. Click "Go" to import
+--
+-- ⚠️ WARNING: This uses DROP TABLE IF EXISTS — it will DELETE
+--    all existing data if tables already exist. BACK UP FIRST!
+--
+-- TOTAL TABLES: 13
+--   1. users           — Admin/teacher/office accounts
+--   2. students        — Student records with photos
+--   3. teachers        — Teacher records linked to user accounts
+--   4. admissions      — Online admission applications
+--   5. notifications   — Notifications with approval workflow + targeting
+--   6. notification_reads — Per-user read tracking
+--   7. gallery_items   — Gallery uploads with approval
+--   8. events          — School events/calendar
+--   9. attendance      — Daily attendance by class
+--  10. exam_results    — Exam marks with auto-grading
+--  11. audit_logs      — System action logs
+--  12. settings        — Key-value school settings
+--  13. home_slider     — Homepage slider with animations & overlays
 -- ============================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -10,8 +37,22 @@ START TRANSACTION;
 SET time_zone = "+05:30";
 
 -- --------------------------------------------------------
--- Users (admin, teacher, office roles)
+-- 1. Users (admin, teacher, office roles)
 -- --------------------------------------------------------
+DROP TABLE IF EXISTS `notification_reads`;
+DROP TABLE IF EXISTS `audit_logs`;
+DROP TABLE IF EXISTS `exam_results`;
+DROP TABLE IF EXISTS `attendance`;
+DROP TABLE IF EXISTS `gallery_items`;
+DROP TABLE IF EXISTS `events`;
+DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `admissions`;
+DROP TABLE IF EXISTS `home_slider`;
+DROP TABLE IF EXISTS `settings`;
+DROP TABLE IF EXISTS `teachers`;
+DROP TABLE IF EXISTS `students`;
+DROP TABLE IF EXISTS `users`;
+
 CREATE TABLE `users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
@@ -35,7 +76,7 @@ INSERT INTO `users` (`name`, `email`, `password`, `role`) VALUES
 ('Super Admin', 'admin@school.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin');
 
 -- --------------------------------------------------------
--- Students
+-- 2. Students
 -- --------------------------------------------------------
 CREATE TABLE `students` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -68,7 +109,7 @@ CREATE TABLE `students` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Teachers
+-- 3. Teachers
 -- --------------------------------------------------------
 CREATE TABLE `teachers` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -96,7 +137,7 @@ CREATE TABLE `teachers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Admissions
+-- 4. Admissions
 -- --------------------------------------------------------
 CREATE TABLE `admissions` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -124,7 +165,7 @@ CREATE TABLE `admissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Notifications
+-- 5. Notifications (with targeting, visibility, soft-delete)
 -- --------------------------------------------------------
 CREATE TABLE `notifications` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -164,7 +205,7 @@ CREATE TABLE `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Notification Read Tracking
+-- 6. Notification Read Tracking
 -- --------------------------------------------------------
 CREATE TABLE `notification_reads` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -178,7 +219,7 @@ CREATE TABLE `notification_reads` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Gallery Items
+-- 7. Gallery Items
 -- --------------------------------------------------------
 CREATE TABLE `gallery_items` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -199,7 +240,7 @@ CREATE TABLE `gallery_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Events
+-- 8. Events
 -- --------------------------------------------------------
 CREATE TABLE `events` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -222,7 +263,7 @@ CREATE TABLE `events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Attendance
+-- 9. Attendance
 -- --------------------------------------------------------
 CREATE TABLE `attendance` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -242,7 +283,7 @@ CREATE TABLE `attendance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Exam Results
+-- 10. Exam Results
 -- --------------------------------------------------------
 CREATE TABLE `exam_results` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -265,7 +306,7 @@ CREATE TABLE `exam_results` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Audit Logs
+-- 11. Audit Logs
 -- --------------------------------------------------------
 CREATE TABLE `audit_logs` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -284,7 +325,7 @@ CREATE TABLE `audit_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Settings
+-- 12. Settings
 -- --------------------------------------------------------
 CREATE TABLE `settings` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -306,10 +347,14 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('primary_color', '#1e40af'),
 ('secondary_color', '#3b82f6'),
 ('academic_year', '2025-2026'),
-('admission_open', '1');
+('admission_open', '1'),
+('facebook_url', ''),
+('twitter_url', ''),
+('instagram_url', ''),
+('youtube_url', '');
 
 -- --------------------------------------------------------
--- Home Slider
+-- 13. Home Slider (with animations, overlays, text position)
 -- --------------------------------------------------------
 CREATE TABLE `home_slider` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -319,10 +364,25 @@ CREATE TABLE `home_slider` (
   `link_url` VARCHAR(255) DEFAULT NULL,
   `badge_text` VARCHAR(50) DEFAULT NULL,
   `cta_text` VARCHAR(50) DEFAULT NULL,
+  `animation_type` VARCHAR(20) NOT NULL DEFAULT 'fade',
+  `overlay_style` VARCHAR(20) NOT NULL DEFAULT 'gradient-dark',
+  `text_position` VARCHAR(10) NOT NULL DEFAULT 'left',
+  `overlay_opacity` INT NOT NULL DEFAULT 70,
   `sort_order` INT NOT NULL DEFAULT 0,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Sample Slider Data (5 slides)
+-- Replace image_path with actual uploaded images
+-- --------------------------------------------------------
+INSERT INTO `home_slider` (`title`, `subtitle`, `image_path`, `badge_text`, `cta_text`, `animation_type`, `overlay_style`, `text_position`, `overlay_opacity`, `sort_order`, `is_active`) VALUES
+('Welcome to Jawahar Navodaya Vidyalaya', 'Nurturing young minds with quality education, discipline, and values since establishment.', 'uploads/slider/slide1.jpg', 'Welcome', 'Learn More', 'fade', 'gradient-dark', 'left', 70, 1, 1),
+('Academic Excellence', 'Our students consistently achieve outstanding results in board examinations and competitive tests.', 'uploads/slider/slide2.jpg', 'Academics', 'View Results', 'slide', 'gradient-primary', 'center', 65, 2, 1),
+('State-of-the-Art Campus', 'Modern classrooms, science labs, computer labs, library, sports grounds, and hostel facilities.', 'uploads/slider/slide3.jpg', 'Campus', 'Take a Tour', 'zoom', 'gradient-dark', 'left', 70, 3, 1),
+('Sports & Co-Curricular Activities', 'Developing well-rounded individuals through athletics, cultural events, and extracurricular programs.', 'uploads/slider/slide4.jpg', 'Activities', 'Explore', 'kenburns', 'solid-dark', 'right', 60, 4, 1),
+('Admissions Open 2025-26', 'Apply now for the upcoming academic session. Limited seats available for Classes VI to XII.', 'uploads/slider/slide5.jpg', 'Admissions', 'Apply Now', 'fade', 'gradient-primary', 'center', 75, 5, 1);
 
 COMMIT;
