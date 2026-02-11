@@ -1,199 +1,410 @@
 
+## Plan: Page Content Manager + Footer Manager for Complete Frontend Control
 
-## Upgrade Gallery Upload System (Admin + Teacher) with Advanced Upload Options
+### 1. Overview
 
-This is a significant feature upgrade that adds multi-image upload, ZIP bulk upload, image compression, and enhanced metadata to the gallery system across both Admin and Teacher panels.
+This plan creates two new admin features to centralize frontend content management:
 
-### Overview of Changes
+**A) Page Content Manager** — A single admin page where admins can edit all text, headings, descriptions, and toggle section visibility for every public page (Home, About, Teachers, Gallery, Events, Notifications, Admission) plus Global elements (navbar text, footer CTA, marquee content).
 
-The gallery upload system will be enhanced with three upload modes, server-side image compression, richer metadata fields, and improved admin approval workflow -- all while preserving existing functionality.
+**B) Footer Manager** — A dedicated admin page for full control over footer columns: Quick Links, Programs, Contact Info, and Social media links with dynamic link management.
+
+Both use the existing `settings` table (`setting_key` / `setting_value`) to store content, ensuring consistency with current architecture.
 
 ---
 
-### 1. Database Schema Changes (`schema.sql`)
+### 2. Database Schema (No new tables needed)
 
-Add new columns to the existing `gallery_items` table:
+All content is stored as settings key-value pairs. Add these default settings to `schema.sql`:
 
+**Home Page Settings:**
 ```sql
-ALTER TABLE gallery_items ADD COLUMN `event_name` VARCHAR(200) DEFAULT NULL AFTER `description`;
-ALTER TABLE gallery_items ADD COLUMN `event_date` DATE DEFAULT NULL AFTER `event_name`;
-ALTER TABLE gallery_items ADD COLUMN `tags` VARCHAR(500) DEFAULT NULL AFTER `event_date`;
-ALTER TABLE gallery_items ADD COLUMN `visibility` ENUM('public','private') NOT NULL DEFAULT 'public' AFTER `tags`;
-ALTER TABLE gallery_items ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0 AFTER `visibility`;
-ALTER TABLE gallery_items ADD COLUMN `original_size` INT UNSIGNED DEFAULT NULL AFTER `is_featured`;
-ALTER TABLE gallery_items ADD COLUMN `compressed_size` INT UNSIGNED DEFAULT NULL AFTER `original_size`;
-ALTER TABLE gallery_items ADD COLUMN `batch_id` VARCHAR(32) DEFAULT NULL AFTER `compressed_size`;
+-- Hero/Marquee
+INSERT INTO settings (setting_key, setting_value) VALUES
+('home_marquee_text', '🎓 Welcome to [school_name] — [tagline]'),
+('home_hero_show', '1'),
+
+-- Stats bar
+('home_stats_show', '1'),
+('home_stats_students_label', 'Students'),
+('home_stats_teachers_label', 'Teachers'),
+('home_stats_classes_label', 'Classes'),
+('home_stats_dedication_label', 'Dedication'),
+
+-- Quick Links section
+('home_quicklinks_show', '1'),
+('home_quicklinks_title', 'Why Choose Us?'),
+('home_quicklinks_subtitle', 'Explore our key features and offerings'),
+
+-- Admission CTA card
+('home_cta_admissions_title', 'Admissions'),
+('home_cta_admissions_desc', 'Apply online for admission to our school.'),
+
+-- Notifications CTA card
+('home_cta_notifications_title', 'Notifications'),
+('home_cta_notifications_desc', 'Stay updated with latest announcements.'),
+
+-- Gallery CTA card
+('home_cta_gallery_title', 'Gallery'),
+('home_cta_gallery_desc', 'Explore our school moments and events.'),
+
+-- Events CTA card
+('home_cta_events_title', 'Events'),
+('home_cta_events_desc', 'Upcoming school events and activities.'),
+
+-- Footer CTA
+('home_footer_cta_title', 'Become a Part of [school_name]'),
+('home_footer_cta_desc', 'Give your child the gift of quality education. Contact us today.'),
+('home_footer_cta_btn_text', 'Get In Touch'),
+('home_footer_cta_show', '1');
 ```
 
-- `event_name`, `event_date`, `tags` -- metadata per image
-- `visibility` -- public/private toggle
-- `is_featured` -- admin-only featured flag
-- `original_size` / `compressed_size` -- track compression savings
-- `batch_id` -- groups images uploaded together (multi/ZIP)
+**About Page Settings:**
+```sql
+INSERT INTO settings (setting_key, setting_value) VALUES
+('about_hero_title', 'About Us'),
+('about_hero_subtitle', 'Discover our story, vision, and the values that drive us to provide exceptional education.'),
+('about_history_show', '1'),
+('about_vision_mission_show', '1'),
+('about_core_values_show', '1'),
+('about_quote_show', '1');
+```
+
+**Teachers Page Settings:**
+```sql
+INSERT INTO settings (setting_key, setting_value) VALUES
+('teachers_hero_title', 'Our Dedicated Educators'),
+('teachers_hero_subtitle', 'Meet the passionate teachers shaping the future of our students.'),
+('teachers_core_team_title', 'Our Leadership'),
+('teachers_core_team_show', '1'),
+('teachers_all_show', '1');
+```
+
+**Gallery & Events Pages:**
+```sql
+INSERT INTO settings (setting_key, setting_value) VALUES
+('gallery_hero_title', 'School Gallery'),
+('gallery_hero_subtitle', 'Explore memorable moments from school events and activities.'),
+('events_hero_title', 'Upcoming Events'),
+('events_hero_subtitle', 'Stay connected with our school calendar and important dates.'),
+('notifications_hero_title', 'Announcements'),
+('notifications_hero_subtitle', 'Latest updates and important notifications for parents and students.');
+```
+
+**Global Elements:**
+```sql
+INSERT INTO settings (setting_key, setting_value) VALUES
+('global_navbar_show_top_bar', '1'),
+('global_navbar_show_login', '1'),
+('global_navbar_show_notif_bell', '1');
+```
 
 ---
 
-### 2. Teacher Upload Page (`teacher/upload-gallery.php`)
+### 3. File Structure
 
-**Restructure the upload form** with a 3-mode tab switcher:
+#### **A. Page Content Manager** — `admin/page-content-manager.php`
 
-| Tab | Icon | Behavior |
-|-----|------|----------|
-| Single | bi-image | Current behavior, enhanced with drag-drop area + preview thumbnail |
-| Multiple | bi-images | `<input type="file" multiple>` with thumbnail previews for all selected files |
-| ZIP | bi-file-zip | Single ZIP upload, shows filename + extracted file count after selection |
+**Features:**
+- Page selector dropdown: Home, About, Teachers, Gallery, Events, Notifications, Admission
+- Dynamic form fields based on selected page
+- Each field shows a textarea/input paired with a "Preview" button to see live changes
+- Enable/Disable toggles for major sections (e.g., "Show Core Values on About page")
+- Save button with flash message feedback
+- Permission: Admin only
 
-**New form fields** (shared across all modes):
-- Category dropdown (existing)
-- Event Name (text input, optional)
-- Event Date (date input, optional)
-- Tags (text input, comma-separated, optional)
-- Visibility (radio: Public / Private)
-- Compression checkbox: "Compress images for faster loading (Recommended)" -- checked by default
-- Description textarea (existing)
+**UI Layout:**
+```
+┌─────────────────────────────────────────────────────┐
+│ Page Content Manager                                │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ Select Page: [Dropdown: Home ▼]                    │
+│              [About ▼ / Teachers ▼ / ...]          │
+│                                                     │
+│ ═══════════════════════════════════════════════    │
+│ Page: HOME                                          │
+│ ═══════════════════════════════════════════════    │
+│                                                     │
+│ 📋 Marquee Text (Top Bar)                          │
+│ [Textarea: current marquee text...]                │
+│ [Preview]                                          │
+│                                                     │
+│ ☑ Show Hero Section                               │
+│ ☑ Show Stats Bar                                  │
+│ ☑ Show Quick Links Section                        │
+│                                                     │
+│ Quick Links Title:                                 │
+│ [Input: "Why Choose Us?"]                          │
+│                                                     │
+│ Quick Links Subtitle:                              │
+│ [Input: subtitle text...]                          │
+│                                                     │
+│ ───────────────────────────────────────────        │
+│ FOOTER CTA SECTION                                 │
+│ ───────────────────────────────────────────        │
+│                                                     │
+│ CTA Title: [Input: Become a Part...]               │
+│ CTA Description: [Textarea: Description...]        │
+│ CTA Button Text: [Input: Get In Touch]             │
+│ ☑ Show Footer CTA                                 │
+│                                                     │
+│ [Save Changes] [Reset to Default]                  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
 
-**Upload flow**:
-- All teacher uploads go to `status = 'pending'` (unchanged)
-- Multiple images generate a shared `batch_id` so they appear grouped in "My Uploads"
-- ZIP files are extracted server-side; each valid image becomes a separate `gallery_items` row with shared `batch_id`
-
-**My Uploads section** enhancements:
-- Group items by `batch_id` as collapsible album cards
-- Show upload count per batch and individual statuses
-
-**Client-side JavaScript**:
-- Tab switching shows/hides the appropriate file input area
-- Drag-and-drop zone with visual feedback (border highlight on dragover)
-- Preview thumbnails via `FileReader` API for single/multiple modes
-- ZIP mode shows filename and "Processing on server..." text
-- File validation: only JPG/PNG/WebP/GIF accepted; ZIP max 50MB
+**Key Implementation Details:**
+- Form fields dynamically populate based on selected page
+- Each page has its own set of settings keys
+- Submit handler validates input lengths (no XSS)
+- Flash message confirms save and shows which page was updated
+- "Reset to Default" button reads from hard-coded defaults and re-inserts into settings
 
 ---
 
-### 3. Admin Gallery Page (`admin/gallery.php`)
+#### **B. Footer Manager** — `admin/footer-manager.php`
 
-**Add an upload section** at the top (collapsible card) with the same 3-mode upload form as the teacher page, but with these differences:
-- Admin uploads are `status = 'approved'` automatically
-- Admin gets a "Featured" toggle checkbox
-- Admin can set visibility
+**Features:**
+- Manage 4 footer columns independently
+- **Column 1: Logo + Description** — Edit description text, social links (Facebook, Twitter, Instagram, YouTube, LinkedIn)
+- **Column 2: Quick Links** — Add/Edit/Delete custom links (label + URL) with drag-to-reorder
+- **Column 3: Programs** — Add/Edit/Delete program names with drag-to-reorder
+- **Column 4: Contact Info** — Edit address, phone, email, operating hours
+- Live preview panel showing how footer will look on desktop/mobile
+- Save all changes at once
 
-**Approval enhancements**:
-- "Approve All" and "Reject All" buttons for batch operations on pending items
-- When viewing a batch (same `batch_id`), show a grouped card with bulk approve/reject
-- Show compressed vs. original size saved per image (e.g., "Saved 45% -- 2.1MB to 1.2MB")
+**UI Layout:**
+```
+┌───────────────────────────────────────────────────────┐
+│ Footer Manager                                        │
+├───────────────────────────────────────────────────────┤
+│                                                       │
+│ ═══════════════════════════════════════════════════  │
+│ COLUMN 1: LOGO & DESCRIPTION                         │
+│ ═══════════════════════════════════════════════════  │
+│                                                       │
+│ Description Text:                                    │
+│ [Textarea: "A professional modern school..."]        │
+│                                                       │
+│ SOCIAL LINKS:                                        │
+│ Facebook URL:   [Input: https://...]                │
+│ Twitter URL:    [Input: https://...]                │
+│ Instagram URL:  [Input: https://...]                │
+│ YouTube URL:    [Input: https://...]                │
+│ LinkedIn URL:   [Input: https://...]                │
+│                                                       │
+│ ═══════════════════════════════════════════════════  │
+│ COLUMN 2: QUICK LINKS                                │
+│ ═══════════════════════════════════════════════════  │
+│                                                       │
+│ [+ Add Link]                                         │
+│                                                       │
+│ ☰ About Us        [Edit] [Delete]                   │
+│ ☰ Our Teachers    [Edit] [Delete]                   │
+│ ☰ Admissions      [Edit] [Delete]                   │
+│ ☰ Gallery         [Edit] [Delete]                   │
+│ ☰ Events          [Edit] [Delete]                   │
+│ ☰ Admin Login     [Edit] [Delete]                   │
+│                                                       │
+│ ═══════════════════════════════════════════════════  │
+│ COLUMN 3: PROGRAMS                                   │
+│ ═══════════════════════════════════════════════════  │
+│                                                       │
+│ [+ Add Program]                                      │
+│                                                       │
+│ ☰ Pre-Primary (LKG & UKG)    [Edit] [Delete]        │
+│ ☰ Primary School (1-5)       [Edit] [Delete]        │
+│ ☰ Upper Primary (6-8)        [Edit] [Delete]        │
+│                                                       │
+│ ═══════════════════════════════════════════════════  │
+│ COLUMN 4: CONTACT INFO                               │
+│ ═══════════════════════════════════════════════════  │
+│                                                       │
+│ Address: [Textarea: full address...]                │
+│ Phone: [Input: phone number...]                     │
+│ Email: [Input: email@school.com]                    │
+│ Hours: [Input: Mon - Sat: 8:00 AM - 5:00 PM]       │
+│                                                       │
+│ ───────────────────────────────────────────────────  │
+│ 📱 LIVE PREVIEW (Desktop & Mobile)                   │
+│ ───────────────────────────────────────────────────  │
+│                                                       │
+│ [Save Footer Changes] [Reset to Default]            │
+│                                                       │
+└───────────────────────────────────────────────────────┘
+```
+
+**Database Structure for Footer Content:**
+
+Links and programs are stored as JSON in settings:
+```sql
+-- Footer Quick Links
+INSERT INTO settings (setting_key, setting_value) VALUES
+('footer_quick_links', '[
+  {"label":"About Us","url":"/public/about.php"},
+  {"label":"Our Teachers","url":"/public/teachers.php"},
+  {"label":"Admissions","url":"/public/admission-form.php"},
+  {"label":"Gallery","url":"/public/gallery.php"},
+  {"label":"Events","url":"/public/events.php"},
+  {"label":"Admin Login","url":"/login.php"}
+]');
+
+-- Footer Programs
+INSERT INTO settings (setting_key, setting_value) VALUES
+('footer_programs', '[
+  {"label":"Pre-Primary (LKG & UKG)"},
+  {"label":"Primary School (1-5)"},
+  {"label":"Upper Primary (6-8)"},
+  {"label":"Co-Curricular Activities"},
+  {"label":"Sports Programs"}
+]');
+
+-- Footer Contact Info
+INSERT INTO settings (setting_key, setting_value) VALUES
+('footer_contact_address', 'Address here'),
+('footer_contact_phone', '+91-XXXX-XXXX-XXX'),
+('footer_contact_email', 'contact@school.com'),
+('footer_contact_hours', 'Mon - Sat: 8:00 AM - 5:00 PM'),
+('footer_description', 'A professional and modern school...');
+```
+
+**Key Implementation Details:**
+- Use `json_encode()` / `json_decode()` for storing/retrieving lists
+- Drag-to-reorder uses simple HTML5 drag events (no external library)
+- Add/Edit modals for Quick Links and Programs with validation
+- Live preview updates on-the-fly as user types (JavaScript preview)
+- Permission: Admin only
 
 ---
 
-### 4. Server-Side Image Compression (PHP)
+### 4. Integration with Existing Pages
 
-Create a helper function in a new utility or inline in both upload pages:
+**Update `index.php`, `about.php`, `teachers.php`, `gallery.php`, `events.php`, `notifications.php`, `admission-form.php`:**
 
+Replace hardcoded content with dynamic settings. Examples:
+
+**Before (hardcoded):**
 ```php
-function compressGalleryImage($sourcePath, $destPath, $maxWidth = 1600) {
-    // Uses GD library (standard PHP)
-    // 1. Read image with imagecreatefromjpeg/png/webp/gif
-    // 2. Calculate new dimensions maintaining aspect ratio
-    // 3. Resize with imagecopyresampled
-    // 4. Save as WebP if supported (imagewebp), else original format
-    // 5. Return [original_size, compressed_size]
-}
+<h2>Become a Part of <?= e($schoolName) ?></h2>
+<p>Give your child the gift of quality education...</p>
 ```
 
-- When compression is enabled, images are resized to max 1600px width and converted to WebP (if GD supports it), otherwise saved as optimized JPEG at 80% quality
-- Original aspect ratio is always preserved
-- Original and compressed file sizes are stored in the database
-
----
-
-### 5. ZIP Extraction Handler (PHP)
-
+**After (dynamic):**
 ```php
-function extractGalleryZip($zipPath, $uploadDir, $compress, $maxWidth) {
-    // Uses ZipArchive (standard PHP extension)
-    // 1. Open ZIP, validate size <= 50MB
-    // 2. Iterate entries, filter by extension (jpg/png/webp/gif)
-    // 3. Extract each valid image to temp, then compress if enabled
-    // 4. Sanitize filenames (remove special chars, add unique prefix)
-    // 5. Return array of [filename, original_size, compressed_size]
-    // 6. Reject ZIP if 0 valid images found
-}
+$footerCtaTitle = getSetting('home_footer_cta_title', 'Become a Part of ' . $schoolName);
+$footerCtaDesc = getSetting('home_footer_cta_desc', 'Give your child the gift of...');
+$footerCtaShow = getSetting('home_footer_cta_show', '1');
+
+if ($footerCtaShow === '1'): ?>
+  <h2><?= e($footerCtaTitle) ?></h2>
+  <p><?= e($footerCtaDesc) ?></p>
+<?php endif; ?>
 ```
 
-- Filenames are sanitized: special characters removed, prefixed with `gallery_` + timestamp + random hex
-- Non-image files in the ZIP are silently skipped
-- If no valid images found, flash error "ZIP contains no valid images"
+**Footer Integration:**
+Replace hardcoded footer columns with:
+```php
+$quickLinks = json_decode(getSetting('footer_quick_links', '[]'), true) ?? [];
+$programs = json_decode(getSetting('footer_programs', '[]'), true) ?? [];
+$footerDesc = getSetting('footer_description', '...');
+
+// Loop through $quickLinks and $programs dynamically
+foreach ($quickLinks as $link): 
+  // Output link
+endforeach;
+```
 
 ---
 
-### 6. Validation Rules
+### 5. Sidebar Navigation Updates
 
-| Rule | Value |
-|------|-------|
-| Allowed image types | JPG, PNG, WebP, GIF |
-| Max single image size | 5MB |
-| Max ZIP size | 50MB |
-| Max images per multi-upload | 20 |
-| Compression max width | 1600px |
-| Compression format | WebP (fallback: JPEG 80%) |
+**Update `includes/header.php`:**
+
+Add two new sidebar links under Configuration section:
+```php
+<a href="/admin/page-content-manager.php" class="nav-link <?= navActive('/admin/page-content-manager') ?>"><i class="bi bi-file-earmark-text"></i> Page Content Manager</a>
+<a href="/admin/footer-manager.php" class="nav-link <?= navActive('/admin/footer-manager') ?>"><i class="bi bi-diagram-3"></i> Footer Manager</a>
+```
 
 ---
 
-### 7. UI/UX Details
-
-**Drag-and-drop zone** (all modes):
-```text
-+---------------------------------------------+
-|                                             |
-|      [cloud-upload icon]                    |
-|      Drag & drop files here                 |
-|      or click to browse                     |
-|                                             |
-|      (accepted: JPG, PNG, WebP, GIF)        |
-+---------------------------------------------+
-```
-
-**Preview thumbnails** (single/multiple):
-- Small 80x80px thumbnail grid below the drop zone
-- Each thumbnail has a remove (X) button
-- File name and size shown below each thumbnail
-
-**ZIP mode display**:
-- After selecting ZIP: shows filename, file size, and "Will be extracted on upload"
-- After upload: server returns count of extracted images
-
-**Compression toggle**:
-```text
-[x] Compress images for faster loading (Recommended)
-    Resizes to max 1600px width, converts to WebP format
-```
-
-**Mobile considerations**:
-- Drag-drop area becomes a large tap-to-browse button on mobile
-- ZIP upload tab hidden on screens < 576px (optional, keeps it simple)
-- All form fields stack vertically on mobile
-- Preview thumbnails wrap in a scrollable row
-
----
-
-### Files to Create
+### 6. Files to Create
 
 | File | Purpose |
 |------|---------|
-| (none) | All changes go into existing files |
+| `admin/page-content-manager.php` | Single admin page for managing text/content on all public pages |
+| `admin/footer-manager.php` | Dedicated admin page for footer columns and links |
 
-### Files to Modify
+---
+
+### 7. Files to Modify
 
 | File | Changes |
 |------|---------|
-| `teacher/upload-gallery.php` | Complete rewrite of upload form with 3-mode tabs, drag-drop, compression, metadata fields, batch grouping in My Uploads |
-| `admin/gallery.php` | Add collapsible upload form (same 3 modes with admin extras), bulk approve/reject, compression stats display |
-| `schema.sql` | Add new columns to `gallery_items` table (event_name, event_date, tags, visibility, is_featured, original_size, compressed_size, batch_id) |
+| `schema.sql` | Add 40+ new settings key-value pairs as defaults for all pages and footer content |
+| `includes/header.php` | Add two new sidebar navigation links under Configuration |
+| `index.php` | Replace hardcoded content (marquee, CTA sections) with dynamic settings |
+| `public/about.php` | Replace hardcoded hero title/subtitle with settings |
+| `public/teachers.php` | Replace hardcoded hero title/subtitle with settings |
+| `public/gallery.php` | Replace hardcoded hero title/subtitle with settings |
+| `public/events.php` | Replace hardcoded hero title/subtitle with settings |
+| `public/notifications.php` | Replace hardcoded hero title/subtitle with settings |
+| `public/admission-form.php` | Replace hardcoded hero title/subtitle with settings |
+| Footer section (all pages) | Replace hardcoded footer columns with JSON-driven dynamic rendering |
 
-### Technical Notes
+---
 
-- PHP GD library is required for compression (standard on most hosts)
-- PHP ZipArchive extension is required for ZIP handling (standard on most hosts)
-- The compression function and ZIP extraction logic will be defined at the top of each upload page (or in a shared include if preferred, but keeping it self-contained per the existing pattern)
-- All file operations use `move_uploaded_file()` and server-side validation -- no client-side-only checks
-- `batch_id` is generated as `bin2hex(random_bytes(16))` for uniqueness
+### 8. Technical Notes
+
+**Page Content Manager (`admin/page-content-manager.php`):**
+- PHP: Process form submissions via `$_POST['form_action']` and update settings table
+- JavaScript: Toggle form fields based on selected page using event listeners
+- HTML: Use Bootstrap tabs or accordion for page sections
+- CSRF protection: Include form token verification
+- Audit log: Log all content changes via `auditLog()`
+
+**Footer Manager (`admin/footer-manager.php`):**
+- Use modal dialogs for Add/Edit operations on Quick Links and Programs
+- Store as JSON: `json_encode()` for saving, `json_decode()` for loading
+- Drag-to-reorder: Simple JavaScript with array reordering on drop
+- Live preview: Update preview HTML on-the-fly using JavaScript
+- Permission: Only admins can edit
+
+**Security:**
+- Sanitize all input with `trim()` and `htmlspecialchars()`
+- Validate URLs in footer links with `filter_var($url, FILTER_VALIDATE_URL)`
+- Validate input lengths (e.g., max 500 chars for titles, 2000 for descriptions)
+- Prevent XSS by using `e()` helper in all output
+
+**Performance:**
+- All settings are cached in memory once fetched via `getSetting()`
+- No N+1 queries — load all settings once at page start
+- JSON decoding happens only when needed for footer content
+
+---
+
+### 9. User Workflow
+
+**For Home Page Content:**
+1. Admin opens Page Content Manager
+2. Selects "Home" from dropdown
+3. Edits marquee text, enables/disables sections, updates CTA text
+4. Clicks Save
+5. Visits home page — sees updated content immediately
+
+**For Footer:**
+1. Admin opens Footer Manager
+2. Adds new Quick Link via modal: "Careers" → "/careers.php"
+3. Reorders programs by dragging
+4. Updates contact hours
+5. Watches live preview update in real-time
+6. Clicks Save Footer Changes
+7. Visits any page — footer reflects changes
+
+---
+
+### 10. Default Values & Backward Compatibility
+
+All `getSetting()` calls include sensible defaults matching current hardcoded text. If a setting is missing, the page renders with the default, ensuring no broken pages during migration.
 
