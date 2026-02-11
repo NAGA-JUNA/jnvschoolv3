@@ -22,6 +22,12 @@ if($action==='social_links'){
   }auditLog('update_social','settings');setFlash('success','Social links updated.');
 }
 
+if($action==='about_content'){
+  foreach(['about_history','about_vision','about_mission'] as $k){
+    $v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
+  }auditLog('update_about','settings');setFlash('success','About page content updated.');
+}
+
 if($action==='sms_whatsapp'){
   foreach(['whatsapp_api_number','sms_gateway_key'] as $k){
     $v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
@@ -160,6 +166,19 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
     </div>
   </div></div>
 </div>
+</div>
+
+<!-- Row: About Page Content -->
+<div class="row g-3 mb-3">
+<div class="col-12"><div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-info-circle me-2"></i>About Page Content</h6></div><div class="card-body">
+  <p class="text-muted mb-3" style="font-size:.8rem">This content appears on the public About Us page. Leave empty to use default placeholder text.</p>
+  <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="about_content"><div class="row g-3">
+  <div class="col-12"><label class="form-label fw-semibold">School History</label><textarea name="about_history" class="form-control" rows="4" placeholder="Tell the story of your school..."><?=e($s['about_history']??'')?></textarea></div>
+  <div class="col-md-6"><label class="form-label fw-semibold">Vision Statement</label><textarea name="about_vision" class="form-control" rows="3" placeholder="Your school's vision..."><?=e($s['about_vision']??'')?></textarea></div>
+  <div class="col-md-6"><label class="form-label fw-semibold">Mission Statement</label><textarea name="about_mission" class="form-control" rows="3" placeholder="Your school's mission..."><?=e($s['about_mission']??'')?></textarea></div>
+  <div class="col-12"><button class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save About Content</button></div>
+  </div></form>
+</div></div></div>
 </div>
 
 <!-- Row 2: Social Media + SMS/WhatsApp -->

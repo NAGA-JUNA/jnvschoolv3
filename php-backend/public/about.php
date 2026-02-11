@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__.'/../includes/auth.php';
+require_once __DIR__ . '/../includes/auth.php';
 $db = getDB();
 $schoolName = getSetting('school_name', 'JNV School');
 $schoolTagline = getSetting('school_tagline', 'Nurturing Talent, Shaping Future');
@@ -17,31 +17,43 @@ $socialInstagram = getSetting('social_instagram', '');
 $socialYoutube = getSetting('social_youtube', '');
 $socialLinkedin = getSetting('social_linkedin', '');
 
+// About content
+$aboutHistory = getSetting('about_history', 'Our school was established with a vision to provide quality education to students from diverse backgrounds. Over the years, we have grown into a premier educational institution known for academic excellence and holistic development.');
+$aboutVision = getSetting('about_vision', 'To be a center of excellence in education, nurturing future leaders who are academically proficient, morally upright, and socially responsible.');
+$aboutMission = getSetting('about_mission', 'To provide quality education through innovative teaching methods, foster critical thinking, and develop well-rounded individuals who contribute positively to society.');
+
 // Bell notifications
 $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 5")->fetchAll();
 $notifCount = $db->query("SELECT COUNT(*) FROM notifications WHERE status='approved' AND is_public=1 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
 
-$events = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date>=CURDATE() ORDER BY event_date ASC")->fetchAll();
-$pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<CURDATE() ORDER BY event_date DESC LIMIT 10")->fetchAll();
+if (isLoggedIn()) {
+    header('Location: ' . (isAdmin() ? '/admin/dashboard.php' : '/teacher/dashboard.php'));
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Events — <?= e($schoolName) ?></title>
+    <title>About Us — <?= e($schoolName) ?></title>
+    <meta name="description" content="Learn about <?= e($schoolName) ?> — our history, vision, mission, and core values. <?= e($schoolTagline) ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
+
+        /* Top Bar */
         .top-bar { background: #0a0f1a; color: #fff; padding: 0.4rem 0; font-size: 0.78rem; }
         .top-bar a { color: rgba(255,255,255,0.8); text-decoration: none; transition: color 0.2s; }
         .top-bar a:hover { color: #fff; }
         .marquee-text { white-space: nowrap; overflow: hidden; }
         .marquee-text span { display: inline-block; animation: marqueeScroll 20s linear infinite; }
         @keyframes marqueeScroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* Main Navbar */
         .main-navbar { background: #0f172a; padding: 0.5rem 0; }
         .main-navbar .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 0.9rem; padding: 0.5rem 0.8rem; }
         .main-navbar .nav-link:hover, .main-navbar .nav-link.active { color: #fff; }
@@ -50,13 +62,59 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
         .notif-badge { position: absolute; top: -6px; right: -8px; background: #ffc107; color: #000; font-size: 0.65rem; font-weight: 700; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
         .login-nav-btn { background: transparent; border: 1.5px solid rgba(255,255,255,0.5); color: #fff; border-radius: 8px; padding: 0.4rem 1.2rem; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
         .login-nav-btn:hover { background: #fff; color: #0f172a; }
+
+        /* Hero */
+        .about-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
+            color: #fff; padding: 5rem 0 4rem; position: relative; overflow: hidden;
+        }
+        .about-hero::before {
+            content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%); border-radius: 50%;
+        }
+        .about-hero::after {
+            content: ''; position: absolute; bottom: -30%; left: -10%; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%); border-radius: 50%;
+        }
+        .hero-badge {
+            display: inline-block; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2); padding: 0.4rem 1.2rem;
+            border-radius: 50px; font-size: 0.75rem; letter-spacing: 2px;
+            text-transform: uppercase; font-weight: 600; margin-bottom: 1.5rem;
+        }
+
+        /* Content cards */
+        .about-card {
+            border: none; border-radius: 16px; overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .about-card:hover { transform: translateY(-4px); box-shadow: 0 15px 40px rgba(0,0,0,0.08); }
+        .about-icon {
+            width: 60px; height: 60px; border-radius: 14px; display: flex;
+            align-items: center; justify-content: center; font-size: 1.5rem;
+        }
+        .value-card {
+            border: none; border-radius: 16px; text-align: center; padding: 2rem 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .value-card:hover { transform: translateY(-6px); box-shadow: 0 15px 40px rgba(0,0,0,0.1); }
+        .value-icon {
+            width: 70px; height: 70px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 1rem;
+        }
+        .section-heading {
+            font-weight: 800; position: relative; display: inline-block; margin-bottom: 0.5rem;
+        }
+        .section-heading::after {
+            content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+            width: 60px; height: 4px; background: linear-gradient(90deg, #1e40af, #3b82f6); border-radius: 2px;
+        }
+
+        /* WhatsApp */
         .whatsapp-float { position: fixed; bottom: 24px; right: 24px; z-index: 9999; width: 60px; height: 60px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.8rem; text-decoration: none; box-shadow: 0 4px 20px rgba(37,211,102,0.4); transition: transform 0.3s; animation: whatsappPulse 2s infinite; }
         .whatsapp-float:hover { transform: scale(1.1); color: #fff; }
         @keyframes whatsappPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.4); } 50% { box-shadow: 0 4px 30px rgba(37,211,102,0.7); } }
-        .hero-banner { background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); color: #fff; padding: 3rem 0; }
-        .event-card { border: none; border-radius: 12px; border-left: 4px solid #3b82f6; transition: transform 0.2s; }
-        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
-        .date-box { width: 60px; height: 60px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; }
+
         /* Gradient Footer */
         .site-footer { background: linear-gradient(135deg, #6a11cb 0%, #1e8a7a 100%); color: #fff; border-radius: 30px 30px 0 0; margin-top: 3rem; }
         .footer-heading { text-transform: uppercase; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; position: relative; padding-bottom: 0.5rem; }
@@ -67,7 +125,12 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
         .footer-newsletter-input::placeholder { color: rgba(255,255,255,0.6); }
         .footer-newsletter-input:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); color: #fff; box-shadow: none; }
         .footer-bottom { border-top: 1px solid rgba(255,255,255,0.15); }
-        @media (max-width: 767.98px) { .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; } }
+
+        @media (max-width: 767.98px) {
+            .about-hero { padding: 3rem 0 2.5rem; }
+            .about-hero h1 { font-size: 2rem; }
+            .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
+        }
     </style>
 </head>
 <body>
@@ -97,11 +160,11 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="/public/about.php">About Us</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/public/about.php">About Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/teachers.php">Our Teachers</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/notifications.php">Notifications</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/gallery.php">Gallery</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/public/events.php">Events</a></li>
+                <li class="nav-item"><a class="nav-link" href="/public/events.php">Events</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/admission-form.php">Apply Now</a></li>
             </ul>
             <div class="d-flex align-items-center gap-2">
@@ -148,60 +211,111 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
     </div>
 </div>
 
-<!-- Hero -->
-<div class="hero-banner">
+<!-- Hero Section -->
+<section class="about-hero">
+    <div class="container position-relative text-center" style="z-index:2;">
+        <div class="hero-badge"><i class="bi bi-info-circle me-2"></i>About Our School</div>
+        <h1 class="display-4 mb-3" style="font-weight:900;">About Us</h1>
+        <p class="lead opacity-75 mx-auto" style="max-width:600px;">Discover our story, vision, and the values that drive us to provide exceptional education.</p>
+    </div>
+</section>
+
+<!-- History Section -->
+<section class="py-5">
     <div class="container">
-        <h1 class="fw-bold mb-2"><i class="bi bi-calendar-event-fill me-2"></i>Events</h1>
-        <p class="mb-0 opacity-75">Upcoming and past events at <?= e($schoolName) ?></p>
-    </div>
-</div>
-
-<div class="container py-4">
-    <h4 class="fw-bold mb-3"><i class="bi bi-calendar-check me-2 text-success"></i>Upcoming Events</h4>
-    <?php if (empty($events)): ?>
-        <div class="text-center py-4">
-            <i class="bi bi-calendar-x display-4 text-muted"></i>
-            <p class="text-muted mt-2">No upcoming events scheduled.</p>
-        </div>
-    <?php else: ?>
-        <?php foreach ($events as $ev): ?>
-        <div class="card event-card mb-3">
-            <div class="card-body d-flex gap-3 align-items-start">
-                <div class="date-box bg-primary-subtle text-primary flex-shrink-0">
-                    <span style="font-size:1.2rem;line-height:1;"><?= date('d', strtotime($ev['event_date'])) ?></span>
-                    <span style="font-size:0.65rem;text-transform:uppercase;"><?= date('M', strtotime($ev['event_date'])) ?></span>
-                </div>
-                <div>
-                    <h5 class="fw-semibold mb-1"><?= e($ev['title']) ?></h5>
-                    <div class="text-muted small mb-1">
-                        <i class="bi bi-clock me-1"></i><?= $ev['event_time'] ? date('h:i A', strtotime($ev['event_time'])) : 'All Day' ?>
-                        <?php if ($ev['location']): ?> <span class="mx-1">|</span> <i class="bi bi-geo-alt me-1"></i><?= e($ev['location']) ?><?php endif; ?>
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card about-card shadow-sm">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="d-flex align-items-start gap-4 flex-column flex-md-row">
+                            <div class="about-icon bg-primary-subtle text-primary flex-shrink-0">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <div>
+                                <h3 class="fw-bold mb-3">Our History</h3>
+                                <p class="text-muted mb-0" style="line-height:1.8;"><?= nl2br(e($aboutHistory)) ?></p>
+                            </div>
+                        </div>
                     </div>
-                    <?php if ($ev['description']): ?><p class="mb-0 mt-1"><?= nl2br(e($ev['description'])) ?></p><?php endif; ?>
                 </div>
             </div>
         </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
+    </div>
+</section>
 
-    <?php if (!empty($pastEvents)): ?>
-    <h4 class="fw-bold mb-3 mt-5"><i class="bi bi-clock-history me-2 text-muted"></i>Past Events</h4>
-    <?php foreach ($pastEvents as $ev): ?>
-    <div class="card event-card mb-3" style="opacity:0.7; border-left-color:#94a3b8;">
-        <div class="card-body d-flex gap-3 align-items-start">
-            <div class="date-box bg-secondary-subtle text-secondary flex-shrink-0">
-                <span style="font-size:1.2rem;line-height:1;"><?= date('d', strtotime($ev['event_date'])) ?></span>
-                <span style="font-size:0.65rem;text-transform:uppercase;"><?= date('M Y', strtotime($ev['event_date'])) ?></span>
+<!-- Vision & Mission -->
+<section class="py-5" style="background:#f1f5f9;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-heading">Our Purpose</h2>
+            <p class="text-muted mt-3">Guided by our vision and driven by our mission</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-lg-5 col-md-6">
+                <div class="card about-card shadow-sm h-100">
+                    <div class="card-body p-4 text-center">
+                        <div class="about-icon bg-info-subtle text-info mx-auto mb-3">
+                            <i class="bi bi-eye"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Our Vision</h4>
+                        <p class="text-muted mb-0" style="line-height:1.8;"><?= nl2br(e($aboutVision)) ?></p>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h5 class="fw-semibold mb-1"><?= e($ev['title']) ?></h5>
-                <?php if ($ev['location']): ?><small class="text-muted"><i class="bi bi-geo-alt me-1"></i><?= e($ev['location']) ?></small><?php endif; ?>
+            <div class="col-lg-5 col-md-6">
+                <div class="card about-card shadow-sm h-100">
+                    <div class="card-body p-4 text-center">
+                        <div class="about-icon bg-success-subtle text-success mx-auto mb-3">
+                            <i class="bi bi-bullseye"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Our Mission</h4>
+                        <p class="text-muted mb-0" style="line-height:1.8;"><?= nl2br(e($aboutMission)) ?></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <?php endforeach; ?>
-    <?php endif; ?>
-</div>
+</section>
+
+<!-- Core Values -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-heading">Our Core Values</h2>
+            <p class="text-muted mt-3">The principles that guide everything we do</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="card value-card shadow-sm h-100">
+                    <div class="value-icon bg-warning-subtle text-warning"><i class="bi bi-trophy"></i></div>
+                    <h5 class="fw-bold">Excellence</h5>
+                    <p class="text-muted small mb-0">We strive for the highest standards in academics, character, and personal growth.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card value-card shadow-sm h-100">
+                    <div class="value-icon bg-danger-subtle text-danger"><i class="bi bi-shield-check"></i></div>
+                    <h5 class="fw-bold">Integrity</h5>
+                    <p class="text-muted small mb-0">We foster honesty, transparency, and ethical behavior in all our actions.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card value-card shadow-sm h-100">
+                    <div class="value-icon bg-primary-subtle text-primary"><i class="bi bi-lightbulb"></i></div>
+                    <h5 class="fw-bold">Innovation</h5>
+                    <p class="text-muted small mb-0">We embrace creativity and modern teaching methods to inspire learning.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card value-card shadow-sm h-100">
+                    <div class="value-icon bg-success-subtle text-success"><i class="bi bi-people"></i></div>
+                    <h5 class="fw-bold">Community</h5>
+                    <p class="text-muted small mb-0">We build a supportive, inclusive environment where everyone belongs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- Gradient Footer -->
 <footer class="site-footer">
@@ -223,12 +337,12 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">Quick Links</h6>
                 <ul class="list-unstyled small">
-                    <li class="mb-1"><a href="/" class="text-white text-decoration-none opacity-75">Home</a></li>
-                    <li class="mb-1"><a href="/public/about.php" class="text-white text-decoration-none opacity-75">About Us</a></li>
-                    <li class="mb-1"><a href="/public/teachers.php" class="text-white text-decoration-none opacity-75">Our Teachers</a></li>
-                    <li class="mb-1"><a href="/public/gallery.php" class="text-white text-decoration-none opacity-75">Gallery</a></li>
-                    <li class="mb-1"><a href="/public/events.php" class="text-white text-decoration-none opacity-75">Events</a></li>
-                    <li class="mb-1"><a href="/public/admission-form.php" class="text-white text-decoration-none opacity-75">Apply Now</a></li>
+                    <li class="mb-1"><a href="/" class="text-white text-decoration-none opacity-75 footer-link">Home</a></li>
+                    <li class="mb-1"><a href="/public/about.php" class="text-white text-decoration-none opacity-75 footer-link">About Us</a></li>
+                    <li class="mb-1"><a href="/public/teachers.php" class="text-white text-decoration-none opacity-75 footer-link">Our Teachers</a></li>
+                    <li class="mb-1"><a href="/public/gallery.php" class="text-white text-decoration-none opacity-75 footer-link">Gallery</a></li>
+                    <li class="mb-1"><a href="/public/events.php" class="text-white text-decoration-none opacity-75 footer-link">Events</a></li>
+                    <li class="mb-1"><a href="/public/admission-form.php" class="text-white text-decoration-none opacity-75 footer-link">Apply Now</a></li>
                 </ul>
             </div>
             <div class="col-lg-3 col-md-6">
