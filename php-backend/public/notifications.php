@@ -128,6 +128,21 @@ $popupNotifs = $db->query("SELECT id, title, content, type FROM notifications WH
         @media (max-width: 767.98px) {
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
         }
+        @media (max-width: 575.98px) {
+            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
+            .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
+            .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
+            .hero-banner { padding: 2rem 0; }
+            .hero-banner h1 { font-size: 1.5rem; }
+            .notif-card .card-body { padding: 0.75rem; }
+            .notif-card h5 { font-size: 0.95rem; }
+            .site-footer .row > div { text-align: center; }
+            .footer-heading::after { left: 50%; transform: translateX(-50%); }
+            .footer-social { justify-content: center; }
+            .site-footer { border-radius: 20px 20px 0 0; }
+            .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
+        }
     </style>
 </head>
 <body>

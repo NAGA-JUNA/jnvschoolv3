@@ -210,6 +210,31 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
             .hero-slide h1 { font-size: 1.8rem; }
             .slider-arrow { display: none; }
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
+            .stat-item .num { font-size: 1.2rem; }
+            .info-card { padding: 1.5rem !important; }
+        }
+        @media (max-width: 575.98px) {
+            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
+            .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
+            .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
+            .hero-slider { height: 320px; }
+            .hero-slide h1 { font-size: 1.5rem; }
+            .hero-slide p { font-size: 0.9rem; }
+            .hero-slide .content { padding: 0 1rem; }
+            .hero-slide .badge-text { font-size: 0.65rem; padding: 0.25rem 0.8rem; }
+            .hero-slide .cta-btn { padding: 0.5rem 1.2rem; font-size: 0.85rem; }
+            .stat-item .num { font-size: 1.1rem; }
+            .stat-item .label { font-size: 0.65rem; }
+            .stats-bar { padding: 0.6rem 0; }
+            .section-title { font-size: 1.1rem; }
+            .site-footer .row > div { text-align: center; }
+            .footer-heading::after { left: 50%; transform: translateX(-50%); }
+            .footer-social { justify-content: center; }
+            .site-footer { border-radius: 20px 20px 0 0; }
+            .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
+            .ad-popup-close { width: 44px; height: 44px; font-size: 1.3rem; top: -8px; right: -8px; }
+            .card img[style*="height:280px"] { height: 200px !important; }
         }
     </style>
 </head>

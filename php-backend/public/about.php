@@ -131,6 +131,24 @@ if (isLoggedIn()) {
             .about-hero h1 { font-size: 2rem; }
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
         }
+        @media (max-width: 575.98px) {
+            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
+            .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
+            .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
+            .about-hero { padding: 2.5rem 0 2rem; }
+            .about-hero h1 { font-size: 1.8rem; }
+            .about-icon { width: 48px; height: 48px; font-size: 1.2rem; }
+            .value-card { padding: 1.2rem 1rem; }
+            .value-icon { width: 56px; height: 56px; font-size: 1.4rem; }
+            .value-card h5 { font-size: 1rem; }
+            .col-lg-5.col-md-6 { flex: 0 0 100%; max-width: 100%; }
+            .site-footer .row > div { text-align: center; }
+            .footer-heading::after { left: 50%; transform: translateX(-50%); }
+            .footer-social { justify-content: center; }
+            .site-footer { border-radius: 20px 20px 0 0; }
+            .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
+        }
     </style>
 </head>
 <body>

@@ -80,6 +80,7 @@ try {
         .input-group-text{border-radius:10px 0 0 10px;background:#f8fafc;border-color:#e2e8f0;color:#64748b}
         .input-group .form-control{border-radius:0 10px 10px 0}
         @media(max-width:991.98px){.split-container{flex-direction:column}.left-panel{padding:2rem;min-height:auto}.left-content h1{font-size:1.5rem}.feature-list{display:none}}
+        @media(max-width:575.98px){.right-panel{padding:1.5rem}.login-form{max-width:100%}.left-panel{padding:1.5rem}.left-content h1{font-size:1.3rem}.school-icon{width:60px;height:60px;font-size:2rem;border-radius:14px}.form-control{padding:.6rem .8rem}.btn-login{padding:.6rem}}
     </style>
 </head>
 <body>
