@@ -7,6 +7,7 @@ $schoolEmail = getSetting('school_email', '');
 $schoolPhone = getSetting('school_phone', '');
 $schoolAddress = getSetting('school_address', '');
 $admissionOpen = getSetting('admission_open', '0');
+$whatsappNumber = getSetting('whatsapp_api_number', '');
 
 // If logged in, redirect to dashboard
 if (isLoggedIn()) {
@@ -23,12 +24,26 @@ $coreTeam = $db->query("SELECT * FROM teachers WHERE status='active' AND is_core
 // Get upcoming events (next 3)
 $events = $db->query("SELECT title, event_date, location FROM events WHERE is_public=1 AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 3")->fetchAll();
 
-// Get latest notifications (3)
+// Get latest notifications (3 for section)
 $notifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 3")->fetchAll();
+
+// Get latest 5 notifications for bell popup
+$bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 5")->fetchAll();
+
+// Notification count (last 7 days)
+$notifCount = $db->query("SELECT COUNT(*) FROM notifications WHERE status='approved' AND is_public=1 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
 
 // Stats
 $totalStudents = $db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
 $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'")->fetchColumn();
+
+// Ad popup
+$popupAdActive = getSetting('popup_ad_active', '0');
+$popupAdImage = getSetting('popup_ad_image', '');
+
+// Nav logo
+$navLogo = getSetting('school_logo', '');
+$logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -44,6 +59,24 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
 
+        /* Top Bar */
+        .top-bar { background: #0a0f1a; color: #fff; padding: 0.4rem 0; font-size: 0.78rem; }
+        .top-bar a { color: rgba(255,255,255,0.8); text-decoration: none; transition: color 0.2s; }
+        .top-bar a:hover { color: #fff; }
+        .marquee-text { white-space: nowrap; overflow: hidden; }
+        .marquee-text span { display: inline-block; animation: marqueeScroll 20s linear infinite; }
+        @keyframes marqueeScroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* Main Navbar */
+        .main-navbar { background: #0f172a; padding: 0.5rem 0; }
+        .main-navbar .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 0.9rem; padding: 0.5rem 0.8rem; }
+        .main-navbar .nav-link:hover, .main-navbar .nav-link.active { color: #fff; }
+        .notif-bell-btn { background: #dc3545; color: #fff; border: none; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; position: relative; transition: background 0.2s; }
+        .notif-bell-btn:hover { background: #c82333; }
+        .notif-badge { position: absolute; top: -6px; right: -8px; background: #ffc107; color: #000; font-size: 0.65rem; font-weight: 700; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+        .login-nav-btn { background: transparent; border: 1.5px solid rgba(255,255,255,0.5); color: #fff; border-radius: 8px; padding: 0.4rem 1.2rem; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+        .login-nav-btn:hover { background: #fff; color: #0f172a; }
+
         /* Hero Slider */
         .hero-slider { position: relative; overflow: hidden; height: 520px; }
         .hero-slide {
@@ -52,7 +85,6 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
             background-size: cover; background-position: center;
         }
         .hero-slide.active { opacity: 1; }
-        /* Animation variants */
         .hero-slide.anim-slide-left { transform: translateX(100%); opacity: 1; transition: transform 0.8s ease, opacity 0.5s ease; }
         .hero-slide.anim-slide-left.active { transform: translateX(0); opacity: 1; }
         .hero-slide.anim-slide-up { transform: translateY(30px); transition: transform 0.8s ease, opacity 0.6s ease; }
@@ -83,8 +115,6 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
             transition: transform 0.2s, box-shadow 0.2s; width: fit-content;
         }
         .hero-slide .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
-
-        /* Slider dots */
         .slider-dots {
             position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
             z-index: 10; display: flex; gap: 0.5rem;
@@ -94,8 +124,6 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
             cursor: pointer; transition: all 0.3s; border: none;
         }
         .slider-dots .dot.active { background: #fff; transform: scale(1.2); }
-
-        /* Slider arrows */
         .slider-arrow {
             position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
             background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
@@ -107,8 +135,6 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
         .slider-arrow:hover { background: rgba(255,255,255,0.3); }
         .slider-arrow.prev { left: 1.5rem; }
         .slider-arrow.next { right: 1.5rem; }
-
-        /* No slider fallback */
         .hero-fallback {
             background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
             color: #fff; padding: 5rem 0; text-align: center;
@@ -130,44 +156,150 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
         .info-card { border: none; border-radius: 14px; transition: transform 0.2s, box-shadow 0.2s; }
         .info-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
 
+        /* WhatsApp floating button */
+        .whatsapp-float {
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            width: 60px; height: 60px; border-radius: 50%; background: #25D366;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.8rem; text-decoration: none;
+            box-shadow: 0 4px 20px rgba(37,211,102,0.4); transition: transform 0.3s;
+            animation: whatsappPulse 2s infinite;
+        }
+        .whatsapp-float:hover { transform: scale(1.1); color: #fff; }
+        @keyframes whatsappPulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.4); }
+            50% { box-shadow: 0 4px 30px rgba(37,211,102,0.7); }
+        }
+
+        /* Ad popup */
+        .ad-popup-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .ad-popup-content { position: relative; max-width: 600px; width: 90%; }
+        .ad-popup-content img { width: 100%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .ad-popup-close {
+            position: absolute; top: -12px; right: -12px; width: 36px; height: 36px;
+            border-radius: 50%; background: #dc3545; color: #fff; border: 3px solid #fff;
+            font-size: 1.1rem; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; z-index: 10001; transition: transform 0.2s;
+        }
+        .ad-popup-close:hover { transform: scale(1.1); }
+
         @media (max-width: 767.98px) {
             .hero-slider { height: 400px; }
             .hero-slide h1 { font-size: 1.8rem; }
             .slider-arrow { display: none; }
+            .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
         }
     </style>
 </head>
 <body>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background:#0f172a;">
+<!-- Top Bar -->
+<div class="top-bar">
     <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
-            <?php
-            $navLogo = getSetting('school_logo', '');
-            if ($navLogo):
-                $logoPath = (strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
-            ?>
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="marquee-text flex-grow-1 me-3">
+                <span>🎓 Welcome to <?= e($schoolName) ?> — <?= e($schoolTagline) ?></span>
+            </div>
+            <div class="d-flex gap-3 flex-shrink-0">
+                <a href="/public/admission-form.php"><i class="bi bi-mortarboard me-1"></i>Admissions</a>
+                <a href="/public/gallery.php"><i class="bi bi-images me-1"></i>Gallery</a>
+                <a href="/public/events.php"><i class="bi bi-calendar-event me-1"></i>Events</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Navbar -->
+<nav class="main-navbar navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-white" href="/">
+            <?php if ($navLogo): ?>
                 <img src="<?= e($logoPath) ?>" alt="Logo" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
             <?php else: ?>
                 <i class="bi bi-mortarboard-fill"></i>
             <?php endif; ?>
             <?= e($schoolName) ?>
         </a>
-        <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler border-0" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav mx-auto">
                 <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/teachers.php">Our Teachers</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/notifications.php">Notifications</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/gallery.php">Gallery</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/events.php">Events</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/admission-form.php">Apply Now</a></li>
-                <li class="nav-item"><a class="nav-link btn btn-sm btn-outline-light ms-lg-2 px-3" href="/login.php">Login</a></li>
             </ul>
+            <div class="d-flex align-items-center gap-2">
+                <button class="notif-bell-btn" data-bs-toggle="modal" data-bs-target="#notifModal">
+                    <i class="bi bi-bell-fill me-1"></i> Notifications
+                    <?php if ($notifCount > 0): ?>
+                        <span class="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span>
+                    <?php endif; ?>
+                </button>
+                <a href="/login.php" class="login-nav-btn"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+            </div>
         </div>
     </div>
 </nav>
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold"><i class="bi bi-bell-fill text-danger me-2"></i>Latest Notifications</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <?php if (empty($bellNotifs)): ?>
+                    <p class="text-muted text-center py-3">No recent notifications.</p>
+                <?php else: ?>
+                    <?php foreach ($bellNotifs as $bn):
+                        $typeColors = ['urgent' => 'danger', 'exam' => 'warning', 'academic' => 'info', 'event' => 'success'];
+                        $color = $typeColors[$bn['type']] ?? 'secondary';
+                    ?>
+                    <div class="d-flex justify-content-between align-items-start p-2 rounded-3 mb-2" style="background:#f8fafc;">
+                        <div>
+                            <div class="fw-semibold" style="font-size:0.88rem;"><?= e($bn['title']) ?></div>
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i><?= date('d M Y', strtotime($bn['created_at'])) ?></small>
+                        </div>
+                        <span class="badge bg-<?= $color ?>" style="font-size:0.7rem;"><?= e(ucfirst($bn['type'])) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <a href="/public/notifications.php" class="btn btn-primary btn-sm w-100 rounded-3"><i class="bi bi-list-ul me-1"></i>View All Notifications</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ad Popup -->
+<?php if ($popupAdActive === '1' && $popupAdImage): ?>
+<div class="ad-popup-overlay" id="adPopup" style="display:none;">
+    <div class="ad-popup-content">
+        <button class="ad-popup-close" onclick="closeAdPopup()"><i class="bi bi-x"></i></button>
+        <img src="/uploads/ads/<?= e($popupAdImage) ?>" alt="Advertisement">
+    </div>
+</div>
+<script>
+(function(){
+    var key = 'popup_ad_dismissed_' + new Date().toISOString().slice(0,10);
+    if (!localStorage.getItem(key)) {
+        setTimeout(function(){ document.getElementById('adPopup').style.display = 'flex'; }, 1000);
+    }
+    window.closeAdPopup = function(){
+        document.getElementById('adPopup').style.display = 'none';
+        localStorage.setItem(key, '1');
+    };
+})();
+</script>
+<?php endif; ?>
 
 <!-- Hero Slider -->
 <?php if (!empty($slides)): ?>
@@ -237,18 +369,10 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
 <div class="stats-bar">
     <div class="container">
         <div class="row g-3 text-center">
-            <div class="col-6 col-md-3">
-                <div class="stat-item"><div class="num"><?= $totalStudents ?>+</div><div class="label">Students</div></div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-item"><div class="num"><?= $totalTeachers ?>+</div><div class="label">Teachers</div></div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-item"><div class="num">12</div><div class="label">Classes</div></div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-item"><div class="num">100%</div><div class="label">Dedication</div></div>
-            </div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= $totalStudents ?>+</div><div class="label">Students</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= $totalTeachers ?>+</div><div class="label">Teachers</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num">12</div><div class="label">Classes</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num">100%</div><div class="label">Dedication</div></div></div>
         </div>
     </div>
 </div>
@@ -457,6 +581,13 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
         </div>
     </div>
 </footer>
+
+<!-- WhatsApp Float -->
+<?php if ($whatsappNumber): ?>
+<a href="https://wa.me/<?= e(preg_replace('/[^0-9]/', '', $whatsappNumber)) ?>" target="_blank" class="whatsapp-float" title="Chat on WhatsApp">
+    <i class="bi bi-whatsapp"></i>
+</a>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <?php if (count($slides) > 1): ?>

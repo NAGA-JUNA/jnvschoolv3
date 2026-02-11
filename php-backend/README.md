@@ -4,7 +4,7 @@
 A complete school management system built with **pure PHP 8+** and **MySQL**. No Node.js, no React, no terminal commands needed. Upload directly to cPanel shared hosting.
 
 **Domain:** `jnvschool.awayindia.com`
-**Schema Version:** v3.0 (13 tables)
+**Schema Version:** v3.1 (13 tables)
 
 ---
 
@@ -96,13 +96,15 @@ public_html/
 │   ├── notifications.php  ← Public notification board
 │   ├── gallery.php        ← Public gallery with lightbox
 │   ├── events.php         ← Upcoming events
+│   ├── teachers.php        ← Public teachers page with flip cards
 │   └── admission-form.php ← Online admission application
 └── uploads/               ← Must be created manually
     ├── photos/            ← Student photos
     ├── gallery/           ← Gallery images
     ├── slider/            ← Slider images
     ├── documents/         ← Admission & notification documents
-    └── logo/              ← School logo upload
+    ├── logo/              ← School logo upload
+    └── ads/               ← Popup advertisement images
 ```
 
 ### Step 4: Create Upload Directories
@@ -230,11 +232,14 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 - **Gallery** — Upload images or YouTube videos for approval
 
 ### Public Website
-- **Homepage** — Dynamic hero slider with animations & overlays, school logo, stats bar, latest notifications, upcoming events, contact info
+- **Homepage** — Two-tier navbar (top bar + main nav), dynamic hero slider, notification bell popup, ad popup, stats bar, core team, contact info, WhatsApp floating button
+- **Our Teachers** — Hero section, principal's message, teacher cards with hover flip effects
 - **Notifications** — Public notification board with type badges and priority indicators
 - **Gallery** — Filterable grid with lightbox viewer, YouTube embeds
 - **Events** — Upcoming + past events with date cards
 - **Admission Form** — Full online application with document upload
+- **WhatsApp Button** — Floating green button on all public pages, links to admin-configured number
+- **Login Page** — Split-screen design with "Back to Website" link
 
 ### Bulk Import (CSV)
 - **Student Import** — Upload CSV with headers: `admission_no, name, father_name, mother_name, dob, gender, class, section, roll_no, phone, email, address, blood_group, category, aadhar_no, status, admission_date`
@@ -267,6 +272,11 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('twitter_url', ''),
 ('instagram_url', ''),
 ('youtube_url', '');
+
+-- Add popup ad settings (v3.1)
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
+('popup_ad_image', ''),
+('popup_ad_active', '0');
 ```
 
 > If the notifications columns (priority, target_audience, etc.) already exist, skip those — they were added in v2.0.
