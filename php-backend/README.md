@@ -4,7 +4,7 @@
 A complete school management system built with **pure PHP 8+** and **MySQL**. No Node.js, no React, no terminal commands needed. Upload directly to cPanel shared hosting.
 
 **Domain:** `jnvschool.awayindia.com`
-**Schema Version:** v3.1 (13 tables)
+**Schema Version:** v3.2 (13 tables)
 
 ---
 
@@ -55,7 +55,7 @@ A complete school management system built with **pure PHP 8+** and **MySQL**. No
 ```
 public_html/
 ├── .htaccess              ← Security rules
-├── index.php              ← Public homepage with dynamic slider
+├── index.php              ← Public homepage with dynamic slider & core team carousel
 ├── login.php              ← Login page
 ├── logout.php             ← Logout handler
 ├── forgot-password.php    ← Password reset request
@@ -74,7 +74,7 @@ public_html/
 │   ├── import-students.php ← Bulk CSV import for students
 │   ├── sample-students-csv.php ← Download student CSV template
 │   ├── teachers.php       ← Teacher list
-│   ├── teacher-form.php   ← Add/edit teacher
+│   ├── teacher-form.php   ← Add/edit teacher with core team toggle
 │   ├── import-teachers.php ← Bulk CSV import for teachers
 │   ├── sample-teachers-csv.php ← Download teacher CSV template
 │   ├── admissions.php     ← Approve/reject admissions
@@ -84,7 +84,7 @@ public_html/
 │   ├── slider.php         ← Advanced home slider management
 │   ├── reports.php        ← CSV exports
 │   ├── audit-logs.php     ← Searchable audit log viewer
-│   ├── settings.php       ← School settings + user management
+│   ├── settings.php       ← School settings + theme color + user management
 │   └── support.php        ← Support/help page
 ├── teacher/
 │   ├── dashboard.php      ← Teacher overview
@@ -93,10 +93,11 @@ public_html/
 │   ├── post-notification.php ← Submit notification with targeting
 │   └── upload-gallery.php ← Upload photos/videos
 ├── public/
+│   ├── about.php          ← About page (History, Vision, Mission, Core Values)
 │   ├── notifications.php  ← Public notification board
 │   ├── gallery.php        ← Public gallery with lightbox
 │   ├── events.php         ← Upcoming events
-│   ├── teachers.php        ← Public teachers page with flip cards
+│   ├── teachers.php       ← Public teachers page with flip cards & principal's message
 │   └── admission-form.php ← Online admission application
 └── uploads/               ← Must be created manually
     ├── photos/            ← Student photos
@@ -169,7 +170,7 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 2. Visit `https://jnvschool.awayindia.com/login.php` → Login page
 3. Login with default credentials (see below)
 4. **⚠️ Immediately change the default admin password!**
-5. Go to Admin → Settings to upload your school logo
+5. Go to Admin → Settings to upload your school logo and set theme color
 6. Go to Admin → Home Slider to manage slides
 
 ---
@@ -214,7 +215,7 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 ### Admin Panel
 - **Dashboard** — 6 KPI cards, Chart.js monthly trends (admissions + attendance), recent activity feed, quick actions
 - **Students** — Full CRUD with search, class/status filters, photo upload, pagination, CSV export, bulk CSV import
-- **Teachers** — Full CRUD with auto user-account creation, search, pagination, bulk CSV import
+- **Teachers** — Full CRUD with auto user-account creation, search, pagination, bulk CSV import, core team toggle, designation & bio fields
 - **Admissions** — Status tabs (pending/approved/rejected/waitlisted), approve/reject actions
 - **Notifications** — Multi-tab management (Pending/Approved/Rejected/Pinned/All), targeting, visibility channels (popup/banner/marquee/dashboard), priority levels, soft-delete, CSV export
 - **Gallery** — Approve/reject uploads, image preview, delete
@@ -222,7 +223,7 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 - **Home Slider** — Advanced management with animations (Fade/Slide/Zoom/Ken Burns), overlay styles, text positioning, live preview, duplicate slides, stats dashboard
 - **Reports** — CSV export for students, teachers, admissions, attendance
 - **Audit Logs** — Searchable, date-filterable, paginated log of all system actions
-- **Settings** — School info, logo upload, social media links, user management, password reset, danger zone (clear logs)
+- **Settings** — School info, logo upload, social media links, theme color (`primary_color`), WhatsApp number, SMS/WhatsApp configuration, user management, password reset, danger zone (clear logs)
 
 ### Teacher Panel
 - **Dashboard** — Personal stats, recent submissions, quick actions
@@ -232,13 +233,17 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 - **Gallery** — Upload images or YouTube videos for approval
 
 ### Public Website
-- **Homepage** — Two-tier navbar (top bar + main nav), dynamic hero slider, notification bell popup, ad popup, stats bar, core team, contact info, WhatsApp floating button
-- **Our Teachers** — Hero section, principal's message, teacher cards with hover flip effects
+- **Homepage** — Two-tier navbar (top bar with marquee, hidden on mobile) with logo-only brand, dynamic hero slider with animations, "Our Core Team" horizontal carousel with left/right arrow navigation, notification bell popup, ad popup, stats bar, contact info, WhatsApp floating button
+- **Dark Gradient Footer** — Background `#1a1a2e`, branded logo card with purple gradient, 4-column layout (Logo/Socials, Quick Links, Programs, Contact Info), "Become a Part of Our Growing School Family" CTA section with admission button
+- **About Us** — Content-managed sections: School History, Vision, Mission, Core Values (all editable from admin settings)
+- **Our Teachers** — Hero section with Playfair Display serif headings, "Principal's Message" badge, 2 stat cards (Expert Teachers + Years Experience), teacher flip-cards with tap-to-flip on mobile
 - **Notifications** — Public notification board with type badges and priority indicators
-- **Gallery** — Filterable grid with lightbox viewer, YouTube embeds
+- **Gallery** — Filterable grid with lightbox viewer (swipe-to-close on mobile), YouTube embeds
 - **Events** — Upcoming + past events with date cards
 - **Admission Form** — Full online application with document upload
-- **WhatsApp Button** — Floating green button on all public pages, links to admin-configured number
+- **WhatsApp Button** — Floating green button on all public pages, links to admin-configured `whatsapp_api_number`
+- **Dynamic Theme Color** — `--theme-primary` CSS variable controlled from admin settings `primary_color`, applied to navbar accents, buttons, links, section-title underlines
+- **Mobile Responsive** — Hidden top bar on mobile, custom hamburger icon (`bi-list`), touch-friendly tap targets, logo-only navbar brand
 - **Login Page** — Split-screen design with "Back to Website" link
 
 ### Bulk Import (CSV)
@@ -248,7 +253,9 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 
 ---
 
-## 🔄 Upgrading from Schema v2.0
+## 🔄 Upgrading
+
+### From Schema v2.0 to v3.0
 
 If you already have v2.0 running and **don't want to lose data**, run these ALTER statements in phpMyAdmin instead of re-importing the full schema:
 
@@ -280,6 +287,19 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 ```
 
 > If the notifications columns (priority, target_audience, etc.) already exist, skip those — they were added in v2.0.
+
+### From Schema v3.1 to v3.2
+
+Run these in phpMyAdmin to add missing settings keys used by the v3.2 codebase:
+
+```sql
+-- WhatsApp & SMS settings
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
+('whatsapp_api_number', ''),
+('sms_gateway_key', '');
+```
+
+No table structure changes — only new default settings keys.
 
 ---
 
@@ -331,12 +351,12 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 
 ---
 
-## 🗄️ Database Schema (v3.0)
+## 🗄️ Database Schema (v3.2)
 
 13 tables total:
 1. `users` — Admin/teacher/office accounts
 2. `students` — Student records with photos
-3. `teachers` — Teacher records linked to user accounts
+3. `teachers` — Teacher records linked to user accounts (with designation, core team flag, bio)
 4. `admissions` — Online admission applications
 5. `notifications` — Notifications with approval workflow, targeting & visibility channels
 6. `notification_reads` — Per-user read tracking
@@ -345,9 +365,9 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 9. `attendance` — Daily attendance by class
 10. `exam_results` — Exam marks with auto-grading
 11. `audit_logs` — System action logs
-12. `settings` — Key-value school settings (including logo, social links)
+12. `settings` — Key-value school settings (including logo, social links, theme color, WhatsApp number)
 13. `home_slider` — Homepage slider with animations, overlays & text positioning
 
 ---
 
-*Built for JNV School — jnvschool.awayindia.com*
+*Built for JNV School — jnvschool.awayindia.com — v3.2*

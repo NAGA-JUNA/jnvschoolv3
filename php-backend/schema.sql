@@ -1,5 +1,5 @@
 -- ============================================
--- JNV School Management System — Full Database Schema v3.0
+-- JNV School Management System — Full Database Schema v3.2
 -- Domain: jnvschool.awayindia.com
 -- Run this in phpMyAdmin after creating database
 -- ============================================
@@ -364,7 +364,9 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('social_linkedin', ''),
 ('about_history', ''),
 ('about_vision', ''),
-('about_mission', '');
+('about_mission', ''),
+('whatsapp_api_number', ''),
+('sms_gateway_key', '');
 
 -- --------------------------------------------------------
 -- 13. Home Slider (with animations, overlays, text position)
