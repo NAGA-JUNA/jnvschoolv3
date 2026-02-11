@@ -1,120 +1,61 @@
 
 
-## Plan: Multi-Feature Update — Navbar, Notifications Popup, Ad Popup, WhatsApp Button, Login Back Link
+## Plan: Sync Public Page Headers + Improve Ad Popup
 
-This plan covers 6 enhancements across the public website, homepage, and login page.
+### Problem
+The four public pages (Notifications, Gallery, Events, Apply Now) still use the old single-row navbar, while the homepage has the updated two-tier navbar with top bar, logo, notification bell, and WhatsApp button. The ad popup also needs better sizing.
 
----
+### Changes
 
-### 1. Enhanced Navbar (Two-Tier Style)
+#### 1. Update all 4 public pages with the two-tier navbar
 
-Matching the reference screenshot, the navbar will be updated to a **two-tier design**:
-- **Top bar**: Dark background with welcome marquee text on the left, quick links (Admissions, Gallery) on the right
-- **Main nav bar**: School logo + name on left, navigation links in center, a **red Notifications bell button** with unread count badge, and a **Login button** with arrow icon on the right
+Each of these files will get the same header structure as `index.php`:
+- `public/notifications.php`
+- `public/gallery.php`
+- `public/events.php`
+- `public/admission-form.php`
 
-This navbar pattern will be applied to `index.php`, `public/teachers.php`, and all other public pages.
+For each page, the changes include:
+- Add PHP queries at the top for: school logo, tagline, WhatsApp number, notification count, bell notifications (5 latest)
+- Replace the single `<nav>` with the **two-tier layout**: dark top bar (marquee + quick links) and main navbar (logo, menu links, red notification bell with badge, login button)
+- Add the **Notification Modal** (Bootstrap modal with 5 latest notifications, close button, "View All" link)
+- Add the **WhatsApp floating button** at the bottom
+- Add matching CSS for top-bar, main-navbar, notification bell, WhatsApp button
+- Add "Home" and "Our Teachers" links to the navigation menu
+- Update footer to include the school logo
 
----
+#### 2. Improve Ad Popup sizing
 
-### 2. Notification Bell Popup
-
-When users click the red **Notifications** button in the navbar:
-- A **modal popup** appears showing the latest 5 approved notifications
-- Each notification shows title, date, and type badge
-- A **notification count badge** (red circle) on the bell icon shows unread/new count
-- Popup has a **Close (X)** button and a **"View All Notifications"** button that links to `/public/notifications.php`
-- Uses Bootstrap modal, no page reload needed
-
----
-
-### 3. Login Page — "Back to Website" Link
-
-Add a clearly visible **"Back to Website"** link/button on the login page:
-- Positioned at the top of the right panel (form side)
-- Links back to `/` (home page)
-- Styled as a subtle link with a left-arrow icon for easy navigation
-
----
-
-### 4. Advertisement Popup on Homepage
-
-Admin can post **one advertisement image** that shows as a fullscreen-overlay popup when visitors first land on the homepage:
-- **Popup design**: Centered modal with the ad image, a visible **Close (X)** button in the top-right corner
-- Uses `localStorage` so the popup only shows once per session/day (won't annoy repeat visitors)
-- **Admin management**: New section in `admin/settings.php` to upload 1 ad image and toggle it ON/OFF
-- Database: 2 new settings keys: `popup_ad_image` and `popup_ad_active`
-
----
-
-### 5. WhatsApp Floating Button
-
-A **green WhatsApp floating icon** in the bottom-right corner of every public page:
-- Clicking it opens `https://wa.me/<number>` in a new tab
-- The WhatsApp number is pulled from the existing `whatsapp_api_number` setting (already in admin settings)
-- Shows on homepage, teachers page, notifications, gallery, events pages
-- Styled as a circular green button with the WhatsApp icon, subtle bounce animation
-
----
-
-### 6. Teachers Page Refinements
-
-Minor updates to match the reference screenshot more closely:
-- Adjust card sizing and spacing to match the reference layout
-- Ensure the "Meet Our Teachers" section heading style matches
-
----
+Update the ad popup CSS in `index.php` to be better centered and sized:
+- Change `max-width` from `600px` to `550px` for a more compact, professional look
+- Add `max-height: 80vh` with `object-fit: contain` on the image so it doesn't overflow on smaller screens
+- Add a subtle entrance animation (fade + scale) for a polished feel
 
 ### Technical Details
 
-#### A. Database Changes (settings table only)
-
-```sql
-INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
-('popup_ad_image', ''),
-('popup_ad_active', '0');
-```
-
-No new tables needed. WhatsApp number already exists as `whatsapp_api_number`.
-
-#### B. Files to Modify
+**Files to modify:**
 
 | File | Changes |
 |------|---------|
-| `index.php` | New two-tier navbar, notification popup modal, ad popup modal, WhatsApp floating button |
-| `public/teachers.php` | Updated navbar style, WhatsApp button |
-| `login.php` | Add "Back to Website" link at top of form |
-| `admin/settings.php` | Add "Popup Advertisement" section with image upload and ON/OFF toggle |
-| `schema.sql` | Add popup_ad settings to INSERT |
-| `README.md` | Document new features |
+| `public/notifications.php` | Replace old navbar (lines 83-105) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries for logo/tagline/whatsapp/bell notifs |
+| `public/gallery.php` | Replace old navbar (lines 40-54) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries |
+| `public/events.php` | Replace old navbar (lines 29-43) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries |
+| `public/admission-form.php` | Replace old navbar (lines 70-84) with two-tier navbar, add notification modal, WhatsApp button, add PHP queries |
+| `index.php` | Tweak ad popup CSS for better sizing and animation |
 
-#### C. Navbar HTML Structure
+**New navbar HTML structure (applied to all 4 pages):**
 
 ```text
 +----------------------------------------------------------+
-| Welcome To JNV School          Admissions | Gallery | ... |  <-- top bar (dark)
+| Welcome marquee text          Admissions | Gallery | Events |  <-- top bar
 +----------------------------------------------------------+
-| [Logo] School Name   Home | Teachers | ... | [Bell] Login |  <-- main nav (white/dark)
+| [Logo] School   Home | Teachers | Notifs... | [Bell] Login |  <-- main nav
 +----------------------------------------------------------+
 ```
 
-#### D. Notification Popup (Bootstrap Modal)
-
-- Fetches latest 5 approved notifications via PHP query on page load
-- Count badge shows number of notifications from last 7 days
-- Modal triggered by clicking the red Notifications button
-- Contains list of notifications with close and "View All" buttons
-
-#### E. Ad Popup (Bootstrap Modal)
-
-- Admin uploads image via settings page (stored in `uploads/ads/`)
-- On homepage load, if `popup_ad_active = '1'` and image exists, shows modal
-- `localStorage` key `popup_ad_dismissed_<date>` prevents showing again same day
-- Large centered image with close button overlay
-
-#### F. WhatsApp Button CSS
-
-- Fixed position bottom-right (bottom: 20px, right: 20px)
-- Green circular button (#25D366) with white WhatsApp icon
-- z-index: 9999 to stay above everything
-- Subtle pulse animation to draw attention
+**Ad popup improvements:**
+- Max-width: 550px (from 600px)
+- Max-height on image: 80vh with object-fit: contain
+- Fade-in + scale animation on appearance
+- Slightly rounded corners and shadow refinements
 
