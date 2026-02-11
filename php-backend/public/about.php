@@ -22,6 +22,32 @@ $aboutHistory = getSetting('about_history', 'Our school was established with a v
 $aboutVision = getSetting('about_vision', 'To be a center of excellence in education, nurturing future leaders who are academically proficient, morally upright, and socially responsible.');
 $aboutMission = getSetting('about_mission', 'To provide quality education through innovative teaching methods, foster critical thinking, and develop well-rounded individuals who contribute positively to society.');
 
+// Core Values
+$coreValues = [];
+$defaultCoreValues = [
+    1 => ['Excellence', 'We strive for the highest standards in academics, character, and personal growth.', 'bi-trophy', 'warning'],
+    2 => ['Integrity', 'We foster honesty, transparency, and ethical behavior in all our actions.', 'bi-shield-check', 'danger'],
+    3 => ['Innovation', 'We embrace creativity and modern teaching methods to inspire learning.', 'bi-lightbulb', 'primary'],
+    4 => ['Community', 'We build a supportive, inclusive environment where everyone belongs.', 'bi-people', 'success'],
+];
+for ($i = 1; $i <= 4; $i++) {
+    $coreValues[$i] = [
+        'title' => getSetting("core_value_{$i}_title", $defaultCoreValues[$i][0]),
+        'desc' => getSetting("core_value_{$i}_desc", $defaultCoreValues[$i][1]),
+        'icon' => $defaultCoreValues[$i][2],
+        'color' => $defaultCoreValues[$i][3],
+    ];
+}
+
+// Inspirational Quote
+$siteQuote = null;
+try {
+    $siteQuote = $db->query("SELECT quote_text, author_name, updated_at FROM site_quotes WHERE is_active=1 ORDER BY id DESC LIMIT 1")->fetch();
+} catch (Exception $e) {}
+
+// Favicon
+$favicon = getSetting('school_favicon', '');
+
 // Bell notifications
 $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 5")->fetchAll();
 $notifCount = $db->query("SELECT COUNT(*) FROM notifications WHERE status='approved' AND is_public=1 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
@@ -38,6 +64,7 @@ if (isLoggedIn()) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>About Us — <?= e($schoolName) ?></title>
     <meta name="description" content="Learn about <?= e($schoolName) ?> — our history, vision, mission, and core values. <?= e($schoolTagline) ?>">
+    <?php if ($favicon): ?><link rel="icon" href="/uploads/logo/<?= e($favicon) ?>"><?php endif; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -304,37 +331,42 @@ if (isLoggedIn()) {
             <p class="text-muted mt-3">The principles that guide everything we do</p>
         </div>
         <div class="row g-4">
+            <?php foreach ($coreValues as $cv): ?>
             <div class="col-lg-3 col-md-6">
                 <div class="card value-card shadow-sm h-100">
-                    <div class="value-icon bg-warning-subtle text-warning"><i class="bi bi-trophy"></i></div>
-                    <h5 class="fw-bold">Excellence</h5>
-                    <p class="text-muted small mb-0">We strive for the highest standards in academics, character, and personal growth.</p>
+                    <div class="value-icon bg-<?= $cv['color'] ?>-subtle text-<?= $cv['color'] ?>"><i class="bi <?= $cv['icon'] ?>"></i></div>
+                    <h5 class="fw-bold"><?= e($cv['title']) ?></h5>
+                    <p class="text-muted small mb-0"><?= e($cv['desc']) ?></p>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="card value-card shadow-sm h-100">
-                    <div class="value-icon bg-danger-subtle text-danger"><i class="bi bi-shield-check"></i></div>
-                    <h5 class="fw-bold">Integrity</h5>
-                    <p class="text-muted small mb-0">We foster honesty, transparency, and ethical behavior in all our actions.</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="card value-card shadow-sm h-100">
-                    <div class="value-icon bg-primary-subtle text-primary"><i class="bi bi-lightbulb"></i></div>
-                    <h5 class="fw-bold">Innovation</h5>
-                    <p class="text-muted small mb-0">We embrace creativity and modern teaching methods to inspire learning.</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="card value-card shadow-sm h-100">
-                    <div class="value-icon bg-success-subtle text-success"><i class="bi bi-people"></i></div>
-                    <h5 class="fw-bold">Community</h5>
-                    <p class="text-muted small mb-0">We build a supportive, inclusive environment where everyone belongs.</p>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<!-- Inspirational Quote Banner -->
+<?php if ($siteQuote): ?>
+<section class="py-5" style="background:#f1f5f9;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="quote-banner" style="background:#fff;border-radius:16px;padding:3rem 2.5rem;text-align:center;border-left:5px solid #1e40af;position:relative;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.06);opacity:0;transform:translateY(30px);transition:opacity 0.8s ease,transform 0.8s ease;">
+                    <div style="position:absolute;top:-15px;left:25px;font-size:7rem;color:rgba(30,64,175,0.06);font-family:Georgia,serif;line-height:1;">"</div>
+                    <p style="font-size:1.25rem;font-style:italic;color:#1e293b;line-height:1.8;margin-bottom:1.2rem;position:relative;z-index:1;font-family:'Playfair Display',Georgia,serif;">
+                        "<?= e($siteQuote['quote_text']) ?>"
+                    </p>
+                    <?php if ($siteQuote['author_name']): ?>
+                    <div style="font-size:.95rem;color:#475569;font-weight:600;">— <?= e($siteQuote['author_name']) ?></div>
+                    <?php endif; ?>
+                    <div style="font-size:.7rem;color:#94a3b8;margin-top:.6rem;">
+                        <i class="bi bi-clock me-1"></i>Last updated: <?= date('d M Y, h:i A', strtotime($siteQuote['updated_at'])) ?>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- Footer CTA -->
 <section class="footer-cta">
@@ -409,5 +441,17 @@ if (isLoggedIn()) {
 <?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Scroll animation for quote banner
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            e.target.style.opacity = '1';
+            e.target.style.transform = 'translateY(0)';
+        }
+    });
+}, { threshold: 0.2 });
+document.querySelectorAll('.quote-banner').forEach(el => observer.observe(el));
+</script>
 </body>
 </html>

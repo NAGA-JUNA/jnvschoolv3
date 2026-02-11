@@ -60,6 +60,7 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($schoolName) ?> — <?= e($schoolTagline) ?></title>
     <meta name="description" content="<?= e($schoolName) ?> — <?= e($schoolTagline) ?>. Official school website for admissions, notifications, gallery, and events.">
+    <?php $favicon = getSetting('school_favicon', ''); if ($favicon): ?><link rel="icon" href="/uploads/logo/<?= e($favicon) ?>"><?php endif; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">

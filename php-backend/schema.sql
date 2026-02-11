@@ -15,7 +15,7 @@
 -- ⚠️ WARNING: This uses DROP TABLE IF EXISTS — it will DELETE
 --    all existing data if tables already exist. BACK UP FIRST!
 --
--- TOTAL TABLES: 13
+-- TOTAL TABLES: 14
 --   1. users           — Admin/teacher/office accounts
 --   2. students        — Student records with photos
 --   3. teachers        — Teacher records linked to user accounts
@@ -29,6 +29,7 @@
 --  11. audit_logs      — System action logs
 --  12. settings        — Key-value school settings
 --  13. home_slider     — Homepage slider with animations & overlays
+--  14. site_quotes     — Inspirational quotes for About page
 -- ============================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -48,6 +49,7 @@ DROP TABLE IF EXISTS `events`;
 DROP TABLE IF EXISTS `notifications`;
 DROP TABLE IF EXISTS `admissions`;
 DROP TABLE IF EXISTS `home_slider`;
+DROP TABLE IF EXISTS `site_quotes`;
 DROP TABLE IF EXISTS `settings`;
 DROP TABLE IF EXISTS `teachers`;
 DROP TABLE IF EXISTS `students`;
@@ -366,7 +368,16 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('about_vision', ''),
 ('about_mission', ''),
 ('whatsapp_api_number', ''),
-('sms_gateway_key', '');
+('sms_gateway_key', ''),
+('school_favicon', ''),
+('core_value_1_title', 'Excellence'),
+('core_value_1_desc', 'We strive for the highest standards in academics, character, and personal growth.'),
+('core_value_2_title', 'Integrity'),
+('core_value_2_desc', 'We foster honesty, transparency, and ethical behavior in all our actions.'),
+('core_value_3_title', 'Innovation'),
+('core_value_3_desc', 'We embrace creativity and modern teaching methods to inspire learning.'),
+('core_value_4_title', 'Community'),
+('core_value_4_desc', 'We build a supportive, inclusive environment where everyone belongs.');
 
 -- --------------------------------------------------------
 -- 13. Home Slider (with animations, overlays, text position)
@@ -388,6 +399,24 @@ CREATE TABLE `home_slider` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 14. Site Quotes (Inspirational Quote on About page)
+-- --------------------------------------------------------
+CREATE TABLE `site_quotes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `quote_text` TEXT NOT NULL,
+  `author_name` VARCHAR(200) DEFAULT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `updated_by` INT UNSIGNED DEFAULT NULL,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_quote_user` FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `site_quotes` (`quote_text`, `author_name`, `updated_by`) VALUES
+('Education is the most powerful weapon which you can use to change the world.', 'Nelson Mandela', 1);
 
 -- --------------------------------------------------------
 -- Sample Slider Data (5 slides)
