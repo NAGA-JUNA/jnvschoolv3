@@ -49,10 +49,17 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
             background-size: cover; background-position: center;
         }
         .hero-slide.active { opacity: 1; }
-        .hero-slide::before {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(135deg, rgba(15,23,42,0.85) 0%, rgba(30,64,175,0.6) 100%);
-        }
+        /* Animation variants */
+        .hero-slide.anim-slide-left { transform: translateX(100%); opacity: 1; transition: transform 0.8s ease, opacity 0.5s ease; }
+        .hero-slide.anim-slide-left.active { transform: translateX(0); opacity: 1; }
+        .hero-slide.anim-slide-up { transform: translateY(30px); transition: transform 0.8s ease, opacity 0.6s ease; }
+        .hero-slide.anim-slide-up.active { transform: translateY(0); opacity: 1; }
+        .hero-slide.anim-zoom-in { transform: scale(0.95); transition: transform 1s ease, opacity 0.8s ease; }
+        .hero-slide.anim-zoom-in.active { transform: scale(1); opacity: 1; }
+        .hero-slide.anim-zoom-out { transform: scale(1.1); transition: transform 1s ease, opacity 0.8s ease; }
+        .hero-slide.anim-zoom-out.active { transform: scale(1); opacity: 1; }
+        @keyframes kenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+        .hero-slide.anim-ken-burns.active { animation: kenBurns 8s ease forwards; opacity: 1; }
         .hero-slide .content {
             position: relative; z-index: 2; color: #fff; height: 100%;
             display: flex; flex-direction: column; justify-content: center;
@@ -132,7 +139,18 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background:#0f172a;">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/"><i class="bi bi-mortarboard-fill me-2"></i><?= e($schoolName) ?></a>
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
+            <?php
+            $navLogo = getSetting('school_logo', '');
+            if ($navLogo):
+                $logoPath = (strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
+            ?>
+                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+            <?php else: ?>
+                <i class="bi bi-mortarboard-fill"></i>
+            <?php endif; ?>
+            <?= e($schoolName) ?>
+        </a>
         <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav ms-auto">
@@ -151,9 +169,27 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
 <?php if (!empty($slides)): ?>
 <div class="hero-slider" id="heroSlider">
     <?php foreach ($slides as $i => $slide): ?>
-    <div class="hero-slide <?= $i === 0 ? 'active' : '' ?>" style="background-image: url('/<?= e($slide['image_path']) ?>');" data-index="<?= $i ?>">
+    <?php
+        $anim = $slide['animation_type'] ?? 'fade';
+        $overlay = $slide['overlay_style'] ?? 'gradient-dark';
+        $textPos = $slide['text_position'] ?? 'left';
+        $opacity = ($slide['overlay_opacity'] ?? 70) / 100;
+        $overlayMap = [
+            'gradient-dark' => "linear-gradient(135deg, rgba(15,23,42,{$opacity}) 0%, rgba(30,64,175," . ($opacity * 0.7) . ") 100%)",
+            'gradient-blue' => "linear-gradient(135deg, rgba(30,64,175,{$opacity}) 0%, rgba(59,130,246," . ($opacity * 0.7) . ") 100%)",
+            'gradient-warm' => "linear-gradient(135deg, rgba(180,83,9,{$opacity}) 0%, rgba(234,88,12," . ($opacity * 0.7) . ") 100%)",
+            'solid-dark' => "rgba(15,23,42,{$opacity})",
+            'none' => 'transparent',
+        ];
+        $overlayBg = $overlayMap[$overlay] ?? $overlayMap['gradient-dark'];
+        $alignMap = ['left' => 'flex-start', 'center' => 'center', 'right' => 'flex-end'];
+        $textAlign = $textPos === 'center' ? 'text-align:center;' : ($textPos === 'right' ? 'text-align:right;' : '');
+        $contentAlign = $alignMap[$textPos] ?? 'flex-start';
+    ?>
+    <div class="hero-slide <?= $i === 0 ? 'active' : '' ?> anim-<?= e($anim) ?>" style="background-image: url('/<?= e($slide['image_path']) ?>');" data-index="<?= $i ?>">
+        <div style="position:absolute;inset:0;background:<?= $overlayBg ?>;"></div>
         <div class="container h-100">
-            <div class="content">
+            <div class="content" style="align-items:<?= $contentAlign ?>;<?= $textAlign ?>">
                 <?php if ($slide['badge_text']): ?>
                     <div class="badge-text"><?= e($slide['badge_text']) ?></div>
                 <?php endif; ?>
@@ -347,7 +383,14 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
     <div class="container">
         <div class="row g-4">
             <div class="col-md-6">
-                <h6 class="fw-bold mb-2"><i class="bi bi-mortarboard-fill me-2"></i><?= e($schoolName) ?></h6>
+                <h6 class="fw-bold mb-2 d-flex align-items-center gap-2">
+                    <?php if ($navLogo): ?>
+                        <img src="<?= e($logoPath) ?>" alt="Logo" style="width:28px;height:28px;border-radius:6px;object-fit:cover;">
+                    <?php else: ?>
+                        <i class="bi bi-mortarboard-fill"></i>
+                    <?php endif; ?>
+                    <?= e($schoolName) ?>
+                </h6>
                 <p class="text-muted small mb-0"><?= e($schoolTagline) ?></p>
             </div>
             <div class="col-md-3">
