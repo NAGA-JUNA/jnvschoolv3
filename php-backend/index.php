@@ -245,12 +245,13 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
 </head>
 <body>
 
+<?php $showTopBar = getSetting('global_navbar_show_top_bar', '1'); if ($showTopBar === '1'): ?>
 <!-- Top Bar -->
 <div class="top-bar d-none d-lg-block">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center">
             <div class="marquee-text flex-grow-1 me-3">
-                <span>🎓 Welcome to <?= e($schoolName) ?> — <?= e($schoolTagline) ?></span>
+                <span><?php $marquee = getSetting('home_marquee_text', ''); echo e($marquee ?: "🎓 Welcome to {$schoolName} — {$schoolTagline}"); ?></span>
             </div>
             <div class="d-flex gap-3 flex-shrink-0">
                 <a href="/public/admission-form.php"><i class="bi bi-mortarboard me-1"></i>Admissions</a>
@@ -260,6 +261,7 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Main Navbar -->
 <nav class="main-navbar navbar navbar-expand-lg sticky-top">
@@ -285,13 +287,17 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
                 <li class="nav-item"><a class="nav-link" href="/public/admission-form.php">Apply Now</a></li>
             </ul>
             <div class="d-flex align-items-center gap-2">
+                <?php if (getSetting('global_navbar_show_notif_bell', '1') === '1'): ?>
                 <button class="notif-bell-btn" data-bs-toggle="modal" data-bs-target="#notifModal">
                     <i class="bi bi-bell-fill me-1"></i> Notifications
                     <?php if ($notifCount > 0): ?>
                         <span class="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span>
                     <?php endif; ?>
                 </button>
+                <?php endif; ?>
+                <?php if (getSetting('global_navbar_show_login', '1') === '1'): ?>
                 <a href="/login.php" class="login-nav-btn"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -416,18 +422,21 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
 </div>
 <?php endif; ?>
 
+<?php if (getSetting('home_stats_show', '1') === '1'): ?>
 <!-- Stats Bar -->
 <div class="stats-bar">
     <div class="container">
         <div class="row g-3 text-center">
-            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= $totalStudents ?>+</div><div class="label">Students</div></div></div>
-            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= $totalTeachers ?>+</div><div class="label">Teachers</div></div></div>
-            <div class="col-6 col-md-3"><div class="stat-item"><div class="num">12</div><div class="label">Classes</div></div></div>
-            <div class="col-6 col-md-3"><div class="stat-item"><div class="num">100%</div><div class="label">Dedication</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= $totalStudents ?>+</div><div class="label"><?= e(getSetting('home_stats_students_label', 'Students')) ?></div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= $totalTeachers ?>+</div><div class="label"><?= e(getSetting('home_stats_teachers_label', 'Teachers')) ?></div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= e(getSetting('home_stats_classes_value', '12')) ?></div><div class="label"><?= e(getSetting('home_stats_classes_label', 'Classes')) ?></div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="num"><?= e(getSetting('home_stats_dedication_value', '100%')) ?></div><div class="label"><?= e(getSetting('home_stats_dedication_label', 'Dedication')) ?></div></div></div>
         </div>
     </div>
 </div>
+<?php endif; ?>
 
+<?php if (getSetting('home_quicklinks_show', '1') === '1'): ?>
 <!-- Quick Links Section -->
 <section class="py-5">
     <div class="container">
@@ -435,38 +444,39 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
             <div class="col-md-6 col-lg-3">
                 <div class="card info-card h-100 text-center p-4">
                     <div class="feature-icon bg-primary-subtle text-primary mx-auto mb-3"><i class="bi bi-mortarboard-fill"></i></div>
-                    <h6 class="fw-bold">Admissions</h6>
-                    <p class="text-muted small mb-3">Apply online for admission to JNV School.</p>
+                    <h6 class="fw-bold"><?= e(getSetting('home_cta_admissions_title', 'Admissions')) ?></h6>
+                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_admissions_desc', 'Apply online for admission to JNV School.')) ?></p>
                     <a href="/public/admission-form.php" class="btn btn-sm btn-outline-primary mt-auto">Apply Now</a>
                 </div>
             </div>
             <div class="col-md-6 col-lg-3">
                 <div class="card info-card h-100 text-center p-4">
                     <div class="feature-icon bg-warning-subtle text-warning mx-auto mb-3"><i class="bi bi-bell-fill"></i></div>
-                    <h6 class="fw-bold">Notifications</h6>
-                    <p class="text-muted small mb-3">Stay updated with latest announcements.</p>
+                    <h6 class="fw-bold"><?= e(getSetting('home_cta_notifications_title', 'Notifications')) ?></h6>
+                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_notifications_desc', 'Stay updated with latest announcements.')) ?></p>
                     <a href="/public/notifications.php" class="btn btn-sm btn-outline-warning mt-auto">View All</a>
                 </div>
             </div>
             <div class="col-md-6 col-lg-3">
                 <div class="card info-card h-100 text-center p-4">
                     <div class="feature-icon bg-success-subtle text-success mx-auto mb-3"><i class="bi bi-images"></i></div>
-                    <h6 class="fw-bold">Gallery</h6>
-                    <p class="text-muted small mb-3">Explore photos & videos from school life.</p>
+                    <h6 class="fw-bold"><?= e(getSetting('home_cta_gallery_title', 'Gallery')) ?></h6>
+                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_gallery_desc', 'Explore photos & videos from school life.')) ?></p>
                     <a href="/public/gallery.php" class="btn btn-sm btn-outline-success mt-auto">Browse</a>
                 </div>
             </div>
             <div class="col-md-6 col-lg-3">
                 <div class="card info-card h-100 text-center p-4">
                     <div class="feature-icon bg-danger-subtle text-danger mx-auto mb-3"><i class="bi bi-calendar-event-fill"></i></div>
-                    <h6 class="fw-bold">Events</h6>
-                    <p class="text-muted small mb-3">Check upcoming school events & dates.</p>
+                    <h6 class="fw-bold"><?= e(getSetting('home_cta_events_title', 'Events')) ?></h6>
+                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_events_desc', 'Check upcoming school events & dates.')) ?></p>
                     <a href="/public/events.php" class="btn btn-sm btn-outline-danger mt-auto">View Events</a>
                 </div>
             </div>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- Latest Notifications & Upcoming Events -->
 <section class="py-5 bg-white">
@@ -523,12 +533,12 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
 </section>
 
 <!-- Our Core Team -->
-<?php if (!empty($coreTeam)): ?>
+<?php if (!empty($coreTeam) && getSetting('home_core_team_show', '1') === '1'): ?>
 <section class="py-5" style="background:#f8fafc;">
     <div class="container">
         <div class="text-center mb-4">
-            <h4 style="font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;font-weight:700;color:#1a1a2e;">Our Core Team</h4>
-            <p class="text-muted mt-2">Meet the dedicated leaders guiding our school's vision and mission.</p>
+            <h4 style="font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;font-weight:700;color:#1a1a2e;"><?= e(getSetting('home_core_team_title', 'Our Core Team')) ?></h4>
+            <p class="text-muted mt-2"><?= e(getSetting('home_core_team_subtitle', 'Meet the dedicated leaders guiding our school\'s vision and mission.')) ?></p>
         </div>
         <div class="position-relative">
             <?php if (count($coreTeam) > 3): ?>
@@ -573,7 +583,7 @@ function scrollTeam(dir) {
 </script>
 <?php endif; ?>
 
-<!-- Contact Info -->
+<?php if (getSetting('home_contact_show', '1') === '1'): ?>
 <section class="py-5">
     <div class="container">
         <div class="row g-4 align-items-center">
@@ -607,19 +617,42 @@ function scrollTeam(dir) {
         </div>
     </div>
 </section>
+<?php endif; ?>
 
+<?php
+$_ctaShow = getSetting('home_footer_cta_show', '1');
+$_ctaTitle = getSetting('home_footer_cta_title', '') ?: getSetting('global_footer_cta_title', '') ?: 'Become a Part of ' . $schoolName;
+$_ctaDesc = getSetting('home_footer_cta_desc', '') ?: getSetting('global_footer_cta_desc', '') ?: 'Give your child the gift of quality education. Contact us today to learn more about admissions.';
+$_ctaBtn = getSetting('home_footer_cta_btn_text', '') ?: getSetting('global_footer_cta_btn_text', 'Get In Touch');
+if ($_ctaShow === '1'):
+?>
 <!-- Footer CTA -->
 <section class="footer-cta">
     <div class="container">
-        <h2>Become a Part of <?= e($schoolName) ?></h2>
-        <p>Give your child the gift of quality education. Contact us today to learn more about admissions.</p>
+        <h2><?= e(str_replace('[school_name]', $schoolName, $_ctaTitle)) ?></h2>
+        <p><?= e($_ctaDesc) ?></p>
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="/public/admission-form.php" class="btn btn-danger rounded-pill px-4 fw-semibold">Get In Touch <i class="bi bi-arrow-right ms-1"></i></a>
+            <a href="/public/admission-form.php" class="btn btn-danger rounded-pill px-4 fw-semibold"><?= e($_ctaBtn) ?> <i class="bi bi-arrow-right ms-1"></i></a>
             <a href="/public/about.php" class="btn btn-outline-light rounded-pill px-4 fw-semibold">Learn More</a>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
+<?php
+$_fDesc = getSetting('footer_description', 'A professional and modern school with years of experience in nurturing children with senior teachers and a clean environment.');
+$_fLinks = json_decode(getSetting('footer_quick_links', ''), true) ?: [['label'=>'About Us','url'=>'/public/about.php'],['label'=>'Our Teachers','url'=>'/public/teachers.php'],['label'=>'Admissions','url'=>'/public/admission-form.php'],['label'=>'Gallery','url'=>'/public/gallery.php'],['label'=>'Events','url'=>'/public/events.php'],['label'=>'Admin Login','url'=>'/login.php']];
+$_fProgs = json_decode(getSetting('footer_programs', ''), true) ?: [['label'=>'Pre-Primary (LKG & UKG)'],['label'=>'Primary School (1-5)'],['label'=>'Upper Primary (6-8)'],['label'=>'Co-Curricular Activities'],['label'=>'Sports Programs']];
+$_fAddr = getSetting('footer_contact_address', $schoolAddress);
+$_fPhone = getSetting('footer_contact_phone', $schoolPhone);
+$_fEmail = getSetting('footer_contact_email', $schoolEmail);
+$_fHours = getSetting('footer_contact_hours', 'Mon - Sat: 8:00 AM - 5:00 PM');
+$_fSocFb = getSetting('footer_social_facebook', $socialFacebook);
+$_fSocTw = getSetting('footer_social_twitter', $socialTwitter);
+$_fSocIg = getSetting('footer_social_instagram', $socialInstagram);
+$_fSocYt = getSetting('footer_social_youtube', $socialYoutube);
+$_fSocLi = getSetting('footer_social_linkedin', $socialLinkedin);
+?>
 <!-- Dark Footer -->
 <footer class="site-footer">
     <div class="container">
@@ -629,46 +662,41 @@ function scrollTeam(dir) {
                     <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:42px;height:42px;border-radius:10px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.8rem;"></i><?php endif; ?>
                     <div>
                         <h6 class="fw-bold mb-0" style="font-size:0.95rem;"><?= e($schoolName) ?></h6>
-                        <?php if ($schoolAddress): ?><small class="opacity-50" style="font-size:0.75rem;"><?= e(explode(',', $schoolAddress)[0] ?? '') ?></small><?php endif; ?>
+                        <?php if ($_fAddr): ?><small class="opacity-50" style="font-size:0.75rem;"><?= e(explode(',', $_fAddr)[0] ?? '') ?></small><?php endif; ?>
                     </div>
                 </div>
-                <p class="small opacity-60 mb-3">A professional and modern school with years of experience in nurturing children with senior teachers and a clean environment.</p>
+                <p class="small opacity-60 mb-3"><?= e($_fDesc) ?></p>
                 <div class="footer-social d-flex gap-2 flex-wrap">
-                    <?php if ($socialFacebook): ?><a href="<?= e($socialFacebook) ?>" target="_blank"><i class="bi bi-facebook"></i></a><?php endif; ?>
-                    <?php if ($socialTwitter): ?><a href="<?= e($socialTwitter) ?>" target="_blank"><i class="bi bi-twitter-x"></i></a><?php endif; ?>
-                    <?php if ($socialInstagram): ?><a href="<?= e($socialInstagram) ?>" target="_blank"><i class="bi bi-instagram"></i></a><?php endif; ?>
-                    <?php if ($socialYoutube): ?><a href="<?= e($socialYoutube) ?>" target="_blank"><i class="bi bi-youtube"></i></a><?php endif; ?>
-                    <?php if ($socialLinkedin): ?><a href="<?= e($socialLinkedin) ?>" target="_blank"><i class="bi bi-linkedin"></i></a><?php endif; ?>
+                    <?php if ($_fSocFb): ?><a href="<?= e($_fSocFb) ?>" target="_blank"><i class="bi bi-facebook"></i></a><?php endif; ?>
+                    <?php if ($_fSocTw): ?><a href="<?= e($_fSocTw) ?>" target="_blank"><i class="bi bi-twitter-x"></i></a><?php endif; ?>
+                    <?php if ($_fSocIg): ?><a href="<?= e($_fSocIg) ?>" target="_blank"><i class="bi bi-instagram"></i></a><?php endif; ?>
+                    <?php if ($_fSocYt): ?><a href="<?= e($_fSocYt) ?>" target="_blank"><i class="bi bi-youtube"></i></a><?php endif; ?>
+                    <?php if ($_fSocLi): ?><a href="<?= e($_fSocLi) ?>" target="_blank"><i class="bi bi-linkedin"></i></a><?php endif; ?>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">Quick Links</h6>
                 <ul class="list-unstyled">
-                    <li class="mb-2"><a href="/public/about.php" class="footer-link">About Us</a></li>
-                    <li class="mb-2"><a href="/public/teachers.php" class="footer-link">Our Teachers</a></li>
-                    <li class="mb-2"><a href="/public/admission-form.php" class="footer-link">Admissions</a></li>
-                    <li class="mb-2"><a href="/public/gallery.php" class="footer-link">Gallery</a></li>
-                    <li class="mb-2"><a href="/public/events.php" class="footer-link">Events</a></li>
-                    <li class="mb-2"><a href="/login.php" class="footer-link">Admin Login</a></li>
+                    <?php foreach ($_fLinks as $_fl): ?>
+                    <li class="mb-2"><a href="<?= e($_fl['url']) ?>" class="footer-link"><?= e($_fl['label']) ?></a></li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">Programs</h6>
                 <ul class="list-unstyled">
-                    <li class="mb-2"><span class="footer-link">Pre-Primary (LKG & UKG)</span></li>
-                    <li class="mb-2"><span class="footer-link">Primary School (1-5)</span></li>
-                    <li class="mb-2"><span class="footer-link">Upper Primary (6-8)</span></li>
-                    <li class="mb-2"><span class="footer-link">Co-Curricular Activities</span></li>
-                    <li class="mb-2"><span class="footer-link">Sports Programs</span></li>
+                    <?php foreach ($_fProgs as $_fp): ?>
+                    <li class="mb-2"><span class="footer-link"><?= e($_fp['label']) ?></span></li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">Contact Info</h6>
                 <ul class="list-unstyled">
-                    <?php if ($schoolAddress): ?><li class="mb-2"><i class="bi bi-geo-alt text-danger me-2"></i><span class="footer-link"><?= e($schoolAddress) ?></span></li><?php endif; ?>
-                    <?php if ($schoolPhone): ?><li class="mb-2"><i class="bi bi-telephone text-success me-2"></i><a href="tel:<?= e($schoolPhone) ?>" class="footer-link"><?= e($schoolPhone) ?></a></li><?php endif; ?>
-                    <?php if ($schoolEmail): ?><li class="mb-2"><i class="bi bi-envelope text-warning me-2"></i><a href="mailto:<?= e($schoolEmail) ?>" class="footer-link"><?= e($schoolEmail) ?></a></li><?php endif; ?>
-                    <li class="mb-2"><i class="bi bi-clock text-info me-2"></i><span class="footer-link">Mon - Sat: 8:00 AM - 5:00 PM</span></li>
+                    <?php if ($_fAddr): ?><li class="mb-2"><i class="bi bi-geo-alt text-danger me-2"></i><span class="footer-link"><?= e($_fAddr) ?></span></li><?php endif; ?>
+                    <?php if ($_fPhone): ?><li class="mb-2"><i class="bi bi-telephone text-success me-2"></i><a href="tel:<?= e($_fPhone) ?>" class="footer-link"><?= e($_fPhone) ?></a></li><?php endif; ?>
+                    <?php if ($_fEmail): ?><li class="mb-2"><i class="bi bi-envelope text-warning me-2"></i><a href="mailto:<?= e($_fEmail) ?>" class="footer-link"><?= e($_fEmail) ?></a></li><?php endif; ?>
+                    <?php if ($_fHours): ?><li class="mb-2"><i class="bi bi-clock text-info me-2"></i><span class="footer-link"><?= e($_fHours) ?></span></li><?php endif; ?>
                 </ul>
             </div>
         </div>
