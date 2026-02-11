@@ -9,6 +9,7 @@ $navLogo = getSetting('school_logo', '');
 $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
 $whatsappNumber = getSetting('whatsapp_api_number', '');
 $schoolAddress = getSetting('school_address', '');
+$primaryColor = getSetting('primary_color', '#1e40af');
 
 // Social links
 $socialFacebook = getSetting('social_facebook', '');
@@ -45,8 +46,9 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     <meta name="description" content="Meet the dedicated educators at <?= e($schoolName) ?>. Our qualified and experienced teachers are committed to academic excellence.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
+        :root { --theme-primary: <?= e($primaryColor) ?>; }
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
 
@@ -223,7 +225,7 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
 <body>
 
 <!-- Top Bar -->
-<div class="top-bar">
+<div class="top-bar d-none d-lg-block">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center">
             <div class="marquee-text flex-grow-1 me-3">
@@ -241,15 +243,16 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
 <!-- Main Navbar -->
 <nav class="main-navbar navbar navbar-expand-lg sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-white" href="/">
+        <a class="navbar-brand d-flex align-items-center text-white" href="/">
             <?php if ($navLogo): ?>
-                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
             <?php else: ?>
-                <i class="bi bi-mortarboard-fill"></i>
+                <i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i>
             <?php endif; ?>
-            <?= e($schoolName) ?>
         </a>
-        <button class="navbar-toggler border-0" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler border-0 p-1" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <i class="bi bi-list text-white" style="font-size:1.8rem;"></i>
+        </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
@@ -311,14 +314,12 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     <div class="container position-relative" style="z-index:2;">
         <div class="text-center mb-4">
             <div class="hero-badge"><i class="bi bi-people-fill me-2"></i>Our Educators</div>
-            <h1 class="display-4 fw-900 mb-3" style="font-weight:900;">Our Teachers</h1>
+            <h1 class="mb-3" style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:3rem;">Our Teachers</h1>
             <p class="lead opacity-75 mx-auto" style="max-width:600px;">Meet our dedicated team of qualified educators who inspire, guide, and shape the future of every student.</p>
         </div>
         <div class="row g-3 justify-content-center mt-4">
-            <div class="col-6 col-md-3"><div class="hero-stat-card"><div class="num"><?= $totalTeachers ?>+</div><div class="label">Teachers</div></div></div>
-            <div class="col-6 col-md-3"><div class="hero-stat-card"><div class="num">15+</div><div class="label">Years Experience</div></div></div>
-            <div class="col-6 col-md-3"><div class="hero-stat-card"><div class="num">12</div><div class="label">Subjects</div></div></div>
-            <div class="col-6 col-md-3"><div class="hero-stat-card"><div class="num">100%</div><div class="label">Dedication</div></div></div>
+            <div class="col-6 col-md-4"><div class="hero-stat-card"><div class="num"><?= $totalTeachers ?>+</div><div class="label">Expert Teachers</div></div></div>
+            <div class="col-6 col-md-4"><div class="hero-stat-card"><div class="num">15+</div><div class="label">Years Experience</div></div></div>
         </div>
     </div>
 </section>
@@ -328,7 +329,8 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
 <section class="principal-section">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="section-heading">Principal's Message</h2>
+            <span class="badge bg-primary-subtle text-primary px-3 py-2 mb-3" style="font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;">Principal's Message</span>
+            <h2 class="section-heading" style="font-family:'Playfair Display',serif;">From the Principal's Desk</h2>
         </div>
         <div class="row g-4 align-items-center justify-content-center">
             <div class="col-md-4 text-center">
@@ -425,9 +427,12 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     <div class="container">
         <div class="row g-4 py-5">
             <div class="col-lg-3 col-md-6">
-                <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:50px;height:50px;border-radius:10px;object-fit:cover;margin-bottom:0.8rem;"><?php endif; ?>
-                <h5 class="fw-bold mb-2"><?= e($schoolName) ?></h5>
-                <p class="small opacity-75 mb-0"><?= e($schoolAddress ?: $schoolTagline) ?></p>
+                <div style="background:linear-gradient(135deg,rgba(106,17,203,0.3),rgba(139,92,246,0.3));border:2px solid rgba(255,255,255,0.2);border-radius:16px;padding:1.5rem;text-align:center;">
+                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:60px;height:60px;border-radius:12px;object-fit:cover;margin-bottom:0.8rem;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;"></i><?php endif; ?>
+                    <h5 class="fw-bold mb-1" style="font-size:1rem;"><?= e($schoolName) ?></h5>
+                    <small class="opacity-75">India</small>
+                </div>
+                <?php if ($schoolAddress): ?><p class="small opacity-75 mt-3 mb-0"><?= e($schoolAddress) ?></p><?php endif; ?>
             </div>
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">About Us</h6>

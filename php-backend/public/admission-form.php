@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <!-- Top Bar -->
-<div class="top-bar">
+<div class="top-bar d-none d-lg-block">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center">
             <div class="marquee-text flex-grow-1 me-3"><span>🎓 Welcome to <?= e($schoolName) ?> — <?= e($schoolTagline) ?></span></div>
@@ -147,11 +147,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!-- Main Navbar -->
 <nav class="main-navbar navbar navbar-expand-lg sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-white" href="/">
-            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:36px;height:36px;border-radius:8px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill"></i><?php endif; ?>
-            <?= e($schoolName) ?>
+        <a class="navbar-brand d-flex align-items-center text-white" href="/">
+            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:40px;height:40px;border-radius:8px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i><?php endif; ?>
         </a>
-        <button class="navbar-toggler border-0" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler border-0 p-1" data-bs-toggle="collapse" data-bs-target="#mainNav"><i class="bi bi-list text-white" style="font-size:1.8rem;"></i></button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
@@ -310,9 +309,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container">
         <div class="row g-4 py-5">
             <div class="col-lg-3 col-md-6">
-                <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:50px;height:50px;border-radius:10px;object-fit:cover;margin-bottom:0.8rem;"><?php endif; ?>
-                <h5 class="fw-bold mb-2"><?= e($schoolName) ?></h5>
-                <p class="small opacity-75 mb-0"><?= e($schoolAddress ?: $schoolTagline) ?></p>
+                <div style="background:linear-gradient(135deg,rgba(106,17,203,0.3),rgba(139,92,246,0.3));border:2px solid rgba(255,255,255,0.2);border-radius:16px;padding:1.5rem;text-align:center;">
+                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:60px;height:60px;border-radius:12px;object-fit:cover;margin-bottom:0.8rem;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;"></i><?php endif; ?>
+                    <h5 class="fw-bold mb-1" style="font-size:1rem;"><?= e($schoolName) ?></h5>
+                    <small class="opacity-75">India</small>
+                </div>
+                <?php if ($schoolAddress): ?><p class="small opacity-75 mt-3 mb-0"><?= e($schoolAddress) ?></p><?php endif; ?>
             </div>
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">About Us</h6>
