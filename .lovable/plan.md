@@ -1,140 +1,129 @@
 
 
-## Plan: Improve Mobile Responsiveness Across All Public Pages
+## Plan: Major UI Overhaul — Navbar, Footer, Core Team Carousel, and Mobile Fixes
 
-### Issues Found
+This plan covers a comprehensive UI upgrade across all public pages based on the reference screenshots and the Aryan School design.
 
-After reviewing all 7 public pages plus the login page, here are the mobile responsiveness problems identified:
+### Summary of Changes
 
-1. **Navbar collapsed menu** -- When the hamburger menu opens on mobile, the notification bell button and login button stack awkwardly without proper spacing or alignment
-2. **Top bar quick links** -- On very small screens (under 360px), the top bar links can overflow or look cramped
-3. **School name in navbar** -- Long school names overflow on small screens, pushing the hamburger button off-screen
-4. **Hero sections** -- Text sizes and padding need refinement for small phones (320-375px width)
-5. **Footer columns** -- The 4-column gradient footer doesn't stack cleanly on mobile; newsletter input can overflow
-6. **Teacher flip cards** -- Hover-based flip doesn't work on touch devices; cards need a tap-to-flip mechanism
-7. **Gallery grid** -- col-6 works but images at 200px height are very small on phones
-8. **Admission form** -- Some form rows (3-column layout for DOB/Gender) get too narrow on mobile
-9. **WhatsApp button** -- Can overlap with footer content when scrolled to bottom
-10. **Ad popup** -- Close button can be hard to tap on small screens
-11. **Core team cards on homepage** -- Image heights (280px) are large relative to mobile width
-12. **About page value cards** -- 2-column (col-md-6) grid doesn't break to single column on very small screens
+1. **Navbar redesign** — Show only logo (no school name) in the brand area; cleaner layout
+2. **Mobile improvements** — Hide top bar links on mobile, better hamburger menu with just logo + menu icon
+3. **Footer upgrade** — Match header style with logo + school info in a branded card (purple background with border)
+4. **"Our Core Team" carousel** on homepage with left/right navigation arrows
+5. **Frontend color theme** controlled from admin settings
+6. **Teachers page** styling improvements to match the reference design
 
 ---
 
-### Changes Per File
+### 1. Navbar Redesign (All Public Pages)
 
-#### All Public Pages (shared CSS improvements)
+**Current**: Logo image + full school name text in navbar brand
+**New**: Only logo image in navbar brand (no school name text); school name removed from brand area
 
-Enhanced `@media` breakpoints added to every page:
+Changes across all 7 public pages + `index.php`:
+- Remove `<?= e($schoolName) ?>` from `.navbar-brand` — show only the logo `<img>`
+- On mobile: the navbar brand shows just the logo, and the hamburger becomes a clean `<i class="bi bi-list">` icon
+- The top bar (marquee + Admissions/Gallery/Events links) will be **completely hidden on mobile** (`d-none d-lg-block`)
+- The sticky navbar remains with: Logo | hamburger toggle (mobile) or Logo | nav links | bell + login (desktop)
 
-- **Small phones (max-width: 575.98px)**:
-  - Navbar brand: truncate long names with `max-width` and `text-overflow: ellipsis`
-  - Navbar collapsed: bell button and login button get `width: 100%` and proper vertical spacing
-  - Top bar: hide quick links text, show icons only
-  - Footer: single column stacking, centered text, reduce padding
-  - WhatsApp button: smaller size (50px), positioned to not overlap footer
-  - Section padding reduced from `py-5` to `py-4`
+### 2. Mobile Top Bar & Menu Improvements
 
-- **Medium phones (max-width: 767.98px)**:
-  - Keep existing rules (hero height reduction, slider arrows hidden)
-  - Add: footer newsletter input group better sizing
-  - Add: core team card image height reduced to 200px
+- **Hide entire top bar on mobile**: Add `d-none d-lg-block` class to `.top-bar`
+- **Hamburger menu**: Replace default Bootstrap toggler icon with a cleaner custom `<i class="bi bi-list"></i>` icon, white color, larger size
+- **Navbar brand on mobile**: Only logo (40px), no text truncation needed since text is removed
+- **Slider adjustments**: Ensure hero slider fits properly on all mobile sizes without overflow
 
-#### 1. `index.php` (Homepage)
+### 3. Footer Redesign (All Pages)
 
-- Add small-screen media queries for hero slider content, stats bar, quick link cards, core team images
-- Reduce hero slide heading to `1.5rem` on phones
-- Make stats bar numbers smaller (`1.2rem`) on mobile
-- Ad popup close button enlarged to 44px for easier tapping on mobile
+Based on the screenshot, the footer's first column should have the logo inside a **branded card** with purple/gradient background and a visible border:
 
-#### 2. `public/teachers.php`
+- Column 1: A card with gradient purple background, school logo centered, school name below, and location text (e.g., "India") — matching the screenshot's red-bordered section
+- Columns 2-4: Stay the same (About Us, Quick Links, Newsletter)
+- The footer first column content (school name, address/tagline) is already from settings — no new settings needed
 
-- Add JavaScript for tap-to-flip on touch devices (detect `touchstart`, toggle a `.flipped` class)
-- Add `.flipped .teacher-card-inner { transform: rotateY(180deg); }` CSS rule
-- Reduce card heights on small screens (300px instead of 380px)
-- Principal photo: center and reduce max-width on mobile
+### 4. "Our Core Team" Horizontal Carousel (Homepage)
 
-#### 3. `public/gallery.php`
+**Current**: The Core Team section shows cards in a standard grid (`row g-4`)
+**New**: A horizontally scrollable carousel with left/right arrow buttons
 
-- Change grid to `col-4` on tablets, keep `col-6` on phones
-- Increase image height to `150px` minimum on phones for better visibility
-- Add swipe-to-close on lightbox for touch devices
+Design (matching screenshot):
+- Section heading: *"Our Core Team"* in italic/serif font, with subtitle *"Meet the dedicated leaders guiding our school's vision and mission."*
+- Cards: Large photo on top (square/portrait), name below, designation in red/primary color, email with icon
+- If more than 3 members, show left/right arrow buttons to scroll
+- "View Our Teachers" button below the carousel
+- Uses CSS `overflow-x: auto` with `scroll-snap` or JavaScript scroll for smooth left/right navigation
+- Sample data for now (3 members: Correspondent, Director, Principal) — actual data comes from the existing `is_core_team=1` query
 
-#### 4. `public/events.php`
+### 5. Frontend Color Theme from Settings
 
-- Date box size reduction on small screens
-- Event card padding adjustments
+Add a new setting `primary_color` (already exists in settings form!) and use it as a CSS custom property:
+- In `<style>`, define `:root { --primary: <?= e($primaryColor ?: '#1e40af') ?>; }`
+- Replace hardcoded blue values (`#1e40af`, `#3b82f6`) with `var(--primary)` in key places (navbar, buttons, links, hero gradient accents)
+- Admin can change the primary color from Settings page — it already has `primary_color` field
 
-#### 5. `public/notifications.php`
+### 6. Teachers Page Improvements
 
-- Notification cards: reduce horizontal padding on mobile
-- Pagination (if any) touch-friendly sizing
-
-#### 6. `public/admission-form.php`
-
-- Force single-column layout on mobile for DOB/Gender/Class row (`col-12` overrides)
-- Document upload field: full width on mobile
-- Submit button padding adjustment
-
-#### 7. `public/about.php`
-
-- Hero heading reduced to `1.8rem` on small phones
-- Value cards: `col-6` on mobile (2 per row, compact)
-- About icon size reduced on small screens
-- Vision/Mission cards: full width (`col-12`) on small phones
-
-#### 8. `login.php`
-
-- Already mostly responsive; minor fix: increase left-panel min-height on tablet landscape
-- Ensure input groups don't overflow on 320px screens
+Match the Aryan School reference:
+- Hero section: Keep current gradient background, use a serif/italic heading font like the reference
+- Stat cards: Show only 2 (Expert Teachers + Years Experience) like the reference instead of 4
+- Principal's Message: Add a "Principal's Message" badge above the heading
+- Teacher cards grid: Keep existing flip cards but improve spacing
 
 ---
 
 ### Technical Details
 
-**Approach**: Add enhanced `@media` queries to each page's existing `<style>` block. No new files or dependencies needed.
+**Files to modify:**
 
-**Key CSS additions per page** (added inside existing `@media` blocks or as new breakpoints):
+| File | Changes |
+|------|---------|
+| `index.php` | Navbar brand (logo only), hide top bar mobile, Core Team carousel, footer col-1 card, CSS variables for theme color |
+| `public/teachers.php` | Navbar brand (logo only), hide top bar mobile, hero heading font, reduce stat cards to 2, footer col-1 card |
+| `public/notifications.php` | Navbar brand (logo only), hide top bar mobile, footer col-1 card |
+| `public/gallery.php` | Navbar brand (logo only), hide top bar mobile, footer col-1 card |
+| `public/events.php` | Navbar brand (logo only), hide top bar mobile, footer col-1 card |
+| `public/admission-form.php` | Navbar brand (logo only), hide top bar mobile, footer col-1 card |
+| `public/about.php` | Navbar brand (logo only), hide top bar mobile, footer col-1 card |
+| `admin/settings.php` | No new fields needed (primary_color already exists) |
 
-```css
-/* Extra small devices */
-@media (max-width: 575.98px) {
-    /* Navbar brand truncation */
-    .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    
-    /* Collapsed menu buttons */
-    .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
-    .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
-    
-    /* Top bar icons only */
-    .top-bar .d-flex.gap-3 a span.link-text { display: none; }
-    
-    /* Footer single column */
-    .site-footer .row > div { text-align: center; }
-    .footer-heading::after { left: 50%; transform: translateX(-50%); }
-    .footer-social { justify-content: center; }
-    
-    /* WhatsApp button */
-    .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
-}
+**Core Team Carousel HTML structure (index.php):**
+
+```text
++------------------------------------------------------------------+
+|         Our Core Team (italic heading)                           |
+|  Meet the dedicated leaders guiding our school's vision...       |
+|                                                                  |
+|  [<]  [ Photo Card 1 ] [ Photo Card 2 ] [ Photo Card 3 ]  [>]  |
+|        Name              Name              Name                  |
+|        Designation        Designation        Designation          |
+|        email              email              email               |
+|                                                                  |
+|              [ View Our Teachers button ]                        |
++------------------------------------------------------------------+
 ```
 
-**Teacher card tap-to-flip JavaScript** (added to teachers.php):
+**Carousel JavaScript**: Smooth scroll left/right by card width on arrow click, with `scroll-behavior: smooth` and `scroll-snap-align: start`.
 
-```javascript
-if ('ontouchstart' in window) {
-    document.querySelectorAll('.teacher-card').forEach(card => {
-        card.addEventListener('click', function() {
-            document.querySelectorAll('.teacher-card.flipped').forEach(c => {
-                if (c !== this) c.classList.remove('flipped');
-            });
-            this.classList.toggle('flipped');
-        });
-    });
-}
+**Footer Column 1 redesign:**
+
+```text
++----------------------------+
+|  [Gradient purple card]    |
+|     [Logo 60px]            |
+|     School Name (bold)     |
+|     India (subtitle)       |
++----------------------------+
 ```
 
-With corresponding CSS: `.teacher-card.flipped .teacher-card-inner { transform: rotateY(180deg); }`
+Uses `background: linear-gradient(135deg, #6a11cb, #8b5cf6)` with `border: 2px solid rgba(255,255,255,0.2)` and `border-radius: 16px`.
 
-**Files to modify**: `index.php`, `public/teachers.php`, `public/gallery.php`, `public/events.php`, `public/notifications.php`, `public/admission-form.php`, `public/about.php`, `login.php` (8 files total)
+**Theme color CSS variable approach:**
+
+```php
+<?php $primaryColor = getSetting('primary_color', '#1e40af'); ?>
+<style>
+:root { --theme-primary: <?= e($primaryColor) ?>; }
+/* Use var(--theme-primary) in navbar accents, buttons, section-title underlines, etc. */
+</style>
+```
 
