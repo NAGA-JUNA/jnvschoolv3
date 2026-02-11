@@ -9,6 +9,13 @@ $schoolAddress = getSetting('school_address', '');
 $admissionOpen = getSetting('admission_open', '0');
 $whatsappNumber = getSetting('whatsapp_api_number', '');
 
+// Social links
+$socialFacebook = getSetting('social_facebook', '');
+$socialTwitter = getSetting('social_twitter', '');
+$socialInstagram = getSetting('social_instagram', '');
+$socialYoutube = getSetting('social_youtube', '');
+$socialLinkedin = getSetting('social_linkedin', '');
+
 // If logged in, redirect to dashboard
 if (isLoggedIn()) {
     header('Location: ' . (isAdmin() ? '/admin/dashboard.php' : '/teacher/dashboard.php'));
@@ -187,6 +194,17 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
         }
         .ad-popup-close:hover { transform: scale(1.1); }
 
+        /* Gradient Footer */
+        .site-footer { background: linear-gradient(135deg, #6a11cb 0%, #1e8a7a 100%); color: #fff; border-radius: 30px 30px 0 0; margin-top: 3rem; }
+        .footer-heading { text-transform: uppercase; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; position: relative; padding-bottom: 0.5rem; }
+        .footer-heading::after { content: ''; position: absolute; bottom: 0; left: 0; width: 30px; height: 2px; background: rgba(255,255,255,0.5); }
+        .footer-social a { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4); color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.3s; font-size: 0.9rem; }
+        .footer-social a:hover { background: #fff; color: #6a11cb; border-color: #fff; }
+        .footer-newsletter-input { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; }
+        .footer-newsletter-input::placeholder { color: rgba(255,255,255,0.6); }
+        .footer-newsletter-input:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); color: #fff; box-shadow: none; }
+        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.15); }
+
         @media (max-width: 767.98px) {
             .hero-slider { height: 400px; }
             .hero-slide h1 { font-size: 1.8rem; }
@@ -228,6 +246,7 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="/public/about.php">About Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/teachers.php">Our Teachers</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/notifications.php">Notifications</a></li>
                 <li class="nav-item"><a class="nav-link" href="/public/gallery.php">Gallery</a></li>
@@ -544,41 +563,53 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
     </div>
 </section>
 
-<!-- Footer -->
-<footer class="bg-dark text-white py-4">
+<!-- Gradient Footer -->
+<footer class="site-footer">
     <div class="container">
-        <div class="row g-4">
-            <div class="col-md-6">
-                <h6 class="fw-bold mb-2 d-flex align-items-center gap-2">
-                    <?php if ($navLogo): ?>
-                        <img src="<?= e($logoPath) ?>" alt="Logo" style="width:28px;height:28px;border-radius:6px;object-fit:cover;">
-                    <?php else: ?>
-                        <i class="bi bi-mortarboard-fill"></i>
-                    <?php endif; ?>
-                    <?= e($schoolName) ?>
-                </h6>
-                <p class="text-muted small mb-0"><?= e($schoolTagline) ?></p>
+        <div class="row g-4 py-5">
+            <div class="col-lg-3 col-md-6">
+                <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:50px;height:50px;border-radius:10px;object-fit:cover;margin-bottom:0.8rem;"><?php endif; ?>
+                <h5 class="fw-bold mb-2"><?= e($schoolName) ?></h5>
+                <p class="small opacity-75 mb-0"><?= e($schoolAddress ?: $schoolTagline) ?></p>
             </div>
-            <div class="col-md-3">
-                <h6 class="fw-bold mb-2">Quick Links</h6>
-                <ul class="list-unstyled mb-0 small">
-                    <li><a href="/public/notifications.php" class="text-muted text-decoration-none">Notifications</a></li>
-                    <li><a href="/public/gallery.php" class="text-muted text-decoration-none">Gallery</a></li>
-                    <li><a href="/public/events.php" class="text-muted text-decoration-none">Events</a></li>
-                    <li><a href="/public/admission-form.php" class="text-muted text-decoration-none">Admissions</a></li>
+            <div class="col-lg-3 col-md-6">
+                <h6 class="footer-heading">About Us</h6>
+                <ul class="list-unstyled small">
+                    <?php if ($schoolAddress): ?><li class="mb-2 opacity-75"><i class="bi bi-geo-alt me-2"></i><?= e($schoolAddress) ?></li><?php endif; ?>
+                    <?php if ($schoolEmail): ?><li class="mb-2 opacity-75"><i class="bi bi-envelope me-2"></i><?= e($schoolEmail) ?></li><?php endif; ?>
+                    <?php if ($schoolPhone): ?><li class="mb-2 opacity-75"><i class="bi bi-telephone me-2"></i><?= e($schoolPhone) ?></li><?php endif; ?>
                 </ul>
             </div>
-            <div class="col-md-3">
-                <h6 class="fw-bold mb-2">Contact</h6>
-                <ul class="list-unstyled mb-0 small text-muted">
-                    <?php if ($schoolEmail): ?><li><i class="bi bi-envelope me-1"></i><?= e($schoolEmail) ?></li><?php endif; ?>
-                    <?php if ($schoolPhone): ?><li><i class="bi bi-telephone me-1"></i><?= e($schoolPhone) ?></li><?php endif; ?>
+            <div class="col-lg-3 col-md-6">
+                <h6 class="footer-heading">Quick Links</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-1"><a href="/" class="text-white text-decoration-none opacity-75">Home</a></li>
+                    <li class="mb-1"><a href="/public/about.php" class="text-white text-decoration-none opacity-75">About Us</a></li>
+                    <li class="mb-1"><a href="/public/teachers.php" class="text-white text-decoration-none opacity-75">Our Teachers</a></li>
+                    <li class="mb-1"><a href="/public/gallery.php" class="text-white text-decoration-none opacity-75">Gallery</a></li>
+                    <li class="mb-1"><a href="/public/events.php" class="text-white text-decoration-none opacity-75">Events</a></li>
+                    <li class="mb-1"><a href="/public/admission-form.php" class="text-white text-decoration-none opacity-75">Apply Now</a></li>
                 </ul>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <h6 class="footer-heading">Newsletter</h6>
+                <div class="input-group mb-3">
+                    <input type="email" class="form-control footer-newsletter-input" placeholder="Your email">
+                    <button class="btn btn-light" type="button"><i class="bi bi-arrow-right"></i></button>
+                </div>
+                <div class="footer-social d-flex gap-2 flex-wrap">
+                    <?php if ($socialFacebook): ?><a href="<?= e($socialFacebook) ?>" target="_blank"><i class="bi bi-facebook"></i></a><?php endif; ?>
+                    <?php if ($socialTwitter): ?><a href="<?= e($socialTwitter) ?>" target="_blank"><i class="bi bi-twitter-x"></i></a><?php endif; ?>
+                    <?php if ($socialInstagram): ?><a href="<?= e($socialInstagram) ?>" target="_blank"><i class="bi bi-instagram"></i></a><?php endif; ?>
+                    <?php if ($socialYoutube): ?><a href="<?= e($socialYoutube) ?>" target="_blank"><i class="bi bi-youtube"></i></a><?php endif; ?>
+                    <?php if ($socialLinkedin): ?><a href="<?= e($socialLinkedin) ?>" target="_blank"><i class="bi bi-linkedin"></i></a><?php endif; ?>
+                </div>
             </div>
         </div>
-        <hr class="border-secondary mt-3 mb-2">
-        <div class="text-center">
-            <small class="text-muted">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved. | Powered by JNV School Management System</small>
+    </div>
+    <div class="footer-bottom">
+        <div class="container text-center py-3">
+            <small class="opacity-75">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.</small>
         </div>
     </div>
 </footer>
