@@ -354,7 +354,9 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('facebook_url', ''),
 ('twitter_url', ''),
 ('instagram_url', ''),
-('youtube_url', '');
+('youtube_url', ''),
+('popup_ad_image', ''),
+('popup_ad_active', '0');
 
 -- --------------------------------------------------------
 -- 13. Home Slider (with animations, overlays, text position)

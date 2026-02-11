@@ -100,6 +100,7 @@ try {
     </div>
     <div class="right-panel">
         <div class="login-form">
+            <a href="/" class="d-inline-flex align-items-center gap-1 text-decoration-none mb-4" style="color:#64748b;font-size:0.88rem;"><i class="bi bi-arrow-left"></i> Back to Website</a>
             <h2>Welcome back</h2>
             <p class="subtitle">Sign in to your account to continue</p>
             <?php if ($error): ?>
