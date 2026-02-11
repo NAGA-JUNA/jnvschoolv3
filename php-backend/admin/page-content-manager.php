@@ -48,6 +48,9 @@ $pageConfigs = [
             ['key' => 'about_history_show', 'label' => 'Show History Section', 'type' => 'toggle', 'default' => '1'],
             ['key' => 'about_vision_mission_show', 'label' => 'Show Vision & Mission', 'type' => 'toggle', 'default' => '1'],
             ['key' => 'about_core_values_show', 'label' => 'Show Core Values', 'type' => 'toggle', 'default' => '1'],
+            ['key' => 'about_leadership_show', 'label' => 'Show Leadership Section', 'type' => 'toggle', 'default' => '1'],
+            ['key' => 'about_leadership_title', 'label' => 'Leadership Section Title', 'type' => 'text', 'default' => 'Meet Our Leadership'],
+            ['key' => 'about_leadership_subtitle', 'label' => 'Leadership Subtitle / Quote', 'type' => 'textarea', 'default' => 'With dedication and passion, our team creates an environment where every student thrives.'],
             ['key' => 'about_quote_show', 'label' => 'Show Inspirational Quote', 'type' => 'toggle', 'default' => '1'],
             ['key' => 'about_footer_cta_show', 'label' => 'Show Footer CTA', 'type' => 'toggle', 'default' => '1'],
         ],
@@ -611,6 +614,256 @@ require_once __DIR__ . '/../includes/header.php';
         // Init
         loadPrincipal();
         loadTeachers();
+        </script>
+        <?php endif; ?>
+
+        <?php if ($activePage === 'about'): ?>
+        <!-- ═══════════ LEADERSHIP PROFILES MANAGER ═══════════ -->
+        <div class="mt-4">
+            <div class="card border rounded-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#leadershipPanel">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2 text-primary"></i>Leadership Profiles Manager</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="collapse show" id="leadershipPanel">
+                    <div class="card-body" id="leadershipGridBody">
+                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leader Add/Edit Modal -->
+        <div class="modal fade" id="leaderModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="leaderModalTitle">Add Leader</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="leaderForm" enctype="multipart/form-data">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="save_leader">
+                            <input type="hidden" name="id" id="lf_id" value="0">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="name" id="lf_name" required maxlength="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Designation</label>
+                                    <input type="text" class="form-control" name="designation" id="lf_designation" maxlength="100" placeholder="e.g., Correspondent, Director, Principal">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Short Bio (optional)</label>
+                                    <textarea class="form-control" name="bio" id="lf_bio" rows="2" maxlength="1000"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Profile Photo</label>
+                                    <input type="file" class="form-control" name="photo" id="lf_photo" accept="image/*">
+                                    <div id="lf_photo_preview" class="mt-2"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Status</label>
+                                    <select class="form-select" name="status" id="lf_status">
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveLeaderBtn"><i class="bi bi-check-lg me-1"></i>Save Leader</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .leader-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem; background: #fff; transition: box-shadow 0.2s; }
+        .leader-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .leader-row .drag-handle { cursor: grab; color: #94a3b8; font-size: 1.1rem; }
+        .leader-row .drag-handle:active { cursor: grabbing; }
+        .leader-row.dragging { opacity: 0.5; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .leader-row .l-thumb { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #e2e8f0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .leader-row .l-thumb img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .leader-row .l-info { flex: 1; min-width: 0; }
+        .leader-row .l-info strong { font-size: 0.88rem; }
+        .leader-row .l-info small { color: #64748b; font-size: 0.78rem; }
+        .leader-row .l-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        </style>
+
+        <script>
+        const L_CSRF = '<?= csrfToken() ?>';
+        const L_AJAX_URL = '/admin/ajax/leadership-actions.php';
+
+        function showLeaderToast(msg, type='success') {
+            const t = document.createElement('div');
+            t.className = `alert alert-${type} position-fixed top-0 end-0 m-3 shadow-sm`;
+            t.style.zIndex = '9999';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function escLeaderHtml(str) {
+            if (!str) return '';
+            const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+        }
+
+        // ══════ LEADERSHIP GRID MANAGER ══════
+        let leadersList = [];
+        async function loadLeaders(search='') {
+            const body = document.getElementById('leadershipGridBody');
+            try {
+                const res = await fetch(L_AJAX_URL + '?action=list_leaders&search=' + encodeURIComponent(search));
+                const data = await res.json();
+                leadersList = data.leaders || [];
+                renderLeadersList();
+            } catch(err) {
+                body.innerHTML = '<div class="text-danger">Failed to load leadership profiles.</div>';
+            }
+        }
+
+        function renderLeadersList() {
+            const body = document.getElementById('leadershipGridBody');
+            let html = `<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div class="input-group" style="max-width:300px;">
+                    <input type="text" class="form-control form-control-sm" placeholder="Search leaders..." id="leaderSearch" oninput="debounceLeaderSearch(this.value)">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openLeaderModal()"><i class="bi bi-plus-lg me-1"></i>Add Leader</button>
+            </div>`;
+
+            if (leadersList.length === 0) {
+                html += '<div class="text-center text-muted py-4"><i class="bi bi-people" style="font-size:2rem;"></i><p class="mt-2">No leadership profiles found.</p></div>';
+            } else {
+                html += '<div id="leaderSortableList">';
+                leadersList.forEach((l, i) => {
+                    const photo = l.photo ? (l.photo.startsWith('/uploads/') ? l.photo : '/uploads/photos/' + l.photo) : '';
+                    const isActive = l.status === 'active';
+                    html += `<div class="leader-row" draggable="true" data-id="${l.id}" ondragstart="leaderDragStart(event)" ondragover="leaderDragOver(event)" ondrop="leaderDropRow(event)" ondragend="leaderDragEnd(event)">
+                        <span class="drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        <div class="l-thumb">
+                            ${photo ? `<img src="${photo}" alt="">` : `<i class="bi bi-person-fill text-muted"></i>`}
+                        </div>
+                        <div class="l-info">
+                            <strong>${escLeaderHtml(l.name)}</strong>
+                            ${!isActive ? '<span class="badge bg-secondary ms-1" style="font-size:0.65rem;">Inactive</span>' : ''}
+                            <br><small>${escLeaderHtml(l.designation || 'Leader')}</small>
+                        </div>
+                        <div class="l-actions">
+                            <div class="form-check form-switch" title="Active / Inactive">
+                                <input class="form-check-input" type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleLeaderStatus(${l.id})">
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick='editLeader(${JSON.stringify(l).replace(/'/g, "\\'").replace(/"/g, "&quot;")})'><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteLeader(${l.id}, '${escLeaderHtml(l.name)}')"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+            body.innerHTML = html;
+        }
+
+        let leaderSearchTimer;
+        function debounceLeaderSearch(val) {
+            clearTimeout(leaderSearchTimer);
+            leaderSearchTimer = setTimeout(() => loadLeaders(val), 300);
+        }
+
+        // ── Drag & Drop ──
+        let leaderDraggedEl = null;
+        function leaderDragStart(e) { leaderDraggedEl = e.currentTarget; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+        function leaderDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const target = e.currentTarget; if (target !== leaderDraggedEl && target.classList.contains('leader-row')) { const rect = target.getBoundingClientRect(); const mid = rect.top + rect.height / 2; target.parentNode.insertBefore(leaderDraggedEl, e.clientY < mid ? target : target.nextSibling); } }
+        function leaderDropRow(e) { e.preventDefault(); saveLeaderOrder(); }
+        function leaderDragEnd(e) { e.currentTarget.classList.remove('dragging'); leaderDraggedEl = null; }
+
+        async function saveLeaderOrder() {
+            const rows = document.querySelectorAll('#leaderSortableList .leader-row');
+            const order = Array.from(rows).map(r => r.dataset.id);
+            const fd = new FormData();
+            fd.append('csrf_token', L_CSRF);
+            fd.append('action', 'reorder');
+            fd.append('order', JSON.stringify(order));
+            await fetch(L_AJAX_URL, { method: 'POST', body: fd });
+        }
+
+        async function toggleLeaderStatus(id) {
+            const fd = new FormData();
+            fd.append('csrf_token', L_CSRF);
+            fd.append('action', 'toggle_status');
+            fd.append('id', id);
+            const res = await fetch(L_AJAX_URL, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) loadLeaders();
+        }
+
+        // ── Modal ──
+        function openLeaderModal(leader = null) {
+            document.getElementById('leaderModalTitle').textContent = leader ? 'Edit Leader' : 'Add Leader';
+            document.getElementById('lf_id').value = leader ? leader.id : 0;
+            document.getElementById('lf_name').value = leader ? leader.name : '';
+            document.getElementById('lf_designation').value = leader ? (leader.designation || '') : '';
+            document.getElementById('lf_bio').value = leader ? (leader.bio || '') : '';
+            document.getElementById('lf_status').value = leader ? leader.status : 'active';
+            document.getElementById('lf_photo').value = '';
+            const preview = document.getElementById('lf_photo_preview');
+            if (leader && leader.photo) {
+                const src = leader.photo.startsWith('/uploads/') ? leader.photo : '/uploads/photos/' + leader.photo;
+                preview.innerHTML = `<img src="${src}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">`;
+            } else {
+                preview.innerHTML = '';
+            }
+            new bootstrap.Modal(document.getElementById('leaderModal')).show();
+        }
+
+        function editLeader(l) { openLeaderModal(l); }
+
+        document.getElementById('saveLeaderBtn').addEventListener('click', async () => {
+            const form = document.getElementById('leaderForm');
+            if (!document.getElementById('lf_name').value.trim()) { showLeaderToast('Name is required', 'warning'); return; }
+            const fd = new FormData(form);
+            try {
+                const res = await fetch(L_AJAX_URL, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    showLeaderToast('Leader saved!');
+                    bootstrap.Modal.getInstance(document.getElementById('leaderModal')).hide();
+                    loadLeaders();
+                } else showLeaderToast(data.message || 'Error', 'danger');
+            } catch(err) { showLeaderToast('Network error', 'danger'); }
+        });
+
+        document.getElementById('lf_photo').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    document.getElementById('lf_photo_preview').innerHTML = `<img src="${ev.target.result}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">`;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        async function deleteLeader(id, name) {
+            if (!confirm(`Delete leader "${name}"? This cannot be undone.`)) return;
+            const fd = new FormData();
+            fd.append('csrf_token', L_CSRF);
+            fd.append('action', 'delete_leader');
+            fd.append('id', id);
+            try {
+                const res = await fetch(L_AJAX_URL, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) { showLeaderToast('Leader deleted'); loadLeaders(); }
+                else showLeaderToast(data.message || 'Error', 'danger');
+            } catch(err) { showLeaderToast('Network error', 'danger'); }
+        }
+
+        // Init
+        loadLeaders();
         </script>
         <?php endif; ?>
 

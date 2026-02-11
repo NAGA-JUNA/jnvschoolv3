@@ -344,6 +344,53 @@ if (isLoggedIn()) {
     </div>
 </section>
 
+<?php
+// Leadership Section
+$leadershipShow = getSetting('about_leadership_show', '1');
+$leadershipTitle = getSetting('about_leadership_title', 'Meet Our Leadership');
+$leadershipSubtitle = getSetting('about_leadership_subtitle', 'With dedication and passion, our team creates an environment where every student thrives.');
+$leaders = [];
+if ($leadershipShow === '1') {
+    try {
+        $leaders = $db->query("SELECT * FROM leadership_profiles WHERE status='active' ORDER BY display_order ASC")->fetchAll();
+    } catch (Exception $e) {}
+}
+?>
+<?php if ($leadershipShow === '1' && !empty($leaders)): ?>
+<!-- Meet Our Leadership -->
+<section class="py-5" style="background:#f8f6f3;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 style="font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:2.2rem;color:#1e293b;"><?= e($leadershipTitle) ?></h2>
+            <?php if ($leadershipSubtitle): ?>
+            <p style="font-style:italic;color:#64748b;max-width:600px;margin:1rem auto 0;font-size:1.05rem;line-height:1.7;">"<?= e($leadershipSubtitle) ?>"</p>
+            <?php endif; ?>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($leaders as $leader):
+                $leaderPhoto = $leader['photo'] ? ($leader['photo'] && strpos($leader['photo'], '/uploads/') === 0 ? $leader['photo'] : '/uploads/photos/' . $leader['photo']) : '';
+            ?>
+            <div class="col-lg-4 col-md-6 col-12 text-center">
+                <div style="margin-bottom:1rem;">
+                    <?php if ($leaderPhoto): ?>
+                    <img src="<?= e($leaderPhoto) ?>" alt="<?= e($leader['name']) ?>" loading="lazy" style="width:200px;height:200px;border-radius:50%;object-fit:cover;border:4px solid rgba(220,180,180,0.4);margin:0 auto;">
+                    <?php else: ?>
+                    <div style="width:200px;height:200px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;margin:0 auto;border:4px solid rgba(220,180,180,0.4);">
+                        <i class="bi bi-person-fill" style="font-size:4rem;color:#94a3b8;"></i>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <h5 style="font-weight:700;color:#1e293b;margin-bottom:0.25rem;"><?= e($leader['name']) ?></h5>
+                <?php if ($leader['designation']): ?>
+                <p style="color:#dc2626;font-weight:600;font-size:0.95rem;margin-bottom:0;"><?= e($leader['designation']) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- Inspirational Quote Banner -->
 <?php if ($siteQuote): ?>
 <section class="py-5" style="background:#f1f5f9;">
