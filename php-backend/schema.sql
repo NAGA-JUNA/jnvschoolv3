@@ -505,6 +505,11 @@ CREATE TABLE `site_quotes` (
 INSERT INTO `site_quotes` (`quote_text`, `author_name`, `updated_by`) VALUES
 ('Education is the most powerful weapon which you can use to change the world.', 'Nelson Mandela', 1);
 
+-- Admission page hero settings
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
+('admission_hero_title', 'Apply for Admission'),
+('admission_hero_subtitle', 'Submit your application to join our school');
+
 -- --------------------------------------------------------
 -- Sample Slider Data (5 slides)
 -- Replace image_path with actual uploaded images
