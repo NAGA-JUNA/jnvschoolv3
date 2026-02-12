@@ -63,6 +63,35 @@ function extractGalleryZip($zipPath, $uploadDir, $compress, $maxWidth = 1600) {
     return $results;
 }
 
+// ── Handle DELETE action (AJAX) ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete' && verifyCsrf()) {
+    header('Content-Type: application/json');
+    $itemId = (int)($_POST['id'] ?? 0);
+    if ($itemId > 0) {
+        $stmt = $db->prepare("SELECT id, file_path FROM gallery_items WHERE id=? AND uploaded_by=?");
+        $stmt->execute([$itemId, $uid]);
+        $item = $stmt->fetch();
+        if ($item) {
+            // Delete file
+            $filePath = __DIR__ . '/../' . $item['file_path'];
+            if (file_exists($filePath) && is_file($filePath)) {
+                unlink($filePath);
+            }
+            // Delete record
+            $db->prepare("DELETE FROM gallery_items WHERE id=?")->execute([$itemId]);
+            auditLog('admin_delete_upload', 'gallery_item', $itemId, "Deleted own upload");
+            echo json_encode(['success' => true, 'message' => 'Upload deleted.']);
+        } else {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Not found or access denied.']);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
+    }
+    exit;
+}
+
 // ── Handle POST ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
     $title       = trim($_POST['title'] ?? '');
@@ -356,12 +385,15 @@ require_once __DIR__.'/../includes/header.php';
                 <div class="row g-3">
                     <?php foreach ($items as $item): ?>
                     <div class="col-sm-6 col-md-4">
-                        <div class="card h-100 border-0 shadow-sm">
+                        <div class="card h-100 border-0 shadow-sm position-relative">
                             <?php if ($item['file_type'] === 'image'): ?>
                                 <img src="/<?= e($item['file_path']) ?>" class="card-img-top" style="height:120px;object-fit:cover;" alt="<?= e($item['title']) ?>" loading="lazy">
                             <?php else: ?>
                                 <div class="bg-dark text-white d-flex align-items-center justify-content-center" style="height:120px;"><i class="bi bi-play-circle-fill fs-1"></i></div>
                             <?php endif; ?>
+                            <button type="button" class="btn btn-sm btn-danger position-absolute" style="top:8px;right:8px;" data-item-id="<?= $item['id'] ?>" onclick="deleteUpload(this)" title="Delete this upload">
+                                <i class="bi bi-trash"></i>
+                            </button>
                             <div class="card-body p-2">
                                 <small class="fw-semibold d-block text-truncate"><?= e($item['title']) ?></small>
                                 <?php $sc = match($item['status']) { 'approved' => 'success', 'rejected' => 'danger', default => 'warning' }; ?>
@@ -495,6 +527,34 @@ function showThumb(file, container) {
     };
     reader.readAsDataURL(file);
 }
+
+// Delete upload function
+function deleteUpload(btn) {
+    const itemId = btn.dataset.itemId;
+    if (confirm('Are you sure you want to delete this upload? This action cannot be undone.')) {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('id', itemId);
+        formData.append('_token', document.querySelector('input[name="_token"]')?.value || '');
+
+        fetch('/admin/upload-gallery.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                btn.closest('.col-sm-6').style.opacity = '0.5';
+                btn.closest('.col-sm-6').style.pointerEvents = 'none';
+                setTimeout(() => location.reload(), 300);
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Delete failed: ' + err));
+    }
+}
+
 </script>
 
 <?php require_once __DIR__.'/../includes/footer.php'; ?>
