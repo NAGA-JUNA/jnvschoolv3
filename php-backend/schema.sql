@@ -616,4 +616,32 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 --   ADD KEY `idx_album` (`album_id`),
 --   ADD CONSTRAINT `fk_item_album` FOREIGN KEY (`album_id`) REFERENCES `gallery_albums`(`id`) ON DELETE SET NULL;
 
+-- --------------------------------------------------------
+-- 18. Navigation Menu Items (Admin-managed navbar)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `nav_menu_items`;
+
+CREATE TABLE `nav_menu_items` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `label` VARCHAR(100) NOT NULL,
+  `url` VARCHAR(255) NOT NULL,
+  `icon` VARCHAR(50) DEFAULT NULL,
+  `link_type` ENUM('internal','external') NOT NULL DEFAULT 'internal',
+  `is_visible` TINYINT(1) NOT NULL DEFAULT 1,
+  `is_cta` TINYINT(1) NOT NULL DEFAULT 0,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `nav_menu_items` (`label`, `url`, `icon`, `link_type`, `is_visible`, `is_cta`, `sort_order`) VALUES
+('Home', '/', 'bi-house-fill', 'internal', 1, 0, 1),
+('About Us', '/public/about.php', 'bi-info-circle', 'internal', 1, 0, 2),
+('Our Teachers', '/public/teachers.php', 'bi-person-badge', 'internal', 1, 0, 3),
+('Notifications', '/public/notifications.php', 'bi-bell', 'internal', 1, 0, 4),
+('Gallery', '/public/gallery.php', 'bi-images', 'internal', 1, 0, 5),
+('Events', '/public/events.php', 'bi-calendar-event', 'internal', 1, 0, 6),
+('Apply Now', '/public/admission-form.php', 'bi-pencil-square', 'internal', 1, 1, 7);
+
 COMMIT;

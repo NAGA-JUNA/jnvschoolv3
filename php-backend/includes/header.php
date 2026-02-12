@@ -148,6 +148,7 @@ function navActive(string $path): string {
         <a href="/admin/settings.php" class="nav-link <?= navActive('/admin/settings') ?>"><i class="bi bi-gear-fill"></i> Settings</a>
         <a href="/admin/page-content-manager.php" class="nav-link <?= navActive('/admin/page-content-manager') ?>"><i class="bi bi-file-earmark-text"></i> Page Content</a>
         <a href="/admin/footer-manager.php" class="nav-link <?= navActive('/admin/footer-manager') ?>"><i class="bi bi-diagram-3"></i> Footer Manager</a>
+        <a href="/admin/navigation-settings.php" class="nav-link <?= navActive('/admin/navigation-settings') ?>"><i class="bi bi-menu-button-wide"></i> Navigation</a>
         <a href="/admin/quote-highlight.php" class="nav-link <?= navActive('/admin/quote-highlight') ?>"><i class="bi bi-quote"></i> Quote Highlight</a>
         <a href="/admin/support.php" class="nav-link <?= navActive('/admin/support') ?>"><i class="bi bi-headset"></i> Support</a>
     </div>
