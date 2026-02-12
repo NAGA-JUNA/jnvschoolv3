@@ -125,6 +125,7 @@ function navActive(string $path): string {
         <?php endif; ?>
         <?php if (isSuperAdmin() || getSetting('feature_gallery', '1') === '1'): ?>
         <a href="/admin/gallery.php" class="nav-link <?= navActive('/admin/gallery') ?>"><i class="bi bi-images"></i> Gallery</a>
+        <a href="/admin/upload-gallery.php" class="nav-link <?= navActive('/admin/upload-gallery') ?>"><i class="bi bi-cloud-arrow-up"></i> Upload Gallery</a>
         <?php endif; ?>
         <?php if (isSuperAdmin() || getSetting('feature_events', '1') === '1'): ?>
         <a href="/admin/events.php" class="nav-link <?= navActive('/admin/events') ?>"><i class="bi bi-calendar-event-fill"></i> Events</a>
