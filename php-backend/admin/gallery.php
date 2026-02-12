@@ -172,8 +172,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
 
 // ── List items ──
 $statusFilter = $_GET['status'] ?? 'pending';
-$where = $statusFilter ? "WHERE g.status=?" : "";
-$params = $statusFilter ? [$statusFilter] : [];
+$catFilter = $_GET['cat'] ?? '';
+$albumFilter = (int)($_GET['album'] ?? 0);
+$where = "WHERE 1=1";
+$params = [];
+if ($statusFilter) { $where .= " AND g.status=?"; $params[] = $statusFilter; }
+if ($catFilter) { $where .= " AND g.category=?"; $params[] = $catFilter; }
+if ($albumFilter) { $where .= " AND g.album_id=?"; $params[] = $albumFilter; }
 $stmt = $db->prepare("SELECT g.*, u.name as uploader_name FROM gallery_items g LEFT JOIN users u ON g.uploaded_by=u.id $where ORDER BY g.created_at DESC");
 $stmt->execute($params);
 $items = $stmt->fetchAll();
@@ -185,6 +190,10 @@ foreach ($items as $item) {
         $batches[$item['batch_id']][] = $item;
     }
 }
+
+// Load categories & albums for filters
+$galCategories = $db->query("SELECT * FROM gallery_categories ORDER BY sort_order")->fetchAll();
+$galAlbums = $db->query("SELECT * FROM gallery_albums ORDER BY sort_order")->fetchAll();
 
 require_once __DIR__.'/../includes/header.php';
 ?>
@@ -298,10 +307,30 @@ require_once __DIR__.'/../includes/header.php';
 <ul class="nav nav-pills mb-3">
     <?php foreach(['pending'=>'warning','approved'=>'success','rejected'=>'danger',''=>'secondary'] as $s=>$c): ?>
     <li class="nav-item">
-        <a href="/admin/gallery.php?status=<?=$s?>" class="nav-link <?=$statusFilter===$s?'active':''?> btn-sm"><?=$s?ucfirst($s):'All'?></a>
+        <a href="/admin/gallery.php?status=<?=$s?>&cat=<?=urlencode($catFilter)?>&album=<?=$albumFilter?>" class="nav-link <?=$statusFilter===$s?'active':''?> btn-sm"><?=$s?ucfirst($s):'All'?></a>
     </li>
     <?php endforeach; ?>
 </ul>
+
+<!-- Category & Album Filters -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <select class="form-select form-select-sm" style="max-width:200px;" onchange="filterByCat(this.value)">
+        <option value="">All Categories</option>
+        <?php foreach ($galCategories as $gc): ?>
+        <option value="<?= e($gc['name']) ?>" <?= strtolower($catFilter) === strtolower($gc['name']) ? 'selected' : '' ?>><?= e($gc['name']) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <select class="form-select form-select-sm" style="max-width:200px;" onchange="filterByAlbum(this.value)">
+        <option value="0">All Albums</option>
+        <?php foreach ($galAlbums as $ga): ?>
+        <option value="<?= $ga['id'] ?>" <?= $albumFilter == $ga['id'] ? 'selected' : '' ?>><?= e($ga['title']) ?></option>
+        <?php endforeach; ?>
+    </select>
+</div>
+<script>
+function filterByCat(v) { window.location = '/admin/gallery.php?status=<?= urlencode($statusFilter) ?>&cat=' + encodeURIComponent(v) + '&album=<?= $albumFilter ?>'; }
+function filterByAlbum(v) { window.location = '/admin/gallery.php?status=<?= urlencode($statusFilter) ?>&cat=<?= urlencode($catFilter) ?>&album=' + v; }
+</script>
 
 <!-- Batch Approve/Reject -->
 <?php if ($statusFilter === 'pending' && !empty($batches)): ?>

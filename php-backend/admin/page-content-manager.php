@@ -76,6 +76,9 @@ $pageConfigs = [
             ['key' => 'gallery_hero_title', 'label' => 'Hero Title', 'type' => 'text', 'default' => 'Photo Gallery'],
             ['key' => 'gallery_hero_subtitle', 'label' => 'Hero Subtitle', 'type' => 'textarea', 'default' => 'Explore moments from [school_name]'],
             ['key' => 'gallery_hero_icon', 'label' => 'Hero Icon (Bootstrap Icons class)', 'type' => 'text', 'default' => 'bi-images'],
+            ['key' => 'gallery_layout_style', 'label' => 'Gallery Layout Style', 'type' => 'select', 'options' => ['premium' => 'Premium Dark', 'classic' => 'Classic Grid'], 'default' => 'premium'],
+            ['key' => 'gallery_bg_style', 'label' => 'Background Style', 'type' => 'select', 'options' => ['dark' => 'Dark Gradient', 'light' => 'Light'], 'default' => 'dark'],
+            ['key' => 'gallery_particles_show', 'label' => 'Show Particle Effects', 'type' => 'toggle', 'default' => '1'],
             ['key' => 'gallery_footer_cta_show', 'label' => 'Show Footer CTA', 'type' => 'toggle', 'default' => '1'],
         ],
     ],
@@ -239,6 +242,13 @@ require_once __DIR__ . '/../includes/header.php';
                         <label class="form-check-label fw-semibold" for="<?= e($field['key']) ?>" style="font-size:0.85rem;"><?= e($field['label']) ?></label>
                     </div>
                 </div>
+                <?php elseif ($field['type'] === 'select'): ?>
+                <label for="<?= e($field['key']) ?>"><?= e($field['label']) ?></label>
+                <select class="form-select form-select-sm" name="<?= e($field['key']) ?>" id="<?= e($field['key']) ?>">
+                    <?php foreach ($field['options'] as $optVal => $optLabel): ?>
+                    <option value="<?= e($optVal) ?>" <?= $currentValue === $optVal ? 'selected' : '' ?>><?= e($optLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
                 <?php elseif ($field['type'] === 'textarea'): ?>
                 <label for="<?= e($field['key']) ?>"><?= e($field['label']) ?></label>
                 <textarea class="form-control form-control-sm" name="<?= e($field['key']) ?>" id="<?= e($field['key']) ?>" rows="2" maxlength="2000"><?= e($currentValue) ?></textarea>
@@ -614,6 +624,312 @@ require_once __DIR__ . '/../includes/header.php';
         // Init
         loadPrincipal();
         loadTeachers();
+        </script>
+        <?php endif; ?>
+
+        <?php if ($activePage === 'gallery'): ?>
+        <!-- ═══════════ GALLERY CATEGORIES MANAGER ═══════════ -->
+        <div class="mt-4">
+            <div class="card border rounded-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#galleryCatPanel">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Gallery Categories Manager</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="collapse show" id="galleryCatPanel">
+                    <div class="card-body" id="galleryCatBody">
+                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Add/Edit Modal -->
+        <div class="modal fade" id="catModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="catModalTitle">Add Category</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="catForm" enctype="multipart/form-data">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="save_category">
+                            <input type="hidden" name="id" id="cf_id" value="0">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="name" id="cf_name" required maxlength="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Cover Image</label>
+                                <input type="file" class="form-control" name="cover_image" id="cf_cover" accept="image/*">
+                                <div id="cf_cover_preview" class="mt-2"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Description</label>
+                                <textarea class="form-control" name="description" id="cf_desc" rows="2" maxlength="500"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Status</label>
+                                <select class="form-select" name="status" id="cf_status">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveCatBtn"><i class="bi bi-check-lg me-1"></i>Save Category</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Album Add/Edit Modal -->
+        <div class="modal fade" id="albumModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="albumModalTitle">Add Album</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="albumForm" enctype="multipart/form-data">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="save_album">
+                            <input type="hidden" name="id" id="af_id" value="0">
+                            <input type="hidden" name="category_id" id="af_cat_id" value="0">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="title" id="af_title" required maxlength="200">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Cover Image</label>
+                                <input type="file" class="form-control" name="cover_image" id="af_cover" accept="image/*">
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold">Event Date</label>
+                                    <input type="date" class="form-control" name="event_date" id="af_date">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold">Year</label>
+                                    <input type="text" class="form-control" name="year" id="af_year" maxlength="10" placeholder="e.g. 2026">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Status</label>
+                                <select class="form-select" name="status" id="af_status">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveAlbumBtn"><i class="bi bi-check-lg me-1"></i>Save Album</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .cat-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.5rem; background: #fff; transition: box-shadow 0.2s; }
+        .cat-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .cat-row .drag-handle { cursor: grab; color: #94a3b8; font-size: 1.1rem; }
+        .cat-row.dragging { opacity: 0.5; }
+        .cat-row .c-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #e2e8f0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .cat-row .c-thumb img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+        .cat-row .c-info { flex: 1; min-width: 0; }
+        .cat-row .c-info strong { font-size: 0.88rem; }
+        .cat-row .c-info small { color: #64748b; font-size: 0.78rem; }
+        .cat-row .c-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .album-sub { margin-left: 2rem; margin-top: 0.25rem; }
+        .album-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border: 1px dashed #e2e8f0; border-radius: 6px; margin-bottom: 0.25rem; background: #fafbfc; font-size: 0.82rem; }
+        .album-row .a-info { flex: 1; }
+        </style>
+
+        <script>
+        const G_CSRF = '<?= csrfToken() ?>';
+        const G_AJAX = '/admin/ajax/gallery-actions.php';
+
+        function gToast(msg, type='success') {
+            const t = document.createElement('div');
+            t.className = `alert alert-${type} position-fixed top-0 end-0 m-3 shadow-sm`;
+            t.style.zIndex = '9999'; t.textContent = msg;
+            document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
+        }
+        function gEsc(s) { if(!s)return''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+        let catList = [];
+        async function loadCategories() {
+            const body = document.getElementById('galleryCatBody');
+            try {
+                const res = await fetch(G_AJAX + '?action=list_categories');
+                const data = await res.json();
+                catList = data.categories || [];
+                renderCategories();
+            } catch(e) { body.innerHTML = '<div class="text-danger">Failed to load.</div>'; }
+        }
+
+        async function loadAlbumsForCat(catId) {
+            try {
+                const res = await fetch(G_AJAX + '?action=list_albums&category_id=' + catId);
+                const data = await res.json();
+                return data.albums || [];
+            } catch(e) { return []; }
+        }
+
+        async function renderCategories() {
+            const body = document.getElementById('galleryCatBody');
+            let html = `<div class="d-flex justify-content-between align-items-center mb-3">
+                <small class="text-muted">${catList.length} categories</small>
+                <button class="btn btn-primary btn-sm" onclick="openCatModal()"><i class="bi bi-plus-lg me-1"></i>Add Category</button>
+            </div><div id="catSortableList">`;
+
+            for (const c of catList) {
+                const cover = c.cover_image ? '/' + c.cover_image : '';
+                const isActive = c.status === 'active';
+                html += `<div class="cat-row" draggable="true" data-id="${c.id}" ondragstart="catDragStart(event)" ondragover="catDragOver(event)" ondrop="catDropRow(event)" ondragend="catDragEnd(event)">
+                    <span class="drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                    <div class="c-thumb">${cover ? `<img src="${cover}">` : `<i class="bi bi-images text-muted"></i>`}</div>
+                    <div class="c-info">
+                        <strong>${gEsc(c.name)}</strong>
+                        ${!isActive ? '<span class="badge bg-secondary ms-1" style="font-size:0.65rem;">Inactive</span>' : ''}
+                        <br><small>${gEsc(c.slug)}</small>
+                    </div>
+                    <div class="c-actions">
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" ${isActive?'checked':''} onchange="toggleCatStatus(${c.id})"></div>
+                        <button class="btn btn-sm btn-outline-info" onclick="toggleAlbums(${c.id})" title="Albums"><i class="bi bi-folder2-open"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" onclick='editCat(${JSON.stringify(c).replace(/'/g,"\\'")})'><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCat(${c.id},'${gEsc(c.name)}')"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+                <div class="album-sub d-none" id="albums-${c.id}"><div class="text-center py-2"><small class="text-muted">Loading albums...</small></div></div>`;
+            }
+            html += '</div>';
+            if (!catList.length) html = '<div class="text-center text-muted py-4"><i class="bi bi-grid-3x3-gap" style="font-size:2rem;"></i><p class="mt-2">No categories yet.</p><button class="btn btn-primary btn-sm" onclick="openCatModal()"><i class="bi bi-plus-lg me-1"></i>Add Category</button></div>';
+            body.innerHTML = html;
+        }
+
+        async function toggleAlbums(catId) {
+            const el = document.getElementById('albums-' + catId);
+            if (!el.classList.contains('d-none')) { el.classList.add('d-none'); return; }
+            el.classList.remove('d-none');
+            const albums = await loadAlbumsForCat(catId);
+            let html = `<div class="d-flex justify-content-between mb-2"><small class="text-muted">${albums.length} album(s)</small><button class="btn btn-sm btn-outline-primary" onclick="openAlbumModal(${catId})"><i class="bi bi-plus me-1"></i>Add Album</button></div>`;
+            albums.forEach(a => {
+                html += `<div class="album-row">
+                    <div class="a-info"><strong>${gEsc(a.title)}</strong> <small class="text-muted ms-1">${a.status === 'inactive' ? '(Hidden)' : ''}</small></div>
+                    <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick='editAlbum(${JSON.stringify(a).replace(/'/g,"\\'")})'><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteAlbum(${a.id},'${gEsc(a.title)}')"><i class="bi bi-trash"></i></button>
+                </div>`;
+            });
+            if (!albums.length) html += '<small class="text-muted">No albums in this category.</small>';
+            el.innerHTML = html;
+        }
+
+        // Drag & Drop
+        let catDraggedEl = null;
+        function catDragStart(e) { catDraggedEl = e.currentTarget; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+        function catDragOver(e) { e.preventDefault(); const t = e.currentTarget; if (t !== catDraggedEl && t.classList.contains('cat-row')) { const r = t.getBoundingClientRect(); t.parentNode.insertBefore(catDraggedEl, e.clientY < r.top + r.height/2 ? t : t.nextSibling); } }
+        function catDropRow(e) { e.preventDefault(); saveCatOrder(); }
+        function catDragEnd(e) { e.currentTarget.classList.remove('dragging'); catDraggedEl = null; }
+
+        async function saveCatOrder() {
+            const rows = document.querySelectorAll('#catSortableList .cat-row');
+            const order = Array.from(rows).map(r => r.dataset.id);
+            const fd = new FormData();
+            fd.append('csrf_token', G_CSRF); fd.append('action', 'reorder_categories'); fd.append('order', JSON.stringify(order));
+            await fetch(G_AJAX, { method: 'POST', body: fd });
+        }
+
+        async function toggleCatStatus(id) {
+            const fd = new FormData();
+            fd.append('csrf_token', G_CSRF); fd.append('action', 'toggle_category_status'); fd.append('id', id);
+            await fetch(G_AJAX, { method: 'POST', body: fd });
+            loadCategories();
+        }
+
+        // Category Modal
+        function openCatModal(cat = null) {
+            document.getElementById('catModalTitle').textContent = cat ? 'Edit Category' : 'Add Category';
+            document.getElementById('cf_id').value = cat ? cat.id : 0;
+            document.getElementById('cf_name').value = cat ? cat.name : '';
+            document.getElementById('cf_desc').value = cat ? (cat.description || '') : '';
+            document.getElementById('cf_status').value = cat ? cat.status : 'active';
+            document.getElementById('cf_cover').value = '';
+            const preview = document.getElementById('cf_cover_preview');
+            if (cat && cat.cover_image) preview.innerHTML = `<img src="/${cat.cover_image}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;">`;
+            else preview.innerHTML = '';
+            new bootstrap.Modal(document.getElementById('catModal')).show();
+        }
+        function editCat(c) { openCatModal(c); }
+
+        document.getElementById('saveCatBtn').addEventListener('click', async () => {
+            if (!document.getElementById('cf_name').value.trim()) { gToast('Name required', 'warning'); return; }
+            const fd = new FormData(document.getElementById('catForm'));
+            const res = await fetch(G_AJAX, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) { gToast('Category saved!'); bootstrap.Modal.getInstance(document.getElementById('catModal')).hide(); loadCategories(); }
+            else gToast(data.message || 'Error', 'danger');
+        });
+
+        async function deleteCat(id, name) {
+            if (!confirm(`Delete category "${name}"? Albums inside will also be removed.`)) return;
+            const fd = new FormData();
+            fd.append('csrf_token', G_CSRF); fd.append('action', 'delete_category'); fd.append('id', id);
+            const res = await fetch(G_AJAX, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) { gToast('Deleted'); loadCategories(); }
+            else gToast(data.message || 'Error', 'danger');
+        }
+
+        // Album Modal
+        function openAlbumModal(catId, album = null) {
+            document.getElementById('albumModalTitle').textContent = album ? 'Edit Album' : 'Add Album';
+            document.getElementById('af_id').value = album ? album.id : 0;
+            document.getElementById('af_cat_id').value = album ? album.category_id : catId;
+            document.getElementById('af_title').value = album ? album.title : '';
+            document.getElementById('af_date').value = album ? (album.event_date || '') : '';
+            document.getElementById('af_year').value = album ? (album.year || '') : '';
+            document.getElementById('af_status').value = album ? album.status : 'active';
+            document.getElementById('af_cover').value = '';
+            new bootstrap.Modal(document.getElementById('albumModal')).show();
+        }
+        function editAlbum(a) { openAlbumModal(a.category_id, a); }
+
+        document.getElementById('saveAlbumBtn').addEventListener('click', async () => {
+            if (!document.getElementById('af_title').value.trim()) { gToast('Title required', 'warning'); return; }
+            const fd = new FormData(document.getElementById('albumForm'));
+            const res = await fetch(G_AJAX, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) { gToast('Album saved!'); bootstrap.Modal.getInstance(document.getElementById('albumModal')).hide(); toggleAlbums(parseInt(document.getElementById('af_cat_id').value)); }
+            else gToast(data.message || 'Error', 'danger');
+        });
+
+        async function deleteAlbum(id, name) {
+            if (!confirm(`Delete album "${name}"?`)) return;
+            const fd = new FormData();
+            fd.append('csrf_token', G_CSRF); fd.append('action', 'delete_album'); fd.append('id', id);
+            const res = await fetch(G_AJAX, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) { gToast('Deleted'); loadCategories(); }
+            else gToast(data.message || 'Error', 'danger');
+        }
+
+        // Cover image preview
+        document.getElementById('cf_cover').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = ev => { document.getElementById('cf_cover_preview').innerHTML = `<img src="${ev.target.result}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;">`; };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        loadCategories();
         </script>
         <?php endif; ?>
 

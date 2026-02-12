@@ -478,6 +478,9 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 -- --------------------------------------------------------
 -- 13. Leadership Profiles (About Us page)
 -- --------------------------------------------------------
+-- NOTE: gallery_categories and gallery_albums are created AFTER leadership/slider/quotes
+
+
 CREATE TABLE `leadership_profiles` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
@@ -546,5 +549,71 @@ INSERT INTO `home_slider` (`title`, `subtitle`, `image_path`, `badge_text`, `cta
 ('State-of-the-Art Campus', 'Modern classrooms, science labs, computer labs, library, sports grounds, and hostel facilities.', 'uploads/slider/slide3.jpg', 'Campus', 'Take a Tour', 'zoom', 'gradient-dark', 'left', 70, 3, 1),
 ('Sports & Co-Curricular Activities', 'Developing well-rounded individuals through athletics, cultural events, and extracurricular programs.', 'uploads/slider/slide4.jpg', 'Activities', 'Explore', 'kenburns', 'solid-dark', 'right', 60, 4, 1),
 ('Admissions Open 2025-26', 'Apply now for the upcoming academic session. Limited seats available for Classes VI to XII.', 'uploads/slider/slide5.jpg', 'Admissions', 'Apply Now', 'fade', 'gradient-primary', 'center', 75, 5, 1);
+
+-- --------------------------------------------------------
+-- 16. Gallery Categories
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `gallery_albums`;
+DROP TABLE IF EXISTS `gallery_categories`;
+
+CREATE TABLE `gallery_categories` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `slug` VARCHAR(100) NOT NULL,
+  `cover_image` VARCHAR(255) DEFAULT NULL,
+  `description` TEXT DEFAULT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  KEY `idx_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 17. Gallery Albums
+-- --------------------------------------------------------
+CREATE TABLE `gallery_albums` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `category_id` INT UNSIGNED NOT NULL,
+  `title` VARCHAR(200) NOT NULL,
+  `slug` VARCHAR(200) NOT NULL,
+  `cover_image` VARCHAR(255) DEFAULT NULL,
+  `description` TEXT DEFAULT NULL,
+  `event_date` DATE DEFAULT NULL,
+  `year` VARCHAR(10) DEFAULT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  KEY `idx_category` (`category_id`),
+  CONSTRAINT `fk_album_category` FOREIGN KEY (`category_id`) REFERENCES `gallery_categories`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed demo categories
+INSERT INTO `gallery_categories` (`name`, `slug`, `sort_order`) VALUES
+('Academic', 'academic', 1),
+('Cultural', 'cultural', 2),
+('Sports', 'sports', 3),
+('Events', 'events', 4),
+('Infrastructure', 'infrastructure', 5),
+('Students', 'students', 6),
+('Teachers', 'teachers', 7),
+('Campus Life', 'campus-life', 8);
+
+-- Gallery settings
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
+('gallery_layout_style', 'premium'),
+('gallery_bg_style', 'dark'),
+('gallery_particles_show', '1');
+
+-- ALTER gallery_items for album support (run on existing DB):
+-- ALTER TABLE `gallery_items`
+--   ADD COLUMN `album_id` INT UNSIGNED DEFAULT NULL AFTER `category`,
+--   ADD COLUMN `caption` VARCHAR(500) DEFAULT NULL AFTER `description`,
+--   ADD COLUMN `position` INT NOT NULL DEFAULT 0 AFTER `caption`,
+--   ADD KEY `idx_album` (`album_id`),
+--   ADD CONSTRAINT `fk_item_album` FOREIGN KEY (`album_id`) REFERENCES `gallery_albums`(`id`) ON DELETE SET NULL;
 
 COMMIT;
