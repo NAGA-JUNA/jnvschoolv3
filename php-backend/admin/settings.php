@@ -217,7 +217,7 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         <?php endif;?>
         <form method="POST" enctype="multipart/form-data" id="logoUploadForm"><?=csrfField()?><input type="hidden" name="form_action" value="logo_upload">
         <input type="file" name="school_logo" id="logoFileInput" class="form-control form-control-sm mb-2" accept=".jpg,.jpeg,.png,.webp,.svg">
-        <small class="text-muted d-block mb-2" style="font-size:.7rem">Recommended: 200×200px or larger, square format. JPG, PNG, WebP, SVG.</small>
+        <small class="text-muted d-block mb-2" style="font-size:.7rem">Recommended: Wide/rectangular format supported. Min 160px wide. JPG, PNG, WebP, SVG.</small>
         <!-- Crop Preview -->
         <div id="logoCropArea" class="mb-2" style="display:none;">
           <small class="fw-semibold text-muted d-block mb-1">Crop Preview:</small>
@@ -238,7 +238,7 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         const cropArea = document.getElementById('logoCropArea');
         const canvas = document.getElementById('logoCropCanvas');
         const ctx = canvas.getContext('2d');
-        let img = null, cropBox = {x:0,y:0,size:0}, dragging = false, dragStart={x:0,y:0};
+        let img = null, cropBox = {x:0,y:0,w:0,h:0}, dragging = false, dragStart={x:0,y:0};
 
         fileInput.addEventListener('change', function(e){
           const file = e.target.files[0];
@@ -251,9 +251,10 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
               const scale = Math.min(maxW / img.width, maxW / img.height, 1);
               canvas.width = img.width * scale;
               canvas.height = img.height * scale;
-              cropBox.size = Math.min(canvas.width, canvas.height);
-              cropBox.x = (canvas.width - cropBox.size) / 2;
-              cropBox.y = (canvas.height - cropBox.size) / 2;
+              cropBox.w = canvas.width;
+              cropBox.h = canvas.height;
+              cropBox.x = 0;
+              cropBox.y = 0;
               drawCrop();
               cropArea.style.display = 'block';
             };
@@ -269,16 +270,16 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
           // Dim outside crop
           ctx.fillStyle = 'rgba(0,0,0,0.5)';
           ctx.fillRect(0, 0, canvas.width, cropBox.y);
-          ctx.fillRect(0, cropBox.y + cropBox.size, canvas.width, canvas.height - cropBox.y - cropBox.size);
-          ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.size);
-          ctx.fillRect(cropBox.x + cropBox.size, cropBox.y, canvas.width - cropBox.x - cropBox.size, cropBox.size);
+          ctx.fillRect(0, cropBox.y + cropBox.h, canvas.width, canvas.height - cropBox.y - cropBox.h);
+          ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.h);
+          ctx.fillRect(cropBox.x + cropBox.w, cropBox.y, canvas.width - cropBox.x - cropBox.w, cropBox.h);
           // Crop border
           ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
-          ctx.strokeRect(cropBox.x, cropBox.y, cropBox.size, cropBox.size);
+          ctx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
           // Corner handles
           const hs = 6;
           ctx.fillStyle = '#3b82f6';
-          [[cropBox.x,cropBox.y],[cropBox.x+cropBox.size,cropBox.y],[cropBox.x,cropBox.y+cropBox.size],[cropBox.x+cropBox.size,cropBox.y+cropBox.size]].forEach(([cx,cy])=>{
+          [[cropBox.x,cropBox.y],[cropBox.x+cropBox.w,cropBox.y],[cropBox.x,cropBox.y+cropBox.h],[cropBox.x+cropBox.w,cropBox.y+cropBox.h]].forEach(([cx,cy])=>{
             ctx.fillRect(cx-hs/2, cy-hs/2, hs, hs);
           });
         }
@@ -286,15 +287,15 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         canvas.addEventListener('mousedown', function(e){
           const rect = canvas.getBoundingClientRect();
           const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-          if(mx >= cropBox.x && mx <= cropBox.x+cropBox.size && my >= cropBox.y && my <= cropBox.y+cropBox.size){
+          if(mx >= cropBox.x && mx <= cropBox.x+cropBox.w && my >= cropBox.y && my <= cropBox.y+cropBox.h){
             dragging = true; dragStart = {x: mx - cropBox.x, y: my - cropBox.y};
           }
         });
         canvas.addEventListener('mousemove', function(e){
           if(!dragging) return;
           const rect = canvas.getBoundingClientRect();
-          cropBox.x = Math.max(0, Math.min(canvas.width - cropBox.size, e.clientX - rect.left - dragStart.x));
-          cropBox.y = Math.max(0, Math.min(canvas.height - cropBox.size, e.clientY - rect.top - dragStart.y));
+          cropBox.x = Math.max(0, Math.min(canvas.width - cropBox.w, e.clientX - rect.left - dragStart.x));
+          cropBox.y = Math.max(0, Math.min(canvas.height - cropBox.h, e.clientY - rect.top - dragStart.y));
           drawCrop();
         });
         canvas.addEventListener('mouseup', ()=>{ dragging=false; });
@@ -304,23 +305,24 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         canvas.addEventListener('touchstart', function(e){
           e.preventDefault(); const t=e.touches[0]; const rect=canvas.getBoundingClientRect();
           const mx=t.clientX-rect.left, my=t.clientY-rect.top;
-          if(mx>=cropBox.x&&mx<=cropBox.x+cropBox.size&&my>=cropBox.y&&my<=cropBox.y+cropBox.size){
+          if(mx>=cropBox.x&&mx<=cropBox.x+cropBox.w&&my>=cropBox.y&&my<=cropBox.y+cropBox.h){
             dragging=true; dragStart={x:mx-cropBox.x,y:my-cropBox.y};
           }
         },{passive:false});
         canvas.addEventListener('touchmove', function(e){
           if(!dragging) return; e.preventDefault(); const t=e.touches[0]; const rect=canvas.getBoundingClientRect();
-          cropBox.x=Math.max(0,Math.min(canvas.width-cropBox.size,t.clientX-rect.left-dragStart.x));
-          cropBox.y=Math.max(0,Math.min(canvas.height-cropBox.size,t.clientY-rect.top-dragStart.y));
+          cropBox.x=Math.max(0,Math.min(canvas.width-cropBox.w,t.clientX-rect.left-dragStart.x));
+          cropBox.y=Math.max(0,Math.min(canvas.height-cropBox.h,t.clientY-rect.top-dragStart.y));
           drawCrop();
         },{passive:false});
         canvas.addEventListener('touchend',()=>{dragging=false;});
 
         window.resetCrop = function(){
           if(!img) return;
-          cropBox.size = Math.min(canvas.width, canvas.height);
-          cropBox.x = (canvas.width - cropBox.size) / 2;
-          cropBox.y = (canvas.height - cropBox.size) / 2;
+          cropBox.w = canvas.width;
+          cropBox.h = canvas.height;
+          cropBox.x = 0;
+          cropBox.y = 0;
           drawCrop();
         };
 
@@ -329,10 +331,14 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
           if(!img || !cropArea.style.display || cropArea.style.display==='none') return;
           e.preventDefault();
           const scaleX = img.width / canvas.width, scaleY = img.height / canvas.height;
+          const cropW = cropBox.w * scaleX, cropH = cropBox.h * scaleY;
+          const maxDim = 400;
+          const outScale = Math.min(maxDim / cropW, maxDim / cropH, 1);
           const outCanvas = document.createElement('canvas');
-          outCanvas.width = 400; outCanvas.height = 400;
+          outCanvas.width = Math.round(cropW * outScale);
+          outCanvas.height = Math.round(cropH * outScale);
           const outCtx = outCanvas.getContext('2d');
-          outCtx.drawImage(img, cropBox.x*scaleX, cropBox.y*scaleY, cropBox.size*scaleX, cropBox.size*scaleY, 0, 0, 400, 400);
+          outCtx.drawImage(img, cropBox.x*scaleX, cropBox.y*scaleY, cropW, cropH, 0, 0, outCanvas.width, outCanvas.height);
           outCanvas.toBlob(function(blob){
             const fd = new FormData(e.target);
             fd.delete('school_logo');
