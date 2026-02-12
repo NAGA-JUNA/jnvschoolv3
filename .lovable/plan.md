@@ -1,97 +1,65 @@
 
 
-## Fix Logo Display Across All Pages + Admin Logo Preview/Crop
+## Widen Logo Display Across All Pages
 
 ### Problem
-From the screenshot, the school logo in the public navbar is clipped at `40x40px`, showing only partial text ("ARA NO SCHO"). The same small size is used in the admin sidebar and footer. The admin settings page lacks a proper logo preview and crop tool.
+The logo is currently displayed as a 48x48px square, but the actual school logo is rectangular/wide. The user wants the logo container to be **160px wide** (auto height) so the full logo text is visible, matching the reference screenshot showing a wide white-bordered box containing the complete logo.
 
-### Changes Overview
+### Changes
 
-#### 1. Fix Public Navbar Logo (all public pages)
+#### 1. Public Navbar Logo (6 files)
 **Files**: `index.php`, `public/about.php`, `public/teachers.php`, `public/notifications.php`, `public/events.php`, `public/gallery.php`
 
-- Increase logo from `40x40px` to `48x48px` (desktop) with `object-fit: contain` instead of `cover` so the full logo is visible without cropping
-- Add the school short name text next to the logo (e.g., "JNV") for brand visibility
-- Mobile: keep logo at `40x40px` but still use `contain`
+Change the logo `<img>` style from:
+```
+width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;
+```
+To:
+```
+width:160px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;border:2px solid rgba(255,255,255,0.3);
+```
 
-#### 2. Fix Admin Sidebar Logo
+On mobile (below 576px), reduce to `width:120px` via a CSS rule:
+```css
+@media (max-width: 575.98px) {
+  .navbar-brand img { width: 120px !important; }
+}
+```
+
+#### 2. Admin Sidebar Logo
 **File**: `includes/header.php`
 
-- Increase sidebar logo from `40x40px` to `48x48px`
-- Change `object-fit` from `cover` to `contain` to prevent cropping
-- Add a white/light background circle behind the logo for better contrast on the dark sidebar
+Update the sidebar logo `<img>` to use `width:140px;height:auto;object-fit:contain;background:#fff;padding:4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);`
 
-#### 3. Fix Footer Logo
+Also update the fallback placeholder from 40x40 to a wider box.
+
+#### 3. Footer Logo
 **File**: `includes/public-footer.php`
 
-- Increase footer logo from `42x42px` to `48x48px`
-- Change `object-fit` to `contain`
+Update the footer logo from `width:48px;height:48px` to `width:140px;height:auto;object-fit:contain;background:#fff;padding:4px;border-radius:8px;`
 
-#### 4. Enhanced Logo Section in Admin Settings
+#### 4. Admin Settings Logo Preview
 **File**: `admin/settings.php`
 
-- Add a larger logo preview card (200x200px display area with contained fit)
-- Add recommended size note: "Recommended: 200x200px or larger, square format"
-- Add a simple client-side crop/resize tool using HTML5 Canvas:
-  - When a file is selected, show a preview with a square crop overlay
-  - User can drag/resize the crop area
-  - On upload, the cropped version is sent as the file
-- Add a "Current Logo" section showing the logo at multiple sizes (sidebar preview at 48px, navbar preview at 48px, favicon size at 32px) so admins can see how it looks everywhere
-
-#### 5. Mobile Navbar Logo Check
-- On screens below 576px, logo stays at `36x36px` with `object-fit: contain`
-- Remove `max-width: 200px; overflow: hidden; text-overflow: ellipsis` constraint on `.navbar-brand` that clips the logo
-
-### Technical Details
-
-**Logo `object-fit` fix** (applied to all 8 files with logo rendering):
-```php
-<!-- Before -->
-<img src="..." style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
-
-<!-- After -->
-<img src="..." style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;">
-```
-
-**Admin settings crop tool** -- lightweight Canvas-based cropper:
-- Uses vanilla JS (no external library needed)
-- Shows file preview when selected
-- Draws a draggable square crop overlay
-- Exports cropped image as a Blob and submits via FormData
-- Falls back to standard upload if JS is disabled
-
-**Logo preview sizes card in settings**:
-```html
-<div class="card">
-  <div class="card-header">Logo Preview (All Sizes)</div>
-  <div class="card-body d-flex align-items-end gap-4">
-    <div class="text-center">
-      <img src="..." style="width:48px;height:48px;object-fit:contain;">
-      <small>Navbar</small>
-    </div>
-    <div class="text-center">
-      <img src="..." style="width:48px;height:48px;object-fit:contain;">
-      <small>Sidebar</small>
-    </div>
-    <div class="text-center">
-      <img src="..." style="width:32px;height:32px;object-fit:contain;">
-      <small>Favicon</small>
-    </div>
-  </div>
-</div>
-```
+Update the preview sizes section to reflect the new 160px navbar size, 140px sidebar size, and 140px footer size.
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `index.php` | Navbar logo size 48px, object-fit:contain, add short name |
-| `public/about.php` | Same navbar logo fix |
-| `public/teachers.php` | Same navbar logo fix |
-| `public/notifications.php` | Same navbar logo fix |
-| `public/events.php` | Same navbar logo fix |
-| `public/gallery.php` | Same navbar logo fix |
-| `includes/header.php` | Admin sidebar logo 48px, object-fit:contain, light bg |
-| `includes/public-footer.php` | Footer logo 48px, object-fit:contain |
-| `admin/settings.php` | Enhanced logo card with preview sizes + crop tool |
+| `php-backend/index.php` | Logo width 160px, auto height, border |
+| `php-backend/public/about.php` | Same |
+| `php-backend/public/teachers.php` | Same |
+| `php-backend/public/notifications.php` | Same |
+| `php-backend/public/events.php` | Same |
+| `php-backend/public/gallery.php` | Same |
+| `php-backend/includes/header.php` | Sidebar logo 140px wide, auto height |
+| `php-backend/includes/public-footer.php` | Footer logo 140px wide, auto height |
+| `php-backend/admin/settings.php` | Update preview sizes to match new widths |
 
+### Summary
+- Navbar logo: **160px wide** (120px on mobile)
+- Sidebar logo: **140px wide**
+- Footer logo: **140px wide**
+- All use `height:auto` with `object-fit:contain` so the logo scales proportionally
+- White background with subtle border for visual emphasis
