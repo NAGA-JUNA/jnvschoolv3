@@ -46,7 +46,7 @@ function navActive(string $path): string {
             border-bottom: 1px solid rgba(255,255,255,0.08);
             display: flex; align-items: center; gap: 0.75rem;
         }
-        .sidebar .brand img { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; background: #fff; padding: 2px; }
+        .sidebar .brand img { width: 140px; height: auto; border-radius: 8px; object-fit: contain; background: #fff; padding: 4px; border: 2px solid rgba(255,255,255,0.2); }
         .sidebar .brand h5 { color: #fff; margin: 0; font-size: 1rem; font-weight: 600; }
         .sidebar .brand small { color: #94a3b8; font-size: 0.7rem; }
         .sidebar .nav-section { padding: 0.5rem 0; }
@@ -101,7 +101,7 @@ function navActive(string $path): string {
         <?php if ($schoolLogo): ?>
             <img src="/uploads/logo/<?= e($schoolLogo) ?>" alt="Logo">
         <?php else: ?>
-            <div style="width:40px;height:40px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">
+            <div style="width:140px;height:40px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">
                 <?= strtoupper(substr($schoolName, 0, 1)) ?>
             </div>
         <?php endif; ?>

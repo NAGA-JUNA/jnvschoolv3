@@ -287,7 +287,7 @@ $selectedCat = $_GET['category'] ?? '';
         }
         @media (max-width: 575.98px) {
             .navbar-brand { }
-            .navbar-brand img { width: 40px !important; height: 40px !important; }
+            .navbar-brand img { width: 120px !important; height: auto !important; }
             .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
             .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
             .hero-panel h1 { font-size: 1.1rem; }
@@ -323,7 +323,7 @@ $selectedCat = $_GET['category'] ?? '';
 <nav class="main-navbar navbar navbar-expand-lg sticky-top">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center text-white" href="/">
-            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i><?php endif; ?>
+            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:160px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;border:2px solid rgba(255,255,255,0.3);"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i><?php endif; ?>
         </a>
         <button class="navbar-toggler border-0 p-1" data-bs-toggle="collapse" data-bs-target="#mainNav"><i class="bi bi-list text-white" style="font-size:1.8rem;"></i></button>
         <div class="collapse navbar-collapse" id="mainNav">

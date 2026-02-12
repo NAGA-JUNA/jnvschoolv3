@@ -201,7 +201,7 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
         }
         @media (max-width: 575.98px) {
             .navbar-brand { }
-            .navbar-brand img { width: 40px !important; height: 40px !important; }
+            .navbar-brand img { width: 120px !important; height: auto !important; }
             .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
             .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
             .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
@@ -249,7 +249,7 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     <div class="container">
         <a class="navbar-brand d-flex align-items-center text-white" href="/">
             <?php if ($navLogo): ?>
-                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;">
+                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:160px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;border:2px solid rgba(255,255,255,0.3);">
             <?php else: ?>
                 <i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i>
             <?php endif; ?>
