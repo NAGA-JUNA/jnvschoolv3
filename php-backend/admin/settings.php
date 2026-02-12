@@ -180,12 +180,168 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
     </div>
     <div class="col-lg-4">
       <div class="card border-0 rounded-3 mb-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-image me-2"></i>School Logo</h6></div><div class="card-body">
-        <form method="POST" enctype="multipart/form-data"><?=csrfField()?><input type="hidden" name="form_action" value="logo_upload">
-        <?php if(!empty($s['school_logo'])):?><div class="mb-3 text-center"><img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="School Logo" style="max-height:80px" class="rounded"></div><?php endif;?>
-        <input type="file" name="school_logo" class="form-control form-control-sm mb-2" accept=".jpg,.jpeg,.png,.webp,.svg">
-        <button class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload Logo</button>
+        <?php if(!empty($s['school_logo'])):?>
+        <div class="mb-3 text-center p-3 rounded-3" style="background:#f1f5f9;">
+          <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="School Logo" style="max-width:200px;max-height:200px;object-fit:contain;" class="rounded">
+        </div>
+        <!-- Logo Preview at All Sizes -->
+        <div class="mb-3 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+          <small class="fw-semibold text-muted d-block mb-2">Preview at different sizes:</small>
+          <div class="d-flex align-items-end gap-4 justify-content-center">
+            <div class="text-center">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:48px;height:48px;background:#0f172a;padding:2px;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:6px;">
+              </div>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Navbar (48px)</small>
+            </div>
+            <div class="text-center">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:48px;height:48px;background:#1e293b;padding:2px;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:6px;">
+              </div>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Sidebar (48px)</small>
+            </div>
+            <div class="text-center">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:32px;height:32px;background:#fff;border:1px solid #e2e8f0;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:28px;height:28px;object-fit:contain;">
+              </div>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Favicon (32px)</small>
+            </div>
+            <div class="text-center">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:48px;height:48px;background:#1a1a2e;padding:2px;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:8px;">
+              </div>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Footer (48px)</small>
+            </div>
+          </div>
+        </div>
+        <?php endif;?>
+        <form method="POST" enctype="multipart/form-data" id="logoUploadForm"><?=csrfField()?><input type="hidden" name="form_action" value="logo_upload">
+        <input type="file" name="school_logo" id="logoFileInput" class="form-control form-control-sm mb-2" accept=".jpg,.jpeg,.png,.webp,.svg">
+        <small class="text-muted d-block mb-2" style="font-size:.7rem">Recommended: 200×200px or larger, square format. JPG, PNG, WebP, SVG.</small>
+        <!-- Crop Preview -->
+        <div id="logoCropArea" class="mb-2" style="display:none;">
+          <small class="fw-semibold text-muted d-block mb-1">Crop Preview:</small>
+          <div class="position-relative d-inline-block">
+            <canvas id="logoCropCanvas" style="max-width:100%;border-radius:8px;border:2px solid #e2e8f0;cursor:crosshair;"></canvas>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetCrop()"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload Logo</button>
         </form>
       </div></div>
+
+      <script>
+      (function(){
+        const fileInput = document.getElementById('logoFileInput');
+        const cropArea = document.getElementById('logoCropArea');
+        const canvas = document.getElementById('logoCropCanvas');
+        const ctx = canvas.getContext('2d');
+        let img = null, cropBox = {x:0,y:0,size:0}, dragging = false, dragStart={x:0,y:0};
+
+        fileInput.addEventListener('change', function(e){
+          const file = e.target.files[0];
+          if(!file) { cropArea.style.display='none'; return; }
+          const reader = new FileReader();
+          reader.onload = function(ev){
+            img = new Image();
+            img.onload = function(){
+              const maxW = 300;
+              const scale = Math.min(maxW / img.width, maxW / img.height, 1);
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              cropBox.size = Math.min(canvas.width, canvas.height);
+              cropBox.x = (canvas.width - cropBox.size) / 2;
+              cropBox.y = (canvas.height - cropBox.size) / 2;
+              drawCrop();
+              cropArea.style.display = 'block';
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+
+        function drawCrop(){
+          if(!img) return;
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Dim outside crop
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(0, 0, canvas.width, cropBox.y);
+          ctx.fillRect(0, cropBox.y + cropBox.size, canvas.width, canvas.height - cropBox.y - cropBox.size);
+          ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.size);
+          ctx.fillRect(cropBox.x + cropBox.size, cropBox.y, canvas.width - cropBox.x - cropBox.size, cropBox.size);
+          // Crop border
+          ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+          ctx.strokeRect(cropBox.x, cropBox.y, cropBox.size, cropBox.size);
+          // Corner handles
+          const hs = 6;
+          ctx.fillStyle = '#3b82f6';
+          [[cropBox.x,cropBox.y],[cropBox.x+cropBox.size,cropBox.y],[cropBox.x,cropBox.y+cropBox.size],[cropBox.x+cropBox.size,cropBox.y+cropBox.size]].forEach(([cx,cy])=>{
+            ctx.fillRect(cx-hs/2, cy-hs/2, hs, hs);
+          });
+        }
+
+        canvas.addEventListener('mousedown', function(e){
+          const rect = canvas.getBoundingClientRect();
+          const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+          if(mx >= cropBox.x && mx <= cropBox.x+cropBox.size && my >= cropBox.y && my <= cropBox.y+cropBox.size){
+            dragging = true; dragStart = {x: mx - cropBox.x, y: my - cropBox.y};
+          }
+        });
+        canvas.addEventListener('mousemove', function(e){
+          if(!dragging) return;
+          const rect = canvas.getBoundingClientRect();
+          cropBox.x = Math.max(0, Math.min(canvas.width - cropBox.size, e.clientX - rect.left - dragStart.x));
+          cropBox.y = Math.max(0, Math.min(canvas.height - cropBox.size, e.clientY - rect.top - dragStart.y));
+          drawCrop();
+        });
+        canvas.addEventListener('mouseup', ()=>{ dragging=false; });
+        canvas.addEventListener('mouseleave', ()=>{ dragging=false; });
+
+        // Touch support
+        canvas.addEventListener('touchstart', function(e){
+          e.preventDefault(); const t=e.touches[0]; const rect=canvas.getBoundingClientRect();
+          const mx=t.clientX-rect.left, my=t.clientY-rect.top;
+          if(mx>=cropBox.x&&mx<=cropBox.x+cropBox.size&&my>=cropBox.y&&my<=cropBox.y+cropBox.size){
+            dragging=true; dragStart={x:mx-cropBox.x,y:my-cropBox.y};
+          }
+        },{passive:false});
+        canvas.addEventListener('touchmove', function(e){
+          if(!dragging) return; e.preventDefault(); const t=e.touches[0]; const rect=canvas.getBoundingClientRect();
+          cropBox.x=Math.max(0,Math.min(canvas.width-cropBox.size,t.clientX-rect.left-dragStart.x));
+          cropBox.y=Math.max(0,Math.min(canvas.height-cropBox.size,t.clientY-rect.top-dragStart.y));
+          drawCrop();
+        },{passive:false});
+        canvas.addEventListener('touchend',()=>{dragging=false;});
+
+        window.resetCrop = function(){
+          if(!img) return;
+          cropBox.size = Math.min(canvas.width, canvas.height);
+          cropBox.x = (canvas.width - cropBox.size) / 2;
+          cropBox.y = (canvas.height - cropBox.size) / 2;
+          drawCrop();
+        };
+
+        // On form submit, crop and replace file
+        document.getElementById('logoUploadForm').addEventListener('submit', function(e){
+          if(!img || !cropArea.style.display || cropArea.style.display==='none') return;
+          e.preventDefault();
+          const scaleX = img.width / canvas.width, scaleY = img.height / canvas.height;
+          const outCanvas = document.createElement('canvas');
+          outCanvas.width = 400; outCanvas.height = 400;
+          const outCtx = outCanvas.getContext('2d');
+          outCtx.drawImage(img, cropBox.x*scaleX, cropBox.y*scaleY, cropBox.size*scaleX, cropBox.size*scaleY, 0, 0, 400, 400);
+          outCanvas.toBlob(function(blob){
+            const fd = new FormData(e.target);
+            fd.delete('school_logo');
+            fd.append('school_logo', blob, 'cropped_logo.png');
+            fetch('/admin/settings.php', {method:'POST', body: fd}).then(()=>{ window.location.href='/admin/settings.php'; });
+          }, 'image/png');
+        });
+      })();
+      </script>
 
       <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-window-desktop me-2"></i>Favicon</h6></div><div class="card-body">
         <form method="POST" enctype="multipart/form-data"><?=csrfField()?><input type="hidden" name="form_action" value="favicon_upload">

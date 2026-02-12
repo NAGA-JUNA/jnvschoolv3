@@ -46,7 +46,7 @@ function navActive(string $path): string {
             border-bottom: 1px solid rgba(255,255,255,0.08);
             display: flex; align-items: center; gap: 0.75rem;
         }
-        .sidebar .brand img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+        .sidebar .brand img { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; background: #fff; padding: 2px; }
         .sidebar .brand h5 { color: #fff; margin: 0; font-size: 1rem; font-weight: 600; }
         .sidebar .brand small { color: #94a3b8; font-size: 0.7rem; }
         .sidebar .nav-section { padding: 0.5rem 0; }
