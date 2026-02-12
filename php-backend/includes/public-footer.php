@@ -64,7 +64,7 @@ if ($_ctaShow === '1'):
         <div class="row g-4 py-5">
             <div class="col-lg-3 col-md-6">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:48px;height:48px;border-radius:10px;object-fit:contain;background:#fff;padding:2px;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.8rem;"></i><?php endif; ?>
+                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:140px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.8rem;"></i><?php endif; ?>
                     <div>
                         <h6 class="fw-bold mb-0" style="font-size:0.95rem;"><?= e($schoolName) ?></h6>
                         <?php if ($_fAddr): ?><small class="opacity-50" style="font-size:0.75rem;"><?= e(explode(',', $_fAddr)[0] ?? '') ?></small><?php endif; ?>

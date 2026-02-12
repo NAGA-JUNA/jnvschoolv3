@@ -187,18 +187,18 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         <!-- Logo Preview at All Sizes -->
         <div class="mb-3 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
           <small class="fw-semibold text-muted d-block mb-2">Preview at different sizes:</small>
-          <div class="d-flex align-items-end gap-4 justify-content-center">
+          <div class="d-flex align-items-end gap-4 justify-content-center flex-wrap">
             <div class="text-center">
-              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:48px;height:48px;background:#0f172a;padding:2px;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:6px;">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#0f172a;padding:4px;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:160px;height:auto;object-fit:contain;border-radius:6px;">
               </div>
-              <small class="d-block text-muted mt-1" style="font-size:.65rem">Navbar (48px)</small>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Navbar (160px)</small>
             </div>
             <div class="text-center">
-              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:48px;height:48px;background:#1e293b;padding:2px;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:6px;">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#1e293b;padding:4px;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:140px;height:auto;object-fit:contain;border-radius:6px;">
               </div>
-              <small class="d-block text-muted mt-1" style="font-size:.65rem">Sidebar (48px)</small>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Sidebar (140px)</small>
             </div>
             <div class="text-center">
               <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:32px;height:32px;background:#fff;border:1px solid #e2e8f0;">
@@ -207,10 +207,10 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
               <small class="d-block text-muted mt-1" style="font-size:.65rem">Favicon (32px)</small>
             </div>
             <div class="text-center">
-              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:48px;height:48px;background:#1a1a2e;padding:2px;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:8px;">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#1a1a2e;padding:4px;">
+                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:140px;height:auto;object-fit:contain;border-radius:8px;">
               </div>
-              <small class="d-block text-muted mt-1" style="font-size:.65rem">Footer (48px)</small>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Footer (140px)</small>
             </div>
           </div>
         </div>
