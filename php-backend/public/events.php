@@ -74,7 +74,8 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
         }
         @media (max-width: 575.98px) {
-            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-brand { }
+            .navbar-brand img { width: 40px !important; height: 40px !important; }
             .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
             .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
             .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
@@ -112,7 +113,7 @@ $pastEvents = $db->query("SELECT * FROM events WHERE is_public=1 AND event_date<
 <nav class="main-navbar navbar navbar-expand-lg sticky-top">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center text-white" href="/">
-            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:40px;height:40px;border-radius:8px;object-fit:cover;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i><?php endif; ?>
+            <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i><?php endif; ?>
         </a>
         <button class="navbar-toggler border-0 p-1" data-bs-toggle="collapse" data-bs-target="#mainNav"><i class="bi bi-list text-white" style="font-size:1.8rem;"></i></button>
         <div class="collapse navbar-collapse" id="mainNav">

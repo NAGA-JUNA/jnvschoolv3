@@ -132,7 +132,8 @@ $popupNotifs = $db->query("SELECT id, title, content, type FROM notifications WH
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
         }
         @media (max-width: 575.98px) {
-            .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .navbar-brand { }
+            .navbar-brand img { width: 40px !important; height: 40px !important; }
             .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
             .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
             .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
@@ -171,7 +172,7 @@ $popupNotifs = $db->query("SELECT id, title, content, type FROM notifications WH
     <div class="container">
         <a class="navbar-brand d-flex align-items-center text-white" href="/">
             <?php if ($navLogo): ?>
-                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
+                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;">
             <?php else: ?>
                 <i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i>
             <?php endif; ?>
