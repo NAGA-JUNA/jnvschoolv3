@@ -269,11 +269,24 @@ require_once __DIR__.'/../includes/header.php';
                         <label class="form-label fw-semibold">Category</label>
                         <select name="category" class="form-select" id="categorySelect" onchange="toggleUploadType()">
                             <option value="general">General</option>
-                            <option value="academic">Academic</option>
-                            <option value="sports">Sports</option>
-                            <option value="cultural">Cultural</option>
-                            <option value="infrastructure">Infrastructure</option>
+                            <?php
+                            $galCats = $db->query("SELECT * FROM gallery_categories WHERE status='active' ORDER BY sort_order")->fetchAll();
+                            foreach ($galCats as $gc): ?>
+                            <option value="<?= e(strtolower($gc['name'])) ?>"><?= e($gc['name']) ?></option>
+                            <?php endforeach; ?>
                             <option value="videos">Videos (YouTube)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Album <small class="text-muted">(optional)</small></label>
+                        <select name="album_id" class="form-select" id="albumSelect">
+                            <option value="">— No Album —</option>
+                            <?php
+                            $galAlbums = $db->query("SELECT a.*, c.name as cat_name FROM gallery_albums a JOIN gallery_categories c ON a.category_id=c.id WHERE a.status='active' ORDER BY c.sort_order, a.sort_order")->fetchAll();
+                            foreach ($galAlbums as $ga): ?>
+                            <option value="<?= $ga['id'] ?>" data-cat="<?= e(strtolower($ga['cat_name'])) ?>"><?= e($ga['cat_name']) ?> → <?= e($ga['title']) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
