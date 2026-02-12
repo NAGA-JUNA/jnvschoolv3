@@ -1,65 +1,61 @@
 
 
-## Widen Logo Display Across All Pages
+## Update Logo Crop Tool to Support Rectangular/Wide Logos
 
 ### Problem
-The logo is currently displayed as a 48x48px square, but the actual school logo is rectangular/wide. The user wants the logo container to be **160px wide** (auto height) so the full logo text is visible, matching the reference screenshot showing a wide white-bordered box containing the complete logo.
+The admin settings crop tool currently forces a **square crop** (400x400px output), which destroys the wide rectangular format of logos like the uploaded "ANANTAPUR" school logo. When a user uploads a wide logo, the square crop cuts off the sides, making it unreadable in the navbar/sidebar/footer.
 
-### Changes
+### Changes (1 file: `php-backend/admin/settings.php`)
 
-#### 1. Public Navbar Logo (6 files)
-**Files**: `index.php`, `public/about.php`, `public/teachers.php`, `public/notifications.php`, `public/events.php`, `public/gallery.php`
+#### 1. Change crop selection from square to rectangular
+- Replace the square `cropBox` (x, y, size) with a rectangular `cropBox` (x, y, width, height)
+- Initialize crop area to match the full image proportions instead of forcing a square
+- Allow the user to drag a rectangle that matches the logo's natural aspect ratio
+- Draw rectangular overlay and corner handles instead of square ones
 
-Change the logo `<img>` style from:
+#### 2. Update crop output to preserve aspect ratio
+- Change the output canvas from fixed `400x400` to a proportional size (e.g., max 400px wide, height calculated from aspect ratio)
+- This ensures the uploaded logo retains its wide rectangular shape
+
+#### 3. Update recommendation text
+- Change "Recommended: 200x200px or larger, square format" to "Recommended: Wide/rectangular format supported. Min 160px wide. JPG, PNG, WebP, SVG."
+
+#### 4. Update preview cards
+- Previews already show `width:160px; height:auto` which is correct for wide logos
+- No changes needed to preview section
+
+### Technical Details
+
+**Current crop output (square):**
+```js
+outCanvas.width = 400; outCanvas.height = 400;
+outCtx.drawImage(img, cropBox.x*scaleX, cropBox.y*scaleY, cropBox.size*scaleX, cropBox.size*scaleY, 0, 0, 400, 400);
 ```
-width:48px;height:48px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;
-```
-To:
-```
-width:160px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;border:2px solid rgba(255,255,255,0.3);
-```
 
-On mobile (below 576px), reduce to `width:120px` via a CSS rule:
-```css
-@media (max-width: 575.98px) {
-  .navbar-brand img { width: 120px !important; }
-}
+**New crop output (rectangular, preserving aspect ratio):**
+```js
+const cropW = cropBox.w * scaleX;
+const cropH = cropBox.h * scaleY;
+const maxDim = 400;
+const outScale = Math.min(maxDim / cropW, maxDim / cropH, 1);
+outCanvas.width = Math.round(cropW * outScale);
+outCanvas.height = Math.round(cropH * outScale);
+outCtx.drawImage(img, cropBox.x*scaleX, cropBox.y*scaleY, cropW, cropH, 0, 0, outCanvas.width, outCanvas.height);
 ```
 
-#### 2. Admin Sidebar Logo
-**File**: `includes/header.php`
+**Crop box initialization (full image instead of square):**
+```js
+// Before: cropBox.size = Math.min(canvas.width, canvas.height);
+// After: use full canvas area
+cropBox = { x: 0, y: 0, w: canvas.width, h: canvas.height };
+```
 
-Update the sidebar logo `<img>` to use `width:140px;height:auto;object-fit:contain;background:#fff;padding:4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);`
+**Updated dimming overlay** -- draw 4 rectangles around a rectangular (not square) crop area.
 
-Also update the fallback placeholder from 40x40 to a wider box.
-
-#### 3. Footer Logo
-**File**: `includes/public-footer.php`
-
-Update the footer logo from `width:48px;height:48px` to `width:140px;height:auto;object-fit:contain;background:#fff;padding:4px;border-radius:8px;`
-
-#### 4. Admin Settings Logo Preview
-**File**: `admin/settings.php`
-
-Update the preview sizes section to reflect the new 160px navbar size, 140px sidebar size, and 140px footer size.
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `php-backend/index.php` | Logo width 160px, auto height, border |
-| `php-backend/public/about.php` | Same |
-| `php-backend/public/teachers.php` | Same |
-| `php-backend/public/notifications.php` | Same |
-| `php-backend/public/events.php` | Same |
-| `php-backend/public/gallery.php` | Same |
-| `php-backend/includes/header.php` | Sidebar logo 140px wide, auto height |
-| `php-backend/includes/public-footer.php` | Footer logo 140px wide, auto height |
-| `php-backend/admin/settings.php` | Update preview sizes to match new widths |
+**Drag behavior** -- same as before but tracks `cropBox.w` and `cropBox.h` separately instead of a single `cropBox.size`.
 
 ### Summary
-- Navbar logo: **160px wide** (120px on mobile)
-- Sidebar logo: **140px wide**
-- Footer logo: **140px wide**
-- All use `height:auto` with `object-fit:contain` so the logo scales proportionally
-- White background with subtle border for visual emphasis
+- Crop tool now supports **rectangular** selections instead of forcing square
+- Output preserves the logo's natural aspect ratio (wide logos stay wide)
+- Recommendation text updated to clarify rectangular logos are supported
+- No changes needed to navbar/sidebar/footer display (already set to `width:160px/140px; height:auto`)
