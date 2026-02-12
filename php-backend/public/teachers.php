@@ -53,23 +53,7 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
         * { font-family: 'Inter', sans-serif; }
         body { background: #f8fafc; }
 
-        /* Top Bar */
-        .top-bar { background: #0a0f1a; color: #fff; padding: 0.4rem 0; font-size: 0.78rem; }
-        .top-bar a { color: rgba(255,255,255,0.8); text-decoration: none; transition: color 0.2s; }
-        .top-bar a:hover { color: #fff; }
-        .marquee-text { white-space: nowrap; overflow: hidden; }
-        .marquee-text span { display: inline-block; animation: marqueeScroll 20s linear infinite; }
-        @keyframes marqueeScroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-        /* Main Navbar */
-        .main-navbar { background: #0f172a; padding: 0.5rem 0; }
-        .main-navbar .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 0.9rem; padding: 0.5rem 0.8rem; }
-        .main-navbar .nav-link:hover, .main-navbar .nav-link.active { color: #fff; }
-        .notif-bell-btn { background: #dc3545; color: #fff; border: none; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; position: relative; transition: background 0.2s; }
-        .notif-bell-btn:hover { background: #c82333; }
-        .notif-badge { position: absolute; top: -6px; right: -8px; background: #ffc107; color: #000; font-size: 0.65rem; font-weight: 700; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
-        .login-nav-btn { background: transparent; border: 1.5px solid rgba(255,255,255,0.5); color: #fff; border-radius: 8px; padding: 0.4rem 1.2rem; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-        .login-nav-btn:hover { background: #fff; color: #0f172a; }
 
         /* Hero Section */
         .teachers-hero {
@@ -228,90 +212,7 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
 </head>
 <body>
 
-<!-- Top Bar -->
-<div class="top-bar d-none d-lg-block">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="marquee-text flex-grow-1 me-3">
-                <span>🎓 Welcome to <?= e($schoolName) ?> — <?= e($schoolTagline) ?></span>
-            </div>
-            <div class="d-flex gap-3 flex-shrink-0">
-                <a href="/public/admission-form.php"><i class="bi bi-mortarboard me-1"></i>Admissions</a>
-                <a href="/public/gallery.php"><i class="bi bi-images me-1"></i>Gallery</a>
-                <a href="/public/events.php"><i class="bi bi-calendar-event me-1"></i>Events</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Main Navbar -->
-<nav class="main-navbar navbar navbar-expand-lg sticky-top">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center text-white" href="/">
-            <?php if ($navLogo): ?>
-                <img src="<?= e($logoPath) ?>" alt="Logo" style="width:160px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;border:2px solid rgba(255,255,255,0.3);">
-            <?php else: ?>
-                <i class="bi bi-mortarboard-fill" style="font-size:1.5rem;"></i>
-            <?php endif; ?>
-        </a>
-        <button class="navbar-toggler border-0 p-1" data-bs-toggle="collapse" data-bs-target="#mainNav">
-            <i class="bi bi-list text-white" style="font-size:1.8rem;"></i>
-        </button>
-        <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="/public/about.php">About Us</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/public/teachers.php">Our Teachers</a></li>
-                <li class="nav-item"><a class="nav-link" href="/public/notifications.php">Notifications</a></li>
-                <li class="nav-item"><a class="nav-link" href="/public/gallery.php">Gallery</a></li>
-                <li class="nav-item"><a class="nav-link" href="/public/events.php">Events</a></li>
-                <li class="nav-item"><a class="nav-link" href="/public/admission-form.php">Apply Now</a></li>
-            </ul>
-            <div class="d-flex align-items-center gap-2">
-                <button class="notif-bell-btn" data-bs-toggle="modal" data-bs-target="#notifModal">
-                    <i class="bi bi-bell-fill me-1"></i> Notifications
-                    <?php if ($notifCount > 0): ?>
-                        <span class="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span>
-                    <?php endif; ?>
-                </button>
-                <a href="/login.php" class="login-nav-btn"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
-            </div>
-        </div>
-    </div>
-</nav>
-
-<!-- Notification Modal -->
-<div class="modal fade" id="notifModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
-            <div class="modal-header border-0 pb-0">
-                <h6 class="modal-title fw-bold"><i class="bi bi-bell-fill text-danger me-2"></i>Latest Notifications</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <?php if (empty($bellNotifs)): ?>
-                    <p class="text-muted text-center py-3">No recent notifications.</p>
-                <?php else: ?>
-                    <?php foreach ($bellNotifs as $bn):
-                        $typeColors = ['urgent' => 'danger', 'exam' => 'warning', 'academic' => 'info', 'event' => 'success'];
-                        $color = $typeColors[$bn['type']] ?? 'secondary';
-                    ?>
-                    <div class="d-flex justify-content-between align-items-start p-2 rounded-3 mb-2" style="background:#f8fafc;">
-                        <div>
-                            <div class="fw-semibold" style="font-size:0.88rem;"><?= e($bn['title']) ?></div>
-                            <small class="text-muted"><i class="bi bi-clock me-1"></i><?= date('d M Y', strtotime($bn['created_at'])) ?></small>
-                        </div>
-                        <span class="badge bg-<?= $color ?>" style="font-size:0.7rem;"><?= e(ucfirst($bn['type'])) ?></span>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <a href="/public/notifications.php" class="btn btn-primary btn-sm w-100 rounded-3"><i class="bi bi-list-ul me-1"></i>View All Notifications</a>
-            </div>
-        </div>
-    </div>
-</div>
+<?php $currentPage = 'teachers'; include __DIR__ . '/../includes/public-navbar.php'; ?>
 
 <!-- Hero Section -->
 <section class="teachers-hero">
