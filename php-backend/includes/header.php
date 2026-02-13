@@ -575,17 +575,54 @@ try {
         .kpi-card {
             border: none;
             border-radius: 16px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1), 
+                        box-shadow 0.3s cubic-bezier(.4,0,.2,1),
+                        background 0.3s ease;
             background: var(--bg-card);
             box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
         }
-        .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.1), transparent);
+            pointer-events: none;
+            transition: left 0.5s ease;
+        }
+        .kpi-card:hover::before { left: 100%; }
+        .kpi-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+        }
+        .kpi-card:active {
+            transform: translateY(-4px) scale(0.98);
+        }
         .kpi-card .fs-3, .kpi-card .fs-4 { color: var(--text-primary); }
         .kpi-icon {
             width: 52px; height: 52px;
             border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1.3rem;
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1), filter 0.3s ease;
+        }
+        .kpi-card:hover .kpi-icon {
+            transform: scale(1.15) rotate(5deg);
+            filter: brightness(1.15);
+        }
+        /* Staggered entrance */
+        .kpi-card { animation: fadeInUp 0.5s cubic-bezier(.4,0,.2,1) backwards; }
+        .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+        .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+        .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+        .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+        .kpi-card:nth-child(5) { animation-delay: 0.25s; }
+        .kpi-card:nth-child(6) { animation-delay: 0.3s; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Tables */
@@ -597,9 +634,22 @@ try {
             border-color: var(--border-color);
         }
         .table td { border-color: var(--border-color); }
-        .table-hover tbody tr:hover { background: rgba(0,0,0,0.02); }
+        .table-hover tbody tr {
+            transition: background 0.3s cubic-bezier(.4,0,.2,1),
+                        transform 0.3s cubic-bezier(.4,0,.2,1),
+                        box-shadow 0.3s ease;
+        }
+        .table-hover tbody tr:hover {
+            background: rgba(0,0,0,0.04);
+            transform: translateX(3px);
+            box-shadow: inset 4px 0 0 0 var(--brand-primary);
+        }
+        .table-hover tbody tr:active { transform: translateX(1px); }
         html[data-theme="dark"] .table th { background: rgba(255,255,255,0.03); }
-        html[data-theme="dark"] .table-hover tbody tr:hover { background: rgba(255,255,255,0.03); }
+        html[data-theme="dark"] .table-hover tbody tr:hover { 
+            background: rgba(255,255,255,0.04);
+            box-shadow: inset 4px 0 0 0 var(--brand-primary);
+        }
 
         /* Forms */
         .form-control, .form-select {
@@ -611,8 +661,57 @@ try {
         }
 
         /* Buttons */
-        .btn { border-radius: 10px; font-weight: 500; transition: all 0.2s; }
+        .btn {
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(.4,0,.2,1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.3), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+        .btn:hover::before { width: 300px; height: 300px; }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
         .btn-sm { border-radius: 8px; }
+        .btn-outline-primary:hover,
+        .btn-outline-success:hover,
+        .btn-outline-warning:hover,
+        .btn-outline-info:hover,
+        .btn-outline-danger:hover { transform: translateY(-2px); }
+        /* Quick Action Buttons */
+        .card .btn-outline-primary,
+        .card .btn-outline-success,
+        .card .btn-outline-warning,
+        .card .btn-outline-info {
+            transition: all 0.3s cubic-bezier(.4,0,.2,1);
+        }
+        .card .btn-outline-primary:hover,
+        .card .btn-outline-success:hover,
+        .card .btn-outline-warning:hover,
+        .card .btn-outline-info:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        /* Ripple keyframe */
+        @keyframes rippleEffect {
+            to { transform: scale(4); opacity: 0; }
+        }
 
         /* Modals */
         .modal-content {
