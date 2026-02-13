@@ -184,12 +184,14 @@ CREATE TABLE `notifications` (
   `content` TEXT NOT NULL,
   `type` ENUM('general','academic','exam','holiday','event','urgent') NOT NULL DEFAULT 'general',
   `priority` ENUM('normal','important','urgent') NOT NULL DEFAULT 'normal',
+  `category` VARCHAR(50) DEFAULT 'general',
+  `tags` VARCHAR(500) DEFAULT NULL,
   `target_audience` ENUM('all','students','teachers','parents','class','section') NOT NULL DEFAULT 'all',
   `target_class` VARCHAR(20) DEFAULT NULL,
   `target_section` VARCHAR(10) DEFAULT NULL,
   `attachment` VARCHAR(255) DEFAULT NULL,
   `is_public` TINYINT(1) NOT NULL DEFAULT 0,
-  `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `status` ENUM('draft','pending','approved','published','expired','rejected') NOT NULL DEFAULT 'pending',
   `posted_by` INT UNSIGNED DEFAULT NULL,
   `approved_by` INT UNSIGNED DEFAULT NULL,
   `approved_at` DATETIME DEFAULT NULL,
@@ -617,7 +619,50 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 --   ADD CONSTRAINT `fk_item_album` FOREIGN KEY (`album_id`) REFERENCES `gallery_albums`(`id`) ON DELETE SET NULL;
 
 -- --------------------------------------------------------
--- 18. Navigation Menu Items (Admin-managed navbar)
+-- 18. Notification Versions (Edit history with restore)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `notification_versions`;
+
+CREATE TABLE `notification_versions` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `notification_id` INT UNSIGNED NOT NULL,
+  `title` VARCHAR(200),
+  `content` TEXT,
+  `type` VARCHAR(20),
+  `priority` VARCHAR(20),
+  `target_audience` VARCHAR(20),
+  `category` VARCHAR(50),
+  `tags` VARCHAR(500),
+  `changed_by` INT UNSIGNED,
+  `changed_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notif` (`notification_id`),
+  CONSTRAINT `fk_nver_notif` FOREIGN KEY (`notification_id`) REFERENCES `notifications`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_nver_user` FOREIGN KEY (`changed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 19. Notification Attachments (Multi-file support)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `notification_attachments`;
+
+CREATE TABLE `notification_attachments` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `notification_id` INT UNSIGNED NOT NULL,
+  `file_name` VARCHAR(255) NOT NULL,
+  `file_path` VARCHAR(255) NOT NULL,
+  `file_type` VARCHAR(50),
+  `file_size` INT UNSIGNED DEFAULT 0,
+  `uploaded_by` INT UNSIGNED,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notif_attach` (`notification_id`),
+  CONSTRAINT `fk_natt_notif` FOREIGN KEY (`notification_id`) REFERENCES `notifications`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_natt_user` FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 20. Navigation Menu Items (Admin-managed navbar)
 -- --------------------------------------------------------
 DROP TABLE IF EXISTS `nav_menu_items`;
 
