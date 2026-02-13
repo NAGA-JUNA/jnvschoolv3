@@ -1,56 +1,47 @@
 
 
-## Fix Forgot Password — Email Not Sending
+## Fix: Reset Password "Invalid or expired" Error
 
-### Root Cause (2 Issues)
+### Root Cause
+**Timezone mismatch between PHP and MySQL.** The forgot-password page stores `reset_expires` using PHP's `date()` function, but the reset-password page validates it using MySQL's `NOW()`. If the server's PHP timezone and MySQL timezone differ, the token can appear expired the moment it's created.
 
-**Issue 1: `sendMail()` ignores SMTP settings**
-The `config/mail.php` file defines SMTP constants (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`) but the `sendMail()` function uses PHP's built-in `mail()`, which completely ignores them. On shared hosting (cPanel), `mail()` typically fails silently or emails land in spam.
+### Fix (2 changes in 1 file)
 
-**Issue 2: Placeholder password**
-`SMTP_PASS` is still set to `'YOUR_EMAIL_PASSWORD'` — it was never configured with the actual email password.
+**File: `php-backend/reset-password.php`**
 
-### Fix
+Replace the MySQL `NOW()` comparison with a PHP-generated timestamp so both sides use the same clock:
 
-**File: `php-backend/config/mail.php`**
+**Current code (line 10):**
+```php
+$stmt = $db->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW() AND is_active = 1");
+```
 
-Replace the `sendMail()` function to use proper SMTP via PHP sockets (no external library needed on cPanel), or use cPanel's built-in PHPMailer if available. The most reliable approach for cPanel shared hosting:
+**Fixed code:**
+```php
+$now = date('Y-m-d H:i:s');
+$stmt = $db->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > ? AND is_active = 1");
+$stmt->execute([$token, $now]);
+```
 
-**Option A (Recommended): Use PHPMailer**
-- Add PHPMailer (most cPanel hosts have it pre-installed, or include it manually as 3 PHP files)
-- Update `sendMail()` to create a PHPMailer instance using the defined SMTP constants
-- This guarantees proper SSL/TLS SMTP delivery through `mail.awayindia.com:465`
+This ensures the same PHP clock is used for both generating the expiry (in `forgot-password.php`) and checking it (in `reset-password.php`).
 
-**Option B (Simpler): Use PHP `mail()` with proper server config**
-- If the cPanel server's sendmail is already configured, `mail()` can work, but the current code already does this and it's failing
-- Less reliable than Option A
+### Additional Safety: Increase Token Expiry
 
-### Implementation (Option A — PHPMailer)
+**File: `php-backend/forgot-password.php`** (line 19)
 
-1. Download PHPMailer files (`PHPMailer.php`, `SMTP.php`, `Exception.php`) into `php-backend/includes/phpmailer/`
-2. Rewrite `config/mail.php` to:
-   - Require the 3 PHPMailer class files
-   - Keep the existing SMTP constants (update password placeholder)
-   - Replace `sendMail()` to use `PHPMailer\PHPMailer\PHPMailer` with:
-     - `SMTPAuth = true`
-     - `Host = SMTP_HOST` (mail.awayindia.com)
-     - `Port = SMTP_PORT` (465)
-     - `SMTPSecure = 'ssl'`
-     - `Username = SMTP_USER`
-     - `Password = SMTP_PASS`
-3. Update `SMTP_PASS` — you will need to provide the real email password for `noreply@jnvschool.awayindia.com` (set it up in cPanel Email Accounts)
+Change the expiry window from 1 hour to 2 hours to add buffer:
 
-### Action Required From You
-- **Set the real email password**: Go to cPanel > Email Accounts > find `noreply@jnvschool.awayindia.com` > set/reset its password, then update `SMTP_PASS` in `config/mail.php`
+```php
+$expires = date('Y-m-d H:i:s', strtotime('+2 hours'));
+```
 
 ### Files Modified
+
 | File | Change |
 |------|--------|
-| `php-backend/config/mail.php` | Replace `mail()` with PHPMailer SMTP; update password placeholder |
-| `php-backend/includes/phpmailer/PHPMailer.php` | New — PHPMailer class |
-| `php-backend/includes/phpmailer/SMTP.php` | New — SMTP transport class |
-| `php-backend/includes/phpmailer/Exception.php` | New — Exception class |
+| `php-backend/reset-password.php` | Use PHP `date()` instead of MySQL `NOW()` for token expiry check |
+| `php-backend/forgot-password.php` | Increase token expiry from 1 hour to 2 hours |
 
-### No Other Files Need Changes
-`forgot-password.php` and `reset-password.php` logic is correct — the only problem is that `sendMail()` never actually delivers the email.
+### After Deploying
+Request a new forgot-password email and click the link again — it should now show the password form instead of the error.
 
