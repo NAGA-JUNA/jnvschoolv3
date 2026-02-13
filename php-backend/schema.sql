@@ -686,7 +686,46 @@ INSERT INTO `nav_menu_items` (`label`, `url`, `icon`, `link_type`, `is_visible`,
 ('Our Teachers', '/public/teachers.php', 'bi-person-badge', 'internal', 1, 0, 3),
 ('Notifications', '/public/notifications.php', 'bi-bell', 'internal', 1, 0, 4),
 ('Gallery', '/public/gallery.php', 'bi-images', 'internal', 1, 0, 5),
-('Events', '/public/events.php', 'bi-calendar-event', 'internal', 1, 0, 6),
-('Apply Now', '/public/admission-form.php', 'bi-pencil-square', 'internal', 1, 1, 7);
+('Certificates', '/public/certificates.php', 'bi-award', 'internal', 1, 0, 6),
+('Events', '/public/events.php', 'bi-calendar-event', 'internal', 1, 0, 7),
+('Apply Now', '/public/admission-form.php', 'bi-pencil-square', 'internal', 1, 1, 8);
+
+-- --------------------------------------------------------
+-- 21. Certificates & Accreditations
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `certificates`;
+
+CREATE TABLE `certificates` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `category` VARCHAR(100) NOT NULL DEFAULT 'recognition',
+  `year` SMALLINT DEFAULT NULL,
+  `file_path` VARCHAR(255) NOT NULL,
+  `thumb_path` VARCHAR(255) DEFAULT NULL,
+  `file_type` ENUM('image','pdf') NOT NULL DEFAULT 'image',
+  `is_featured` TINYINT(1) NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `allow_download` TINYINT(1) NOT NULL DEFAULT 1,
+  `display_order` INT NOT NULL DEFAULT 0,
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `deleted_at` DATETIME DEFAULT NULL,
+  `created_by` INT UNSIGNED DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_active` (`is_active`),
+  KEY `idx_featured` (`is_featured`),
+  KEY `idx_category` (`category`),
+  KEY `idx_order` (`display_order`),
+  KEY `idx_deleted` (`is_deleted`),
+  CONSTRAINT `fk_cert_creator` FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Certificate settings
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
+('home_certificates_show', '1'),
+('home_certificates_max', '6'),
+('certificates_page_enabled', '1');
 
 COMMIT;

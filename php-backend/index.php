@@ -484,6 +484,68 @@ function scrollTeam(dir) {
 </script>
 <?php endif; ?>
 
+<?php
+// ── Certificates & Accreditations Section ──
+if (getSetting('home_certificates_show', '1') === '1'):
+    $certMax = (int)getSetting('home_certificates_max', '6');
+    $featuredCerts = $db->query("SELECT * FROM certificates WHERE is_active=1 AND is_deleted=0 AND is_featured=1 ORDER BY display_order ASC LIMIT $certMax")->fetchAll();
+    if (!empty($featuredCerts)):
+        $certCategories = ['govt_approval'=>'Govt Approved','board_affiliation'=>'CBSE Affiliation','recognition'=>'Recognition','awards'=>'Award'];
+        $certBadgeColors = ['govt_approval'=>'success','board_affiliation'=>'primary','recognition'=>'info','awards'=>'warning'];
+?>
+<section class="py-5" style="background:linear-gradient(135deg,#f0f4ff 0%,#e8f0fe 100%);">
+    <div class="container">
+        <div class="text-center mb-4">
+            <div class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 mb-2" style="font-size:.75rem;letter-spacing:1px;text-transform:uppercase;"><i class="bi bi-award me-1"></i>Our Credentials</div>
+            <h4 style="font-family:'Playfair Display',serif;font-weight:700;font-size:2rem;color:#1a1a2e;">Our Certifications & Accreditations</h4>
+            <p class="text-muted mt-2" style="max-width:600px;margin:0 auto;">Recognized and accredited by leading educational bodies and government authorities.</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($featuredCerts as $fc):
+                $fcThumb = $fc['thumb_path'] ? '/' . $fc['thumb_path'] : ($fc['file_type']==='pdf' ? '' : '/' . $fc['file_path']);
+                $fcCatLabel = $certCategories[$fc['category']] ?? ucfirst($fc['category']);
+                $fcCatColor = $certBadgeColors[$fc['category']] ?? 'secondary';
+            ?>
+            <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                <div class="card border-0 shadow-sm h-100 text-center" style="border-radius:16px;overflow:hidden;transition:transform .3s,box-shadow .3s;cursor:pointer;" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 12px 30px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="window.certLightbox('<?= e('/' . $fc['file_path']) ?>','<?= $fc['file_type'] ?>')">
+                    <?php if ($fc['file_type'] === 'pdf'): ?>
+                        <div class="d-flex align-items-center justify-content-center" style="height:160px;background:linear-gradient(135deg,#fef2f2,#fee2e2);"><i class="bi bi-file-earmark-pdf text-danger" style="font-size:2.5rem"></i></div>
+                    <?php elseif ($fcThumb): ?>
+                        <img src="<?= e($fcThumb) ?>" alt="<?= e($fc['title']) ?>" style="width:100%;height:160px;object-fit:cover;" loading="lazy">
+                    <?php endif; ?>
+                    <div class="card-body p-2">
+                        <span class="badge bg-<?= $fcCatColor ?>-subtle text-<?= $fcCatColor ?> mb-1" style="font-size:.6rem;border-radius:50px;"><?= e($fcCatLabel) ?></span>
+                        <h6 class="fw-semibold mb-0" style="font-size:.78rem;line-height:1.3;"><?= e($fc['title']) ?></h6>
+                        <?php if ($fc['year']): ?><small class="text-muted" style="font-size:.65rem"><?= $fc['year'] ?></small><?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php if (getSetting('certificates_page_enabled', '1') === '1'): ?>
+        <div class="text-center mt-4">
+            <a href="/public/certificates.php" class="btn fw-bold px-4 rounded-pill text-uppercase" style="font-size:.8rem;letter-spacing:1px;background:var(--theme-primary);color:#fff;">View All Certificates <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- Certificate Lightbox (Home) -->
+<div id="homeCertLightbox" style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;" onclick="if(event.target===this){this.style.display='none';document.body.style.overflow=''}">
+    <button onclick="document.getElementById('homeCertLightbox').style.display='none';document.body.style.overflow=''" style="position:absolute;top:1rem;right:1.5rem;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.5rem;width:44px;height:44px;border-radius:50%;cursor:pointer;z-index:10001;"><i class="bi bi-x-lg"></i></button>
+    <div id="homeCertLightboxContent"></div>
+</div>
+<script>
+window.certLightbox = function(src, type) {
+    var el = document.getElementById('homeCertLightbox');
+    var content = document.getElementById('homeCertLightboxContent');
+    if (type === 'pdf') content.innerHTML = '<iframe src="'+src+'" style="width:90vw;height:85vh;border:none;border-radius:12px;background:#fff"></iframe>';
+    else content.innerHTML = '<img src="'+src+'" alt="Certificate" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:12px">';
+    el.style.display = 'flex'; document.body.style.overflow = 'hidden';
+};
+</script>
+<?php endif; endif; ?>
+
 <?php if (getSetting('home_contact_show', '1') === '1'): ?>
 <section class="py-5">
     <div class="container">
