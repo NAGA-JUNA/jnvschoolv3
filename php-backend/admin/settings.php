@@ -5,24 +5,37 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&verifyCsrf()){$action=$_POST['form_actio
 if($action==='settings'){$keys=['school_name','school_short_name','school_tagline','school_email','school_phone','school_address','primary_color','academic_year','admission_open'];foreach($keys as $k){$v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);}auditLog('update_settings','settings');setFlash('success','Settings updated.');}
 
 if($action==='logo_upload'){
-  if(!empty($_FILES['school_logo']['name'])&&$_FILES['school_logo']['error']===UPLOAD_ERR_OK){
+  if(!isSuperAdmin()){setFlash('error','Only Super Admin can change the logo.');
+  }elseif(!empty($_FILES['school_logo']['name'])&&$_FILES['school_logo']['error']===UPLOAD_ERR_OK){
     $ext=strtolower(pathinfo($_FILES['school_logo']['name'],PATHINFO_EXTENSION));
     if(in_array($ext,['jpg','jpeg','png','webp','svg'])){
-      @mkdir(__DIR__.'/../uploads/logo',0755,true);
-      $fname='school_logo.'.$ext;move_uploaded_file($_FILES['school_logo']['tmp_name'],__DIR__.'/../uploads/logo/'.$fname);
+      @mkdir(__DIR__.'/../uploads/branding',0755,true);
+      $fname='school_logo.'.$ext;move_uploaded_file($_FILES['school_logo']['tmp_name'],__DIR__.'/../uploads/branding/'.$fname);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('school_logo',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
-      auditLog('update_logo','settings');setFlash('success','Logo updated.');
+      $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('logo_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([time(),time()]);
+      // Auto-generate favicon 32x32
+      $srcPath=__DIR__.'/../uploads/branding/'.$fname;
+      if(in_array($ext,['jpg','jpeg','png','webp'])){
+        $srcImg=imagecreatefromstring(file_get_contents($srcPath));
+        if($srcImg){$fav=imagecreatetruecolor(32,32);imagealphablending($fav,false);imagesavealpha($fav,true);$transparent=imagecolorallocatealpha($fav,0,0,0,127);imagefill($fav,0,0,$transparent);imagecopyresampled($fav,$srcImg,0,0,0,0,32,32,imagesx($srcImg),imagesy($srcImg));imagepng($fav,__DIR__.'/../uploads/branding/favicon.png');imagedestroy($fav);imagedestroy($srcImg);
+        $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('school_favicon',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute(['favicon.png','favicon.png']);
+        $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('favicon_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([time(),time()]);
+        }
+      }
+      auditLog('update_logo','settings');setFlash('success','Logo updated across website.');
     }else setFlash('error','Logo must be JPG, PNG, WebP or SVG.');
   }
 }
 
 if($action==='favicon_upload'){
-  if(!empty($_FILES['school_favicon']['name'])&&$_FILES['school_favicon']['error']===UPLOAD_ERR_OK){
+  if(!isSuperAdmin()){setFlash('error','Only Super Admin can change the favicon.');
+  }elseif(!empty($_FILES['school_favicon']['name'])&&$_FILES['school_favicon']['error']===UPLOAD_ERR_OK){
     $ext=strtolower(pathinfo($_FILES['school_favicon']['name'],PATHINFO_EXTENSION));
     if(in_array($ext,['ico','png','svg','jpg','jpeg'])){
-      @mkdir(__DIR__.'/../uploads/logo',0755,true);
-      $fname='favicon.'.$ext;move_uploaded_file($_FILES['school_favicon']['tmp_name'],__DIR__.'/../uploads/logo/'.$fname);
+      @mkdir(__DIR__.'/../uploads/branding',0755,true);
+      $fname='favicon.'.$ext;move_uploaded_file($_FILES['school_favicon']['tmp_name'],__DIR__.'/../uploads/branding/'.$fname);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('school_favicon',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
+      $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('favicon_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([time(),time()]);
       auditLog('update_favicon','settings');setFlash('success','Favicon updated.');
     }else setFlash('error','Favicon must be ICO, PNG, SVG or JPG.');
   }
@@ -179,41 +192,61 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
       </div></div>
     </div>
     <div class="col-lg-4">
+      <?php
+        // Build logo URL with cache-busting
+        $_logoVer = $s['logo_updated_at'] ?? '0';
+        $_logoFile = $s['school_logo'] ?? '';
+        $_logoUrl = $_logoFile ? ((strpos($_logoFile, '/uploads/') === 0 ? $_logoFile : '/uploads/branding/' . $_logoFile) . '?v=' . $_logoVer) : '';
+        // Also check old path for backward compat
+        if ($_logoFile && !file_exists(__DIR__ . '/../uploads/branding/' . $_logoFile) && file_exists(__DIR__ . '/../uploads/logo/' . $_logoFile)) {
+            $_logoUrl = '/uploads/logo/' . $_logoFile . '?v=' . $_logoVer;
+        }
+        $_favFile = $s['school_favicon'] ?? '';
+        $_favVer = $s['favicon_updated_at'] ?? '0';
+        $_favUrl = $_favFile ? ((strpos($_favFile, '/uploads/') === 0 ? $_favFile : '/uploads/branding/' . $_favFile) . '?v=' . $_favVer) : '';
+        if ($_favFile && !file_exists(__DIR__ . '/../uploads/branding/' . $_favFile) && file_exists(__DIR__ . '/../uploads/logo/' . $_favFile)) {
+            $_favUrl = '/uploads/logo/' . $_favFile . '?v=' . $_favVer;
+        }
+      ?>
       <div class="card border-0 rounded-3 mb-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-image me-2"></i>School Logo</h6></div><div class="card-body">
-        <?php if(!empty($s['school_logo'])):?>
+        <?php if($_logoUrl):?>
         <div class="mb-3 text-center p-3 rounded-3" style="background:#f1f5f9;">
-          <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="School Logo" style="max-width:200px;max-height:200px;object-fit:contain;" class="rounded">
+          <img src="<?=e($_logoUrl)?>" alt="School Logo" style="max-width:200px;max-height:200px;object-fit:contain;" class="rounded">
         </div>
         <!-- Logo Preview at All Sizes -->
         <div class="mb-3 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
           <small class="fw-semibold text-muted d-block mb-2">Preview at different sizes:</small>
           <div class="d-flex align-items-end gap-4 justify-content-center flex-wrap">
             <div class="text-center">
-              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#0f172a;padding:4px;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:160px;height:auto;object-fit:contain;border-radius:6px;">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#0f172a;padding:6px;">
+                <img src="<?=e($_logoUrl)?>" alt="" style="height:42px;width:auto;object-fit:contain;border-radius:6px;">
               </div>
-              <small class="d-block text-muted mt-1" style="font-size:.65rem">Navbar (160px)</small>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Navbar (42px h)</small>
             </div>
             <div class="text-center">
               <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#1e293b;padding:4px;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:140px;height:auto;object-fit:contain;border-radius:6px;">
+                <img src="<?=e($_logoUrl)?>" alt="" style="width:64px;height:64px;object-fit:contain;border-radius:6px;">
               </div>
-              <small class="d-block text-muted mt-1" style="font-size:.65rem">Sidebar (140px)</small>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Sidebar (64px)</small>
             </div>
             <div class="text-center">
               <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width:32px;height:32px;background:#fff;border:1px solid #e2e8f0;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:28px;height:28px;object-fit:contain;">
+                <img src="<?=e($_favUrl ?: $_logoUrl)?>" alt="" style="width:28px;height:28px;object-fit:contain;">
               </div>
               <small class="d-block text-muted mt-1" style="font-size:.65rem">Favicon (32px)</small>
             </div>
             <div class="text-center">
               <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="background:#1a1a2e;padding:4px;">
-                <img src="/uploads/logo/<?=e($s['school_logo'])?>" alt="" style="width:140px;height:auto;object-fit:contain;border-radius:8px;">
+                <img src="<?=e($_logoUrl)?>" alt="" style="max-width:120px;height:auto;object-fit:contain;border-radius:8px;">
               </div>
-              <small class="d-block text-muted mt-1" style="font-size:.65rem">Footer (140px)</small>
+              <small class="d-block text-muted mt-1" style="font-size:.65rem">Footer (120px)</small>
             </div>
           </div>
         </div>
+        <?php if($_logoVer && $_logoVer !== '0'): ?>
+        <small class="text-muted d-block mb-2"><i class="bi bi-clock me-1"></i>Last updated: <?= date('d M Y, h:i A', (int)$_logoVer) ?></small>
+        <?php endif; ?>
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-2 w-100" onclick="location.reload(true);"><i class="bi bi-arrow-clockwise me-1"></i>Clear Cache & Refresh Logo</button>
         <?php endif;?>
         <form method="POST" enctype="multipart/form-data" id="logoUploadForm"><?=csrfField()?><input type="hidden" name="form_action" value="logo_upload">
         <input type="file" name="school_logo" id="logoFileInput" class="form-control form-control-sm mb-2" accept=".jpg,.jpeg,.png,.webp,.svg">
