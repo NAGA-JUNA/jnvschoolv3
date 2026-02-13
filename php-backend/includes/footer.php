@@ -9,13 +9,27 @@
 <?php if (isLoggedIn()): ?>
 <script>
 (function() {
-    // ===== Theme Persistence =====
+    // ===== Theme System =====
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('admin_theme', theme);
+        syncThemePill(theme);
     }
+
+    function syncThemePill(theme) {
+        var btns = document.querySelectorAll('#themePill .theme-pill-btn');
+        btns.forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+        });
+    }
+
     var savedTheme = localStorage.getItem('admin_theme') || 'light';
     applyTheme(savedTheme);
+
+    // Global theme functions
+    window.setTheme = function(theme) {
+        applyTheme(theme);
+    };
 
     window.toggleTheme = function() {
         var current = document.documentElement.getAttribute('data-theme');
@@ -26,7 +40,6 @@
     var sidebar = document.getElementById('sidebar');
     if (sidebar) {
         var isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
-        // Only apply collapse on desktop
         if (window.innerWidth >= 992 && isCollapsed) {
             sidebar.classList.add('collapsed');
         }
@@ -39,14 +52,12 @@
         var nowCollapsed = sb.classList.contains('collapsed');
         localStorage.setItem('sidebar_collapsed', nowCollapsed);
         document.documentElement.classList.toggle('sidebar-is-collapsed', nowCollapsed);
-        // Toggle tooltips
         initTooltips(nowCollapsed);
     };
 
     // ===== Bootstrap Tooltips for Collapsed Sidebar =====
     var tooltipInstances = [];
     function initTooltips(collapsed) {
-        // Destroy existing
         tooltipInstances.forEach(function(t) { t.dispose(); });
         tooltipInstances = [];
         if (!collapsed) return;
@@ -58,7 +69,6 @@
             tooltipInstances.push(new bootstrap.Tooltip(el, { trigger: 'hover' }));
         });
     }
-    // Init on load if collapsed
     if (sidebar && sidebar.classList.contains('collapsed')) {
         initTooltips(true);
     }

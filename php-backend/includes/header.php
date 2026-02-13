@@ -21,6 +21,7 @@ function navActive(string $path): string {
 $_currentUser = currentUser();
 $_userName = $_currentUser['name'] ?? 'User';
 $_userRole = currentRole() ?? 'user';
+$_userEmail = $_currentUser['email'] ?? '';
 $_userInitials = '';
 $_nameParts = explode(' ', $_userName);
 $_userInitials .= strtoupper(substr($_nameParts[0] ?? '', 0, 1));
@@ -28,13 +29,26 @@ if (count($_nameParts) > 1) $_userInitials .= strtoupper(substr(end($_nameParts)
 if (!$_userInitials) $_userInitials = 'U';
 
 $_roleBadgeMap = [
-    'super_admin' => ['Super Admin', 'bg-danger'],
-    'admin' => ['Admin', 'bg-primary'],
-    'office' => ['Office', 'bg-info'],
-    'teacher' => ['Teacher', 'bg-success'],
+    'super_admin' => ['Super Admin', 'badge-role-super'],
+    'admin' => ['Admin', 'badge-role-admin'],
+    'office' => ['Office', 'badge-role-office'],
+    'teacher' => ['Teacher', 'badge-role-teacher'],
 ];
 $_roleLabel = $_roleBadgeMap[$_userRole][0] ?? ucfirst($_userRole);
-$_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
+$_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'badge-role-default';
+
+// Notification counts for badges
+$_notifCount = 0;
+$_admissionCount = 0;
+try {
+    global $pdo;
+    if (isset($pdo) && isAdmin()) {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM notifications WHERE status='pending'");
+        $_notifCount = (int)$stmt->fetchColumn();
+        $stmt2 = $pdo->query("SELECT COUNT(*) FROM admissions WHERE status='pending'");
+        $_admissionCount = (int)$stmt2->fetchColumn();
+    }
+} catch (Exception $e) { /* silent */ }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -63,133 +77,392 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
             --brand-primary-light: <?= e($brandPrimary) ?>22;
             --brand-secondary-light: <?= e($brandSecondary) ?>22;
             --brand-accent-light: <?= e($brandAccent) ?>22;
-            --sidebar-width: 260px;
-            --sidebar-collapsed-width: 70px;
-            /* Light theme (default) */
-            --bg-body: #f1f5f9;
+            --sidebar-width: 264px;
+            --sidebar-collapsed-width: 78px;
+            --sidebar-margin: 12px;
+
+            /* Light theme */
+            --bg-body: #f4f2ee;
             --bg-card: #ffffff;
             --bg-topbar: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #334155;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --text-primary: #1a1a1a;
+            --text-secondary: #374151;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+
+            /* Sidebar – Light */
+            --sidebar-bg: #faf8f5;
+            --sidebar-text: #1a1a1a;
+            --sidebar-text-muted: #9ca3af;
+            --sidebar-hover: rgba(0,0,0,0.04);
+            --sidebar-active-bg: var(--brand-primary);
+            --sidebar-active-text: #ffffff;
+            --sidebar-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+            --sidebar-border: rgba(0,0,0,0.06);
+            --sidebar-divider: rgba(0,0,0,0.06);
+            --sidebar-profile-bg: rgba(0,0,0,0.02);
+            --sidebar-theme-bg: rgba(0,0,0,0.04);
+            --sidebar-theme-active: #ffffff;
         }
         html[data-theme="dark"] {
             --brand-primary-light: <?= e($brandPrimary) ?>33;
             --brand-secondary-light: <?= e($brandSecondary) ?>33;
             --brand-accent-light: <?= e($brandAccent) ?>33;
-            --bg-body: #0f172a;
-            --bg-card: #1e293b;
-            --bg-topbar: #1e293b;
-            --text-primary: #e2e8f0;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
+            --bg-body: #111111;
+            --bg-card: #1c1c1c;
+            --bg-topbar: #1c1c1c;
+            --text-primary: #e5e5e5;
+            --text-secondary: #d1d5db;
+            --text-muted: #6b7280;
             --border-color: rgba(255,255,255,0.08);
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-        }
-        * { font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-body); min-height: 100vh; color: var(--text-primary); transition: background 0.3s ease, color 0.3s ease; }
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
 
-        /* Sidebar */
+            /* Sidebar – Dark */
+            --sidebar-bg: #1a1a1a;
+            --sidebar-text: #e5e5e5;
+            --sidebar-text-muted: #6b7280;
+            --sidebar-hover: rgba(255,255,255,0.05);
+            --sidebar-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --sidebar-border: rgba(255,255,255,0.06);
+            --sidebar-divider: rgba(255,255,255,0.06);
+            --sidebar-profile-bg: rgba(255,255,255,0.04);
+            --sidebar-theme-bg: rgba(255,255,255,0.06);
+            --sidebar-theme-active: #2a2a2a;
+        }
+
+        * { font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-body); min-height: 100vh; color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+
+        /* ========== PREMIUM SIDEBAR ========== */
         .sidebar {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-            height: 100vh;
+            margin: var(--sidebar-margin);
+            height: calc(100vh - var(--sidebar-margin) * 2);
+            border-radius: 20px;
+            background: var(--sidebar-bg);
+            box-shadow: var(--sidebar-shadow);
             position: fixed;
             top: 0; left: 0;
             z-index: 1040;
-            transition: width 0.3s ease, transform 0.3s ease;
-            overflow-y: auto;
-            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.3s cubic-bezier(.4,0,.2,1), transform 0.3s cubic-bezier(.4,0,.2,1), margin 0.3s;
         }
-        .sidebar .brand {
-            padding: 1.25rem;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            display: flex; align-items: center; gap: 0.75rem;
+
+        /* -- Sidebar Header / Logo -- */
+        .sidebar-header {
+            padding: 20px 20px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             position: relative;
-            min-height: 85px;
+            flex-shrink: 0;
         }
-        .sidebar .brand img { width: 64px; height: 64px; border-radius: 8px; object-fit: contain; background: #fff; padding: 4px; border: 2px solid rgba(255,255,255,0.2); transition: all 0.3s ease; flex-shrink: 0; }
-        .sidebar .brand-text { overflow: hidden; transition: opacity 0.2s ease, width 0.2s ease; white-space: nowrap; }
-        .sidebar .brand h5 { color: #fff; margin: 0; font-size: 1rem; font-weight: 600; }
-        .sidebar .brand small { color: #94a3b8; font-size: 0.7rem; }
+        .sidebar-logo {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: #fff;
+            object-fit: contain;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        html[data-theme="dark"] .sidebar-logo { background: #2a2a2a; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .sidebar-logo-fallback {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.1rem;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .sidebar-brand-text {
+            overflow: hidden;
+            white-space: nowrap;
+            transition: opacity 0.2s, width 0.2s;
+        }
+        .sidebar-brand-text h6 { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--sidebar-text); line-height: 1.2; }
+        .sidebar-brand-text small { color: var(--sidebar-text-muted); font-size: 0.7rem; }
 
         /* Collapse toggle */
-        .collapse-toggle {
+        .sidebar-collapse-btn {
             position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
             width: 28px; height: 28px; border-radius: 50%;
-            background: var(--brand-primary); border: 2px solid #1e293b;
-            color: #fff; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 0.75rem; z-index: 1050;
-            transition: transform 0.3s ease, background 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            background: var(--sidebar-bg);
+            border: 1px solid var(--sidebar-border);
+            color: var(--sidebar-text-muted);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 0.7rem; z-index: 1050;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
-        .collapse-toggle:hover { background: var(--brand-secondary); }
+        .sidebar-collapse-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-text); }
 
-        .sidebar .nav-section { padding: 0.5rem 0; }
-        .sidebar .nav-section-title { color: #64748b; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.75rem 1.25rem 0.25rem; font-weight: 600; white-space: nowrap; overflow: hidden; transition: opacity 0.2s ease; }
+        /* -- Navigation -- */
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 4px 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--sidebar-divider) transparent;
+        }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: var(--sidebar-divider); border-radius: 4px; }
+
+        .nav-group { padding: 4px 0; }
+        .nav-group + .nav-group { border-top: 1px solid var(--sidebar-divider); }
+        .nav-group-label {
+            color: var(--sidebar-text-muted);
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            padding: 12px 20px 4px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.2s;
+        }
+        .sidebar .nav-item {
+            margin: 1px 10px;
+        }
         .sidebar .nav-link {
-            color: #cbd5e1; padding: 0.55rem 1.25rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.75rem;
-            border-radius: 0; transition: all 0.2s; white-space: nowrap; overflow: hidden; position: relative;
+            color: var(--sidebar-text);
+            padding: 9px 12px;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 10px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            font-weight: 450;
+            text-decoration: none;
         }
-        .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .sidebar .nav-link.active { color: #fff; background: var(--brand-primary); font-weight: 500; }
-        .sidebar .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; flex-shrink: 0; }
-        .sidebar .nav-link span { transition: opacity 0.2s ease; }
+        .sidebar .nav-link:hover {
+            background: var(--sidebar-hover);
+            color: var(--sidebar-text);
+        }
+        .sidebar .nav-link.active {
+            background: var(--sidebar-active-bg);
+            color: var(--sidebar-active-text);
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+        .sidebar .nav-link i {
+            font-size: 1.05rem;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+        .sidebar .nav-link.active i { opacity: 1; }
+        .sidebar .nav-link span { transition: opacity 0.2s; }
 
-        /* Collapsed sidebar */
+        /* Notification badge */
+        .nav-badge {
+            margin-left: auto;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            line-height: 1.2;
+            flex-shrink: 0;
+        }
+
+        /* -- Sidebar Footer (Theme + Profile) -- */
+        .sidebar-footer {
+            flex-shrink: 0;
+            padding: 12px 14px 16px;
+            border-top: 1px solid var(--sidebar-divider);
+        }
+
+        /* Theme Switcher Pill */
+        .theme-pill {
+            display: flex;
+            background: var(--sidebar-theme-bg);
+            border-radius: 12px;
+            padding: 3px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .theme-pill-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 0;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--sidebar-text-muted);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .theme-pill-btn.active {
+            background: var(--sidebar-theme-active);
+            color: var(--sidebar-text);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .theme-pill-btn i { font-size: 0.85rem; }
+
+        /* Profile Card */
+        .sidebar-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 8px;
+            background: var(--sidebar-profile-bg);
+            border-radius: 12px;
+            margin-bottom: 6px;
+        }
+        .sidebar-profile-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.78rem;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .sidebar-profile-avatar .online-indicator {
+            position: absolute; bottom: -1px; right: -1px;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            border: 2px solid var(--sidebar-bg);
+        }
+        .sidebar-profile-info {
+            overflow: hidden;
+            transition: opacity 0.2s, width 0.2s;
+        }
+        .sidebar-profile-info h6 {
+            margin: 0; font-size: 0.78rem; font-weight: 600;
+            color: var(--sidebar-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-profile-info small {
+            font-size: 0.65rem;
+            color: var(--sidebar-text-muted);
+        }
+        .badge-role {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 6px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-role-super { background: #fde8e8; color: #dc2626; }
+        .badge-role-admin { background: var(--brand-primary-light); color: var(--brand-primary); }
+        .badge-role-office { background: #dbeafe; color: #2563eb; }
+        .badge-role-teacher { background: #dcfce7; color: #16a34a; }
+        .badge-role-default { background: #f3f4f6; color: #6b7280; }
+        html[data-theme="dark"] .badge-role-super { background: rgba(220,38,38,0.15); }
+        html[data-theme="dark"] .badge-role-admin { background: var(--brand-primary-light); }
+        html[data-theme="dark"] .badge-role-office { background: rgba(37,99,235,0.15); }
+        html[data-theme="dark"] .badge-role-teacher { background: rgba(22,163,74,0.15); }
+        html[data-theme="dark"] .badge-role-default { background: rgba(107,114,128,0.15); }
+
+        .sidebar-logout-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 8px;
+            border: none; background: transparent;
+            border-radius: 10px;
+            color: var(--sidebar-text-muted);
+            font-size: 0.78rem; font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+        .sidebar-logout-btn:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
+
+        /* ========== COLLAPSED STATE ========== */
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-        .sidebar.collapsed .brand { justify-content: center; padding: 1rem 0.5rem; }
-        .sidebar.collapsed .brand img { width: 40px; height: 40px; }
-        .sidebar.collapsed .brand-text { opacity: 0; width: 0; overflow: hidden; }
-        .sidebar.collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; }
-        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.7rem 0; }
-        .sidebar.collapsed .nav-link span { opacity: 0; width: 0; position: absolute; }
-        .sidebar.collapsed .nav-link i { margin: 0; font-size: 1.2rem; }
-        .sidebar.collapsed .collapse-toggle { right: -14px; }
-        .sidebar.collapsed .collapse-toggle i { transform: rotate(180deg); }
+        .sidebar.collapsed .sidebar-header { padding: 16px 0 12px; justify-content: center; }
+        .sidebar.collapsed .sidebar-logo,
+        .sidebar.collapsed .sidebar-logo-fallback { width: 38px; height: 38px; }
+        .sidebar.collapsed .sidebar-brand-text { opacity: 0; width: 0; overflow: hidden; }
+        .sidebar.collapsed .nav-group-label { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        .sidebar.collapsed .nav-item { margin: 2px 8px; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 10px 0; gap: 0; }
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .nav-badge { opacity: 0; width: 0; position: absolute; overflow: hidden; }
+        .sidebar.collapsed .nav-link i { margin: 0; font-size: 1.15rem; }
+        .sidebar.collapsed .sidebar-collapse-btn i { transform: rotate(180deg); }
+        .sidebar.collapsed .sidebar-collapse-btn { right: -14px; }
 
-        /* Tooltip for collapsed sidebar */
+        /* Collapsed footer */
+        .sidebar.collapsed .sidebar-footer { padding: 8px 6px 12px; }
+        .sidebar.collapsed .theme-pill { flex-direction: column; padding: 2px; margin-bottom: 8px; }
+        .sidebar.collapsed .theme-pill-btn { padding: 6px 0; }
+        .sidebar.collapsed .theme-pill-btn span { display: none; }
+        .sidebar.collapsed .sidebar-profile { padding: 6px; justify-content: center; }
+        .sidebar.collapsed .sidebar-profile-info { opacity: 0; width: 0; overflow: hidden; }
+        .sidebar.collapsed .sidebar-logout-btn span { display: none; }
+
+        /* Tooltip */
         .sidebar.collapsed .nav-link[data-bs-toggle="tooltip"] { overflow: visible; }
 
-        /* Main content */
-        .main-content { margin-left: var(--sidebar-width); min-height: 100vh; transition: margin-left 0.3s ease; }
-        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
-        html.sidebar-is-collapsed .main-content { margin-left: var(--sidebar-collapsed-width); }
+        /* ========== MAIN CONTENT ========== */
+        .main-content {
+            margin-left: calc(var(--sidebar-width) + var(--sidebar-margin) * 2);
+            min-height: 100vh;
+            transition: margin-left 0.3s cubic-bezier(.4,0,.2,1);
+        }
+        .sidebar.collapsed ~ .main-content,
+        html.sidebar-is-collapsed .main-content {
+            margin-left: calc(var(--sidebar-collapsed-width) + var(--sidebar-margin) * 2);
+        }
 
         .top-bar {
             background: var(--bg-topbar); border-bottom: 1px solid var(--border-color);
             padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
             position: sticky; top: 0; z-index: 1030;
-            transition: background 0.3s ease, border-color 0.3s ease;
+            transition: background 0.3s, border-color 0.3s;
             box-shadow: var(--shadow-sm);
         }
         .top-bar .page-title { margin: 0; font-weight: 600; font-size: 1.1rem; color: var(--text-primary); }
         .top-bar .user-info { display: flex; align-items: center; gap: 0.75rem; }
         .content-area { padding: 1.5rem; }
 
-        /* Profile Avatar */
+        /* Profile Avatar (top bar) */
         .profile-avatar-btn {
             background: none; border: none; cursor: pointer; position: relative;
             display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem; border-radius: 50px;
-            transition: background 0.2s ease;
+            transition: background 0.2s;
         }
         .profile-avatar-btn:hover { background: rgba(0,0,0,0.05); }
         html[data-theme="dark"] .profile-avatar-btn:hover { background: rgba(255,255,255,0.08); }
         .avatar-circle {
-            width: 38px; height: 38px; border-radius: 50%;
+            width: 36px; height: 36px; border-radius: 50%;
             background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             color: #fff; display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+            font-weight: 700; font-size: 0.8rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
         .online-dot {
             position: absolute; bottom: 2px; right: 2px;
             width: 10px; height: 10px; border-radius: 50%;
-            background: var(--brand-accent); border: 2px solid var(--bg-topbar);
+            background: #22c55e; border: 2px solid var(--bg-topbar);
         }
 
         /* Profile Dropdown */
@@ -215,7 +488,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         .profile-dropdown .dropdown-body { padding: 0.5rem 0; }
         .profile-dropdown .dropdown-item {
             padding: 0.6rem 1.25rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.6rem;
-            color: var(--text-secondary); transition: background 0.15s ease;
+            color: var(--text-secondary); transition: background 0.15s;
         }
         .profile-dropdown .dropdown-item:hover { background: rgba(0,0,0,0.04); color: var(--text-primary); }
         html[data-theme="dark"] .profile-dropdown .dropdown-item:hover { background: rgba(255,255,255,0.06); }
@@ -224,25 +497,11 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         .profile-dropdown .dropdown-item.text-danger { color: #ef4444 !important; }
         .profile-dropdown .dropdown-item.text-danger i { color: #ef4444 !important; }
 
-        /* Theme toggle in dropdown */
-        .theme-switch-item { cursor: pointer; }
-        .theme-switch-track {
-            width: 40px; height: 22px; border-radius: 11px; position: relative;
-            background: #cbd5e1; transition: background 0.3s ease; flex-shrink: 0; margin-left: auto;
-        }
-        html[data-theme="dark"] .theme-switch-track { background: var(--brand-primary); }
-        .theme-switch-track::after {
-            content: ''; position: absolute; top: 2px; left: 2px;
-            width: 18px; height: 18px; border-radius: 50%; background: #fff;
-            transition: transform 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        html[data-theme="dark"] .theme-switch-track::after { transform: translateX(18px); }
-
-        /* Theme toggle button in header */
+        /* Theme toggle in header */
         .theme-toggle-btn {
             background: none; border: 1px solid var(--border-color); cursor: pointer;
             width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: var(--text-muted); transition: all 0.2s ease; font-size: 1.1rem;
+            color: var(--text-muted); transition: all 0.2s; font-size: 1.1rem;
         }
         .theme-toggle-btn:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
         html[data-theme="dark"] .theme-toggle-btn:hover { background: rgba(255,255,255,0.08); }
@@ -251,44 +510,61 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         html[data-theme="dark"] .theme-toggle-btn .bi-sun-fill { display: inline; }
         html[data-theme="dark"] .theme-toggle-btn .bi-moon-fill { display: none; }
 
-        /* Mobile */
+        /* Theme switch track in dropdown */
+        .theme-switch-item { cursor: pointer; }
+        .theme-switch-track {
+            width: 40px; height: 22px; border-radius: 11px; position: relative;
+            background: #cbd5e1; transition: background 0.3s; flex-shrink: 0; margin-left: auto;
+        }
+        html[data-theme="dark"] .theme-switch-track { background: var(--brand-primary); }
+        .theme-switch-track::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 18px; height: 18px; border-radius: 50%; background: #fff;
+            transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        html[data-theme="dark"] .theme-switch-track::after { transform: translateX(18px); }
+
+        /* ========== MOBILE ========== */
         .sidebar-toggle { display: none; background: none; border: none; font-size: 1.5rem; color: var(--text-primary); }
-        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1035; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1035; backdrop-filter: blur(2px); }
         @media (max-width: 991.98px) {
-            .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; }
+            .sidebar { transform: translateX(calc(-100% - 24px)); width: var(--sidebar-width) !important; margin: 8px; height: calc(100vh - 16px); }
             .sidebar.collapsed { width: var(--sidebar-width) !important; }
             .sidebar.show { transform: translateX(0); }
             .sidebar-overlay.show { display: block; }
             .main-content, .sidebar.collapsed ~ .main-content, html.sidebar-is-collapsed .main-content { margin-left: 0 !important; }
             .sidebar-toggle { display: inline-block; }
-            .collapse-toggle { display: none !important; }
+            .sidebar-collapse-btn { display: none !important; }
             /* Restore labels on mobile even if collapsed */
-            .sidebar.collapsed .brand-text { opacity: 1; width: auto; }
-            .sidebar.collapsed .nav-section-title { opacity: 1; height: auto; padding: 0.75rem 1.25rem 0.25rem; }
-            .sidebar.collapsed .nav-link { justify-content: flex-start; padding: 0.55rem 1.25rem; }
+            .sidebar.collapsed .sidebar-brand-text { opacity: 1; width: auto; }
+            .sidebar.collapsed .nav-group-label { opacity: 1; height: auto; padding: 12px 20px 4px; }
+            .sidebar.collapsed .nav-link { justify-content: flex-start; padding: 9px 12px; gap: 10px; }
             .sidebar.collapsed .nav-link span { opacity: 1; width: auto; position: static; }
-            .sidebar.collapsed .brand { justify-content: flex-start; padding: 1.25rem; }
-            .sidebar.collapsed .brand img { width: 64px; height: 64px; }
+            .sidebar.collapsed .nav-badge { opacity: 1; width: auto; position: static; }
+            .sidebar.collapsed .sidebar-header { justify-content: flex-start; padding: 20px 20px 12px; }
+            .sidebar.collapsed .sidebar-logo,
+            .sidebar.collapsed .sidebar-logo-fallback { width: 48px; height: 48px; }
+            .sidebar.collapsed .sidebar-profile-info { opacity: 1; width: auto; }
+            .sidebar.collapsed .theme-pill { flex-direction: row; }
+            .sidebar.collapsed .theme-pill-btn span { display: inline; }
+            .sidebar.collapsed .sidebar-logout-btn span { display: inline; }
         }
 
-        /* Cards — themed */
-        .kpi-card { border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; background: var(--bg-card); box-shadow: var(--shadow-sm); }
+        /* ========== GENERIC THEMED ELEMENTS ========== */
+        .kpi-card { border: none; border-radius: 14px; transition: transform 0.2s, box-shadow 0.2s; background: var(--bg-card); box-shadow: var(--shadow-sm); }
         .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
         .kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
-
-        /* Table — themed */
         .table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
         .badge { font-weight: 500; }
 
-        /* Themed elements */
         html[data-theme="dark"] .card, html[data-theme="dark"] .kpi-card { background: var(--bg-card); border-color: var(--border-color); }
         html[data-theme="dark"] .table { color: var(--text-primary); --bs-table-bg: transparent; }
         html[data-theme="dark"] .table th, html[data-theme="dark"] .table td { border-color: var(--border-color); }
         html[data-theme="dark"] .form-control, html[data-theme="dark"] .form-select {
-            background: #0f172a; border-color: var(--border-color); color: var(--text-primary);
+            background: #111; border-color: var(--border-color); color: var(--text-primary);
         }
         html[data-theme="dark"] .form-control:focus, html[data-theme="dark"] .form-select:focus {
-            background: #0f172a; border-color: var(--brand-primary); color: var(--text-primary);
+            background: #111; border-color: var(--brand-primary); color: var(--text-primary);
             box-shadow: 0 0 0 0.2rem var(--brand-primary-light);
         }
         html[data-theme="dark"] .modal-content { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); }
@@ -325,78 +601,162 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
 <!-- Sidebar Overlay (mobile) -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-<!-- Sidebar -->
+<!-- ========== PREMIUM SIDEBAR ========== -->
 <nav class="sidebar" id="sidebar">
-    <div class="brand">
+    <!-- Header / Logo -->
+    <div class="sidebar-header">
         <?php if ($schoolLogo):
             $_sidebarLogoPath = (strpos($schoolLogo, '/uploads/') === 0) ? $schoolLogo : (file_exists(__DIR__.'/../uploads/branding/'.$schoolLogo) ? '/uploads/branding/'.$schoolLogo : '/uploads/logo/'.$schoolLogo);
         ?>
-            <img src="<?= e($_sidebarLogoPath) ?>?v=<?= e($_logoVer) ?>" alt="Logo">
+            <img src="<?= e($_sidebarLogoPath) ?>?v=<?= e($_logoVer) ?>" alt="Logo" class="sidebar-logo">
         <?php else: ?>
-            <div style="width:64px;height:64px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;">
-                <?= strtoupper(substr($schoolName, 0, 1)) ?>
-            </div>
+            <div class="sidebar-logo-fallback"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
         <?php endif; ?>
-        <div class="brand-text">
-            <h5><?= e($schoolName) ?></h5>
+        <div class="sidebar-brand-text">
+            <h6><?= e($schoolName) ?></h6>
             <small>Management System</small>
         </div>
-        <button class="collapse-toggle d-none d-lg-flex" onclick="toggleCollapse()" title="Toggle sidebar">
+        <button class="sidebar-collapse-btn d-none d-lg-flex" onclick="toggleCollapse()" title="Toggle sidebar">
             <i class="bi bi-chevron-left"></i>
         </button>
     </div>
 
-    <?php if (isAdmin()): ?>
-    <div class="nav-section">
-        <div class="nav-section-title">Administration</div>
-        <a href="/admin/dashboard.php" class="nav-link <?= navActive('/admin/dashboard') ?>" data-bs-title="Dashboard"><i class="bi bi-grid-1x2-fill"></i> <span>Dashboard</span></a>
-        <a href="/admin/students.php" class="nav-link <?= navActive('/admin/students') ?><?= navActive('/admin/student-form') ?>" data-bs-title="Students"><i class="bi bi-mortarboard-fill"></i> <span>Students</span></a>
-        <a href="/admin/teachers.php" class="nav-link <?= navActive('/admin/teachers') ?><?= navActive('/admin/teacher-form') ?>" data-bs-title="Teachers"><i class="bi bi-person-badge-fill"></i> <span>Teachers</span></a>
-        <?php if (isSuperAdmin() || getSetting('feature_admissions', '1') === '1'): ?>
-        <a href="/admin/admissions.php" class="nav-link <?= navActive('/admin/admissions') ?>" data-bs-title="Admissions"><i class="bi bi-file-earmark-plus-fill"></i> <span>Admissions</span></a>
-        <?php endif; ?>
-        <?php if (isSuperAdmin() || getSetting('feature_notifications', '1') === '1'): ?>
-        <a href="/admin/notifications.php" class="nav-link <?= navActive('/admin/notifications') ?>" data-bs-title="Notifications"><i class="bi bi-bell-fill"></i> <span>Notifications</span></a>
-        <?php endif; ?>
-        <?php if (isSuperAdmin() || getSetting('feature_gallery', '1') === '1'): ?>
-        <a href="/admin/gallery.php" class="nav-link <?= navActive('/admin/gallery') ?>" data-bs-title="Gallery"><i class="bi bi-images"></i> <span>Gallery</span></a>
-        <a href="/admin/upload-gallery.php" class="nav-link <?= navActive('/admin/upload-gallery') ?>" data-bs-title="Upload Gallery"><i class="bi bi-cloud-arrow-up"></i> <span>Upload Gallery</span></a>
-        <?php endif; ?>
-        <?php if (isSuperAdmin() || getSetting('feature_events', '1') === '1'): ?>
-        <a href="/admin/events.php" class="nav-link <?= navActive('/admin/events') ?>" data-bs-title="Events"><i class="bi bi-calendar-event-fill"></i> <span>Events</span></a>
-        <?php endif; ?>
-        <?php if (isSuperAdmin() || getSetting('feature_slider', '1') === '1'): ?>
-        <a href="/admin/slider.php" class="nav-link <?= navActive('/admin/slider') ?>" data-bs-title="Home Slider"><i class="bi bi-collection-play-fill"></i> <span>Home Slider</span></a>
+    <!-- Navigation -->
+    <div class="sidebar-nav">
+        <?php if (isAdmin()): ?>
+        <div class="nav-group">
+            <div class="nav-group-label">Main</div>
+            <div class="nav-item">
+                <a href="/admin/dashboard.php" class="nav-link <?= navActive('/admin/dashboard') ?>" data-bs-title="Dashboard"><i class="bi bi-grid-1x2"></i> <span>Dashboard</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/students.php" class="nav-link <?= navActive('/admin/students') ?><?= navActive('/admin/student-form') ?>" data-bs-title="Students"><i class="bi bi-mortarboard"></i> <span>Students</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/teachers.php" class="nav-link <?= navActive('/admin/teachers') ?><?= navActive('/admin/teacher-form') ?>" data-bs-title="Teachers"><i class="bi bi-person-badge"></i> <span>Teachers</span></a>
+            </div>
+            <?php if (isSuperAdmin() || getSetting('feature_admissions', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/admissions.php" class="nav-link <?= navActive('/admin/admissions') ?>" data-bs-title="Admissions"><i class="bi bi-file-earmark-plus"></i> <span>Admissions</span><?php if ($_admissionCount > 0): ?><span class="nav-badge"><?= $_admissionCount > 99 ? '99+' : $_admissionCount ?></span><?php endif; ?></a>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Content</div>
+            <?php if (isSuperAdmin() || getSetting('feature_notifications', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/notifications.php" class="nav-link <?= navActive('/admin/notifications') ?>" data-bs-title="Notifications"><i class="bi bi-bell"></i> <span>Notifications</span><?php if ($_notifCount > 0): ?><span class="nav-badge"><?= $_notifCount > 99 ? '99+' : $_notifCount ?></span><?php endif; ?></a>
+            </div>
+            <?php endif; ?>
+            <?php if (isSuperAdmin() || getSetting('feature_gallery', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/gallery.php" class="nav-link <?= navActive('/admin/gallery') ?>" data-bs-title="Gallery"><i class="bi bi-images"></i> <span>Gallery</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/upload-gallery.php" class="nav-link <?= navActive('/admin/upload-gallery') ?>" data-bs-title="Upload"><i class="bi bi-cloud-arrow-up"></i> <span>Upload Gallery</span></a>
+            </div>
+            <?php endif; ?>
+            <?php if (isSuperAdmin() || getSetting('feature_events', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/events.php" class="nav-link <?= navActive('/admin/events') ?>" data-bs-title="Events"><i class="bi bi-calendar-event"></i> <span>Events</span></a>
+            </div>
+            <?php endif; ?>
+            <?php if (isSuperAdmin() || getSetting('feature_slider', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/slider.php" class="nav-link <?= navActive('/admin/slider') ?>" data-bs-title="Slider"><i class="bi bi-collection-play"></i> <span>Home Slider</span></a>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Reports</div>
+            <?php if (isSuperAdmin() || getSetting('feature_reports', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/reports.php" class="nav-link <?= navActive('/admin/reports') ?>" data-bs-title="Reports"><i class="bi bi-bar-chart-line"></i> <span>Reports</span></a>
+            </div>
+            <?php endif; ?>
+            <?php if (isSuperAdmin() || getSetting('feature_audit_logs', '1') === '1'): ?>
+            <div class="nav-item">
+                <a href="/admin/audit-logs.php" class="nav-link <?= navActive('/admin/audit-logs') ?>" data-bs-title="Audit Logs"><i class="bi bi-clock-history"></i> <span>Audit Logs</span></a>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Settings</div>
+            <div class="nav-item">
+                <a href="/admin/settings.php" class="nav-link <?= navActive('/admin/settings') ?>" data-bs-title="Settings"><i class="bi bi-gear"></i> <span>Settings</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/page-content-manager.php" class="nav-link <?= navActive('/admin/page-content-manager') ?>" data-bs-title="Pages"><i class="bi bi-file-earmark-text"></i> <span>Page Content</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/footer-manager.php" class="nav-link <?= navActive('/admin/footer-manager') ?>" data-bs-title="Footer"><i class="bi bi-layout-three-columns"></i> <span>Footer Manager</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/navigation-settings.php" class="nav-link <?= navActive('/admin/navigation-settings') ?>" data-bs-title="Navigation"><i class="bi bi-menu-button-wide"></i> <span>Navigation</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/quote-highlight.php" class="nav-link <?= navActive('/admin/quote-highlight') ?>" data-bs-title="Quote"><i class="bi bi-quote"></i> <span>Quote Highlight</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/admin/support.php" class="nav-link <?= navActive('/admin/support') ?>" data-bs-title="Support"><i class="bi bi-headset"></i> <span>Support</span></a>
+            </div>
+        </div>
+
+        <?php else: ?>
+        <!-- Teacher Panel -->
+        <div class="nav-group">
+            <div class="nav-group-label">Teacher Panel</div>
+            <div class="nav-item">
+                <a href="/teacher/dashboard.php" class="nav-link <?= navActive('/teacher/dashboard') ?>" data-bs-title="Dashboard"><i class="bi bi-grid-1x2"></i> <span>Dashboard</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/teacher/attendance.php" class="nav-link <?= navActive('/teacher/attendance') ?>" data-bs-title="Attendance"><i class="bi bi-check2-square"></i> <span>Attendance</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/teacher/exams.php" class="nav-link <?= navActive('/teacher/exams') ?>" data-bs-title="Exams"><i class="bi bi-journal-text"></i> <span>Exam Results</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/teacher/post-notification.php" class="nav-link <?= navActive('/teacher/post-notification') ?>" data-bs-title="Notify"><i class="bi bi-megaphone"></i> <span>Post Notification</span></a>
+            </div>
+            <div class="nav-item">
+                <a href="/teacher/upload-gallery.php" class="nav-link <?= navActive('/teacher/upload-gallery') ?>" data-bs-title="Gallery"><i class="bi bi-camera"></i> <span>Upload Gallery</span></a>
+            </div>
+        </div>
         <?php endif; ?>
     </div>
-    <div class="nav-section">
-        <div class="nav-section-title">Reports & Logs</div>
-        <?php if (isSuperAdmin() || getSetting('feature_reports', '1') === '1'): ?>
-        <a href="/admin/reports.php" class="nav-link <?= navActive('/admin/reports') ?>" data-bs-title="Reports"><i class="bi bi-file-earmark-bar-graph-fill"></i> <span>Reports</span></a>
-        <?php endif; ?>
-        <?php if (isSuperAdmin() || getSetting('feature_audit_logs', '1') === '1'): ?>
-        <a href="/admin/audit-logs.php" class="nav-link <?= navActive('/admin/audit-logs') ?>" data-bs-title="Audit Logs"><i class="bi bi-clock-history"></i> <span>Audit Logs</span></a>
-        <?php endif; ?>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+        <!-- Theme Switcher Pill -->
+        <div class="theme-pill" id="themePill">
+            <button class="theme-pill-btn" data-theme="light" onclick="setTheme('light')">
+                <i class="bi bi-sun"></i> <span>Light</span>
+            </button>
+            <button class="theme-pill-btn" data-theme="dark" onclick="setTheme('dark')">
+                <i class="bi bi-moon"></i> <span>Dark</span>
+            </button>
+        </div>
+
+        <!-- Profile Card -->
+        <div class="sidebar-profile">
+            <div class="sidebar-profile-avatar">
+                <?= e($_userInitials) ?>
+                <span class="online-indicator"></span>
+            </div>
+            <div class="sidebar-profile-info">
+                <h6><?= e($_userName) ?></h6>
+                <small><span class="badge-role <?= e($_roleBadgeClass) ?>"><?= e($_roleLabel) ?></span></small>
+            </div>
+        </div>
+
+        <!-- Logout -->
+        <a href="/logout.php" class="sidebar-logout-btn">
+            <i class="bi bi-box-arrow-left"></i> <span>Log out</span>
+        </a>
     </div>
-    <div class="nav-section">
-        <div class="nav-section-title">Configuration</div>
-        <a href="/admin/settings.php" class="nav-link <?= navActive('/admin/settings') ?>" data-bs-title="Settings"><i class="bi bi-gear-fill"></i> <span>Settings</span></a>
-        <a href="/admin/page-content-manager.php" class="nav-link <?= navActive('/admin/page-content-manager') ?>" data-bs-title="Page Content"><i class="bi bi-file-earmark-text"></i> <span>Page Content</span></a>
-        <a href="/admin/footer-manager.php" class="nav-link <?= navActive('/admin/footer-manager') ?>" data-bs-title="Footer Manager"><i class="bi bi-diagram-3"></i> <span>Footer Manager</span></a>
-        <a href="/admin/navigation-settings.php" class="nav-link <?= navActive('/admin/navigation-settings') ?>" data-bs-title="Navigation"><i class="bi bi-menu-button-wide"></i> <span>Navigation</span></a>
-        <a href="/admin/quote-highlight.php" class="nav-link <?= navActive('/admin/quote-highlight') ?>" data-bs-title="Quote Highlight"><i class="bi bi-quote"></i> <span>Quote Highlight</span></a>
-        <a href="/admin/support.php" class="nav-link <?= navActive('/admin/support') ?>" data-bs-title="Support"><i class="bi bi-headset"></i> <span>Support</span></a>
-    </div>
-    <?php else: ?>
-    <div class="nav-section">
-        <div class="nav-section-title">Teacher Panel</div>
-        <a href="/teacher/dashboard.php" class="nav-link <?= navActive('/teacher/dashboard') ?>" data-bs-title="Dashboard"><i class="bi bi-grid-1x2-fill"></i> <span>Dashboard</span></a>
-        <a href="/teacher/attendance.php" class="nav-link <?= navActive('/teacher/attendance') ?>" data-bs-title="Attendance"><i class="bi bi-check2-square"></i> <span>Attendance</span></a>
-        <a href="/teacher/exams.php" class="nav-link <?= navActive('/teacher/exams') ?>" data-bs-title="Exam Results"><i class="bi bi-journal-text"></i> <span>Exam Results</span></a>
-        <a href="/teacher/post-notification.php" class="nav-link <?= navActive('/teacher/post-notification') ?>" data-bs-title="Post Notification"><i class="bi bi-megaphone-fill"></i> <span>Post Notification</span></a>
-        <a href="/teacher/upload-gallery.php" class="nav-link <?= navActive('/teacher/upload-gallery') ?>" data-bs-title="Upload Gallery"><i class="bi bi-camera-fill"></i> <span>Upload Gallery</span></a>
-    </div>
-    <?php endif; ?>
 </nav>
 
 <!-- Main Content -->
@@ -430,7 +790,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
                         <div class="avatar-lg"><?= e($_userInitials) ?></div>
                         <div class="user-meta">
                             <h6><?= e($_userName) ?></h6>
-                            <small><span class="badge <?= e($_roleBadgeClass) ?> rounded-pill" style="font-size:0.7rem;"><?= e($_roleLabel) ?></span></small>
+                            <small><span class="badge <?= e($_roleBadgeClass === 'badge-role-super' ? 'bg-danger' : ($_roleBadgeClass === 'badge-role-admin' ? 'bg-primary' : ($_roleBadgeClass === 'badge-role-teacher' ? 'bg-success' : 'bg-info'))) ?> rounded-pill" style="font-size:0.7rem;"><?= e($_roleLabel) ?></span></small>
                         </div>
                     </div>
                     <div class="dropdown-body">
