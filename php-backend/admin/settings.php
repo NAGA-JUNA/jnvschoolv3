@@ -1,5 +1,91 @@
 <?php
 $pageTitle='Settings';require_once __DIR__.'/../includes/auth.php';requireAdmin();$db=getDB();
+
+// === Brand Color Extraction Functions ===
+function extractDominantColors($imagePath, $count = 3) {
+    $data = @file_get_contents($imagePath);
+    if (!$data) return [];
+    $img = @imagecreatefromstring($data);
+    if (!$img) return [];
+    $w = imagesx($img); $h = imagesy($img);
+    $sample = imagecreatetruecolor(50, 50);
+    imagealphablending($sample, false); imagesavealpha($sample, true);
+    imagecopyresampled($sample, $img, 0,0,0,0, 50,50, $w,$h);
+    imagedestroy($img);
+    $colors = [];
+    for ($y=0; $y<50; $y++) {
+        for ($x=0; $x<50; $x++) {
+            $rgb = imagecolorat($sample, $x, $y);
+            $r = ($rgb>>16)&0xFF; $g = ($rgb>>8)&0xFF; $b = $rgb&0xFF;
+            $a = ($rgb>>24)&0x7F;
+            if ($a > 60) continue;
+            $brightness = ($r*299 + $g*587 + $b*114) / 1000;
+            if ($brightness > 240 || $brightness < 15) continue;
+            $qr = round($r/32)*32; $qg = round($g/32)*32; $qb = round($b/32)*32;
+            $key = "$qr,$qg,$qb";
+            $colors[$key] = ($colors[$key] ?? 0) + 1;
+        }
+    }
+    imagedestroy($sample);
+    arsort($colors);
+    $result = [];
+    foreach (array_slice(array_keys($colors), 0, $count) as $c) {
+        list($r,$g,$b) = explode(',', $c);
+        $result[] = sprintf('#%02x%02x%02x', (int)$r, (int)$g, (int)$b);
+    }
+    if (count($result) === 1) {
+        $result[] = adjustBrandHue($result[0], 30);
+        $result[] = adjustBrandHue($result[0], 180);
+    } elseif (count($result) === 2) {
+        $result[] = adjustBrandHue($result[0], 180);
+    }
+    if (empty($result)) {
+        $result = ['#1e40af', '#6366f1', '#f59e0b'];
+    }
+    return $result;
+}
+
+function adjustBrandHue($hex, $shift) {
+    $r = hexdec(substr($hex,1,2)); $g = hexdec(substr($hex,3,2)); $b = hexdec(substr($hex,5,2));
+    $r /= 255; $g /= 255; $b /= 255;
+    $max = max($r,$g,$b); $min = min($r,$g,$b); $d = $max - $min;
+    $l = ($max + $min) / 2; $s = 0; $h = 0;
+    if ($d > 0) {
+        $s = $l > 0.5 ? $d / (2 - $max - $min) : $d / ($max + $min);
+        if ($max == $r) $h = fmod(($g - $b) / $d + 6, 6) * 60;
+        elseif ($max == $g) $h = (($b - $r) / $d + 2) * 60;
+        else $h = (($r - $g) / $d + 4) * 60;
+    }
+    $h = fmod($h + $shift, 360); if ($h < 0) $h += 360;
+    // Normalize brightness
+    if ($l < 0.12) $l = 0.3;
+    if ($l > 0.88) $l = 0.6;
+    return hslToHex($h, $s, $l);
+}
+
+function hslToHex($h, $s, $l) {
+    $c = (1 - abs(2*$l - 1)) * $s;
+    $x = $c * (1 - abs(fmod($h/60, 2) - 1));
+    $m = $l - $c/2;
+    if ($h < 60) { $r=$c; $g=$x; $b=0; }
+    elseif ($h < 120) { $r=$x; $g=$c; $b=0; }
+    elseif ($h < 180) { $r=0; $g=$c; $b=$x; }
+    elseif ($h < 240) { $r=0; $g=$x; $b=$c; }
+    elseif ($h < 300) { $r=$x; $g=0; $b=$c; }
+    else { $r=$c; $g=0; $b=$x; }
+    return sprintf('#%02x%02x%02x', round(($r+$m)*255), round(($g+$m)*255), round(($b+$m)*255));
+}
+
+function saveBrandColors($db, $colors, $auto = true) {
+    $keys = ['brand_primary', 'brand_secondary', 'brand_accent'];
+    foreach ($keys as $i => $key) {
+        $val = $colors[$i] ?? $colors[0];
+        $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$key, $val, $val]);
+    }
+    $autoVal = $auto ? '1' : '0';
+    $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('brand_colors_auto',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$autoVal, $autoVal]);
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST'&&verifyCsrf()){$action=$_POST['form_action']??'settings';
 
 if($action==='settings'){$keys=['school_name','school_short_name','school_tagline','school_email','school_phone','school_address','primary_color','academic_year','admission_open'];foreach($keys as $k){$v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);}auditLog('update_settings','settings');setFlash('success','Settings updated.');}
@@ -22,8 +108,41 @@ if($action==='logo_upload'){
         $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('favicon_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([time(),time()]);
         }
       }
-      auditLog('update_logo','settings');setFlash('success','Logo updated across website.');
+      // Auto-extract brand colors from logo
+      if(in_array($ext,['jpg','jpeg','png','webp'])){
+        $extracted = extractDominantColors($srcPath);
+        if(!empty($extracted)) saveBrandColors($db, $extracted, true);
+      }
+      auditLog('update_logo','settings');setFlash('success','Logo updated. Brand colors auto-extracted.');
     }else setFlash('error','Logo must be JPG, PNG, WebP or SVG.');
+  }
+}
+
+// Re-extract brand colors from current logo
+if($action==='reextract_colors'){
+  if(!isSuperAdmin()){setFlash('error','Only Super Admin can change brand colors.');
+  }else{
+    $logoFile = $db->query("SELECT setting_value FROM settings WHERE setting_key='school_logo'")->fetchColumn();
+    $logoPath = $logoFile ? __DIR__.'/../uploads/branding/'.$logoFile : '';
+    if($logoPath && file_exists($logoPath)){
+      $extracted = extractDominantColors($logoPath);
+      if(!empty($extracted)){ saveBrandColors($db, $extracted, true); setFlash('success','Brand colors re-extracted from logo.'); }
+      else setFlash('error','Could not extract colors from logo.');
+    }else setFlash('error','No logo found. Upload a logo first.');
+  }
+}
+
+// Manual brand color override
+if($action==='brand_colors_manual'){
+  if(!isSuperAdmin()){setFlash('error','Only Super Admin can change brand colors.');
+  }else{
+    $bp = trim($_POST['brand_primary'] ?? '');
+    $bs = trim($_POST['brand_secondary'] ?? '');
+    $ba = trim($_POST['brand_accent'] ?? '');
+    if(preg_match('/^#[0-9a-fA-F]{6}$/', $bp) && preg_match('/^#[0-9a-fA-F]{6}$/', $bs) && preg_match('/^#[0-9a-fA-F]{6}$/', $ba)){
+      saveBrandColors($db, [$bp, $bs, $ba], false);
+      setFlash('success','Brand colors updated manually.');
+    }else setFlash('error','Invalid color format. Use #RRGGBB.');
   }
 }
 
@@ -389,6 +508,94 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         <small class="text-muted d-block mb-2" style="font-size:.7rem">Recommended: 32×32 or 64×64px. ICO, PNG, SVG, JPG.</small>
         <button class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload Favicon</button>
         </form>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Brand Colors Card -->
+  <div class="row g-3 mt-2">
+    <div class="col-12">
+      <div class="card border-0 rounded-3"><div class="card-header bg-white border-0 d-flex align-items-center justify-content-between">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-droplet-fill me-2"></i>Brand Colors <span class="badge <?=($s['brand_colors_auto']??'1')==='1'?'bg-success':'bg-warning text-dark'?> rounded-pill ms-2" style="font-size:.65rem"><?=($s['brand_colors_auto']??'1')==='1'?'Auto':'Custom'?></span></h6>
+        <?php if(isSuperAdmin()):?>
+        <form method="POST" class="d-inline"><?=csrfField()?><input type="hidden" name="form_action" value="reextract_colors">
+          <button class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-repeat me-1"></i>Re-extract from Logo</button>
+        </form>
+        <?php endif;?>
+      </div><div class="card-body">
+        <p class="text-muted mb-3" style="font-size:.85rem">These colors are auto-extracted from your school logo and applied across the admin dashboard (sidebar, buttons, badges, highlights). Super Admins can manually override them.</p>
+
+        <!-- Color Swatches -->
+        <div class="d-flex gap-3 mb-4 flex-wrap">
+          <?php
+          $brandColors = [
+            ['key'=>'brand_primary','label'=>'Primary','default'=>'#1e40af'],
+            ['key'=>'brand_secondary','label'=>'Secondary','default'=>'#6366f1'],
+            ['key'=>'brand_accent','label'=>'Accent','default'=>'#f59e0b'],
+          ];
+          foreach($brandColors as $bc):
+            $colorVal = $s[$bc['key']] ?? $bc['default'];
+          ?>
+          <div class="text-center">
+            <div style="width:64px;height:64px;border-radius:12px;background:<?=e($colorVal)?>;border:3px solid var(--border-color);box-shadow:0 2px 8px rgba(0,0,0,0.15);"></div>
+            <small class="d-block mt-1 fw-semibold" style="font-size:.75rem"><?=$bc['label']?></small>
+            <code style="font-size:.65rem"><?=e($colorVal)?></code>
+          </div>
+          <?php endforeach;?>
+        </div>
+
+        <!-- Preview of brand colors on UI elements -->
+        <div class="p-3 rounded-3 mb-4" style="background:var(--bg-body);border:1px solid var(--border-color);">
+          <small class="fw-semibold text-muted d-block mb-2">Preview on UI elements:</small>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <button class="btn btn-sm text-white" style="background:<?=e($s['brand_primary']??'#1e40af')?>">Primary Button</button>
+            <span class="badge rounded-pill text-white" style="background:<?=e($s['brand_secondary']??'#6366f1')?>">Badge</span>
+            <span class="badge rounded-pill text-white" style="background:<?=e($s['brand_accent']??'#f59e0b')?>">Accent</span>
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,<?=e($s['brand_primary']??'#1e40af')?>,<?=e($s['brand_secondary']??'#6366f1')?>);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.7rem">AB</div>
+            <div style="width:10px;height:10px;border-radius:50%;background:<?=e($s['brand_accent']??'#f59e0b')?>"></div>
+          </div>
+        </div>
+
+        <?php if(isSuperAdmin()):?>
+        <!-- Manual Override -->
+        <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="brand_colors_manual">
+          <h6 class="fw-semibold mb-2" style="font-size:.85rem"><i class="bi bi-sliders me-1"></i>Manual Override</h6>
+          <div class="row g-2 mb-3">
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:.8rem">Primary</label>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="color" name="brand_primary" class="form-control form-control-color" value="<?=e($s['brand_primary']??'#1e40af')?>" style="width:48px;height:38px;">
+                <input type="text" class="form-control form-control-sm" value="<?=e($s['brand_primary']??'#1e40af')?>" readonly style="font-size:.75rem;font-family:monospace;">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:.8rem">Secondary</label>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="color" name="brand_secondary" class="form-control form-control-color" value="<?=e($s['brand_secondary']??'#6366f1')?>" style="width:48px;height:38px;">
+                <input type="text" class="form-control form-control-sm" value="<?=e($s['brand_secondary']??'#6366f1')?>" readonly style="font-size:.75rem;font-family:monospace;">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:.8rem">Accent</label>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="color" name="brand_accent" class="form-control form-control-color" value="<?=e($s['brand_accent']??'#f59e0b')?>" style="width:48px;height:38px;">
+                <input type="text" class="form-control form-control-sm" value="<?=e($s['brand_accent']??'#f59e0b')?>" readonly style="font-size:.75rem;font-family:monospace;">
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save Custom Colors</button>
+          </div>
+        </form>
+        <script>
+        // Sync color pickers with text fields
+        document.querySelectorAll('input[type="color"][name^="brand_"]').forEach(function(picker){
+          picker.addEventListener('input', function(){
+            this.closest('.d-flex').querySelector('input[type="text"]').value = this.value;
+          });
+        });
+        </script>
+        <?php endif;?>
       </div></div>
     </div>
   </div>

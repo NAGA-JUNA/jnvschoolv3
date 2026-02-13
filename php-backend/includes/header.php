@@ -4,6 +4,9 @@ $schoolName = getSetting('school_name', 'JNV School');
 $schoolLogo = getSetting('school_logo', '');
 $_logoVer = getSetting('logo_updated_at', '0');
 $primaryColor = getSetting('primary_color', '#1e40af');
+$brandPrimary = getSetting('brand_primary', '#1e40af');
+$brandSecondary = getSetting('brand_secondary', '#6366f1');
+$brandAccent = getSetting('brand_accent', '#f59e0b');
 $pageTitle = $pageTitle ?? 'Dashboard';
 $flash = getFlash();
 
@@ -54,6 +57,12 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
     <style>
         :root {
             --primary: <?= e($primaryColor) ?>;
+            --brand-primary: <?= e($brandPrimary) ?>;
+            --brand-secondary: <?= e($brandSecondary) ?>;
+            --brand-accent: <?= e($brandAccent) ?>;
+            --brand-primary-light: <?= e($brandPrimary) ?>22;
+            --brand-secondary-light: <?= e($brandSecondary) ?>22;
+            --brand-accent-light: <?= e($brandAccent) ?>22;
             --sidebar-width: 260px;
             --sidebar-collapsed-width: 70px;
             /* Light theme (default) */
@@ -68,6 +77,9 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
             --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
         }
         html[data-theme="dark"] {
+            --brand-primary-light: <?= e($brandPrimary) ?>33;
+            --brand-secondary-light: <?= e($brandSecondary) ?>33;
+            --brand-accent-light: <?= e($brandAccent) ?>33;
             --bg-body: #0f172a;
             --bg-card: #1e293b;
             --bg-topbar: #1e293b;
@@ -109,13 +121,13 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         .collapse-toggle {
             position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
             width: 28px; height: 28px; border-radius: 50%;
-            background: var(--primary); border: 2px solid #1e293b;
+            background: var(--brand-primary); border: 2px solid #1e293b;
             color: #fff; display: flex; align-items: center; justify-content: center;
             cursor: pointer; font-size: 0.75rem; z-index: 1050;
             transition: transform 0.3s ease, background 0.2s ease;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
-        .collapse-toggle:hover { background: #2563eb; }
+        .collapse-toggle:hover { background: var(--brand-secondary); }
 
         .sidebar .nav-section { padding: 0.5rem 0; }
         .sidebar .nav-section-title { color: #64748b; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.75rem 1.25rem 0.25rem; font-weight: 600; white-space: nowrap; overflow: hidden; transition: opacity 0.2s ease; }
@@ -124,7 +136,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
             border-radius: 0; transition: all 0.2s; white-space: nowrap; overflow: hidden; position: relative;
         }
         .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .sidebar .nav-link.active { color: #fff; background: var(--primary); font-weight: 500; }
+        .sidebar .nav-link.active { color: #fff; background: var(--brand-primary); font-weight: 500; }
         .sidebar .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; flex-shrink: 0; }
         .sidebar .nav-link span { transition: opacity 0.2s ease; }
 
@@ -169,7 +181,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         html[data-theme="dark"] .profile-avatar-btn:hover { background: rgba(255,255,255,0.08); }
         .avatar-circle {
             width: 38px; height: 38px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), #6366f1);
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             color: #fff; display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;
             box-shadow: 0 2px 8px rgba(99,102,241,0.3);
@@ -177,7 +189,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         .online-dot {
             position: absolute; bottom: 2px; right: 2px;
             width: 10px; height: 10px; border-radius: 50%;
-            background: #22c55e; border: 2px solid var(--bg-topbar);
+            background: var(--brand-accent); border: 2px solid var(--bg-topbar);
         }
 
         /* Profile Dropdown */
@@ -194,7 +206,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         }
         .profile-dropdown .dropdown-header-custom .avatar-lg {
             width: 44px; height: 44px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), #6366f1);
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             color: #fff; display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 1rem; flex-shrink: 0;
         }
@@ -218,7 +230,7 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
             width: 40px; height: 22px; border-radius: 11px; position: relative;
             background: #cbd5e1; transition: background 0.3s ease; flex-shrink: 0; margin-left: auto;
         }
-        html[data-theme="dark"] .theme-switch-track { background: var(--primary); }
+        html[data-theme="dark"] .theme-switch-track { background: var(--brand-primary); }
         .theme-switch-track::after {
             content: ''; position: absolute; top: 2px; left: 2px;
             width: 18px; height: 18px; border-radius: 50%; background: #fff;
@@ -276,8 +288,8 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
             background: #0f172a; border-color: var(--border-color); color: var(--text-primary);
         }
         html[data-theme="dark"] .form-control:focus, html[data-theme="dark"] .form-select:focus {
-            background: #0f172a; border-color: var(--primary); color: var(--text-primary);
-            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.25);
+            background: #0f172a; border-color: var(--brand-primary); color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem var(--brand-primary-light);
         }
         html[data-theme="dark"] .modal-content { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); }
         html[data-theme="dark"] .alert { border-color: var(--border-color); }
@@ -295,6 +307,17 @@ $_roleBadgeClass = $_roleBadgeMap[$_userRole][1] ?? 'bg-secondary';
         html[data-theme="dark"] .nav-tabs .nav-link.active { color: var(--text-primary); background: var(--bg-card); border-color: var(--border-color); }
         html[data-theme="dark"] .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-primary); }
         html[data-theme="dark"] .breadcrumb-item a { color: var(--text-muted); }
+
+        /* Brand color overrides */
+        .btn-primary { background: var(--brand-primary) !important; border-color: var(--brand-primary) !important; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-outline-primary { color: var(--brand-primary) !important; border-color: var(--brand-primary) !important; }
+        .btn-outline-primary:hover { background: var(--brand-primary) !important; color: #fff !important; }
+        .badge.bg-primary { background: var(--brand-primary) !important; }
+        .nav-pills .nav-link.active { background: var(--brand-primary) !important; }
+        .form-control:focus, .form-select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 0.2rem var(--brand-primary-light); }
+        a { color: var(--brand-primary); }
+        a:hover { color: var(--brand-secondary); }
     </style>
 </head>
 <body>
