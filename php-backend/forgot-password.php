@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
             if ($user) {
                 $token = bin2hex(random_bytes(32));
-                $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+                $expires = date('Y-m-d H:i:s', strtotime('+2 hours'));
                 $db->prepare("UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?")->execute([$token, $expires, $user['id']]);
                 $resetUrl = 'https://jnvschool.awayindia.com/reset-password.php?token=' . $token;
                 $body = "<h2>Password Reset</h2><p>Hi {$user['name']},</p><p>Click below to reset your password:</p><p><a href='{$resetUrl}' style='padding:10px 24px;background:#1e40af;color:#fff;text-decoration:none;border-radius:8px;'>Reset Password</a></p><p>This link expires in 1 hour.</p>";
