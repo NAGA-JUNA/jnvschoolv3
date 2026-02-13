@@ -9,35 +9,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
     $content = trim($_POST['content'] ?? '');
     $type = $_POST['type'] ?? 'general';
     $priority = $_POST['priority'] ?? 'normal';
+    $category = $_POST['category'] ?? 'general';
+    $tags = trim($_POST['tags'] ?? '');
     $targetAudience = $_POST['target_audience'] ?? 'all';
     $targetClass = $_POST['target_class'] ?? null;
     $targetSection = $_POST['target_section'] ?? null;
     $isPublic = isset($_POST['is_public']) ? 1 : 0;
-    $attachment = null;
+    $saveAs = $_POST['save_as'] ?? 'pending';
+    $status = in_array($saveAs, ['draft', 'pending']) ? $saveAs : 'pending';
 
     if ($title && $content) {
-        // Handle file upload
-        if (!empty($_FILES['attachment']['name']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-            $allowedExts = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif'];
-            $ext = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
-            $maxSize = 5 * 1024 * 1024;
-            if (in_array($ext, $allowedExts) && $_FILES['attachment']['size'] <= $maxSize) {
-                $filename = 'notif_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                $dest = __DIR__ . '/../uploads/documents/' . $filename;
-                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $dest)) {
-                    $attachment = $filename;
+        $stmt = $db->prepare("INSERT INTO notifications (title, content, type, priority, category, tags, target_audience, target_class, target_section, is_public, posted_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $content, $type, $priority, $category, $tags, $targetAudience, $targetClass, $targetSection, $isPublic, $uid, $status]);
+        $newId = (int)$db->lastInsertId();
+
+        // Handle multi-attachments
+        if (!empty($_FILES['attachments'])) {
+            $allowedExts = ['pdf','doc','docx','jpg','jpeg','png','gif','zip','xlsx','pptx'];
+            $maxSize = 10 * 1024 * 1024;
+            $files = $_FILES['attachments'];
+            $count = is_array($files['name']) ? count($files['name']) : 0;
+            for ($i = 0; $i < $count; $i++) {
+                if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
+                $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+                if (!in_array($ext, $allowedExts) || $files['size'][$i] > $maxSize) continue;
+                $saveName = 'notif_' . $newId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                $dest = __DIR__ . '/../uploads/documents/' . $saveName;
+                if (move_uploaded_file($files['tmp_name'][$i], $dest)) {
+                    $ftype = in_array($ext, ['jpg','jpeg','png','gif']) ? 'image' : ($ext === 'pdf' ? 'pdf' : 'document');
+                    $db->prepare("INSERT INTO notification_attachments (notification_id, file_name, file_path, file_type, file_size, uploaded_by) VALUES (?,?,?,?,?,?)")
+                        ->execute([$newId, $files['name'][$i], $saveName, $ftype, $files['size'][$i], $uid]);
                 }
-            } else {
-                setFlash('error', 'Invalid file. Max 5MB, allowed: PDF, DOC, DOCX, JPG, PNG, GIF.');
-                header('Location: /teacher/post-notification.php');
-                exit;
             }
         }
 
-        $stmt = $db->prepare("INSERT INTO notifications (title, content, type, priority, target_audience, target_class, target_section, attachment, is_public, posted_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
-        $stmt->execute([$title, $content, $type, $priority, $targetAudience, $targetClass, $targetSection, $attachment, $isPublic, $uid]);
-        auditLog('post_notification', 'notification', (int)$db->lastInsertId(), "Title: $title");
-        setFlash('success', 'Notification submitted for admin approval.');
+        // Legacy single attachment support
+        if (!empty($_FILES['attachment']['name']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+            $allowedExts = ['pdf','doc','docx','jpg','jpeg','png','gif'];
+            $ext = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, $allowedExts) && $_FILES['attachment']['size'] <= 5 * 1024 * 1024) {
+                $filename = 'notif_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                $dest = __DIR__ . '/../uploads/documents/' . $filename;
+                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $dest)) {
+                    $db->prepare("UPDATE notifications SET attachment=? WHERE id=?")->execute([$filename, $newId]);
+                }
+            }
+        }
+
+        auditLog('post_notification', 'notification', $newId, "Title: $title");
+        setFlash('success', $status === 'draft' ? 'Notification saved as draft.' : 'Notification submitted for admin approval.');
         header('Location: /teacher/post-notification.php');
         exit;
     } else {
@@ -47,10 +67,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 $total = $db->prepare("SELECT COUNT(*) FROM notifications WHERE posted_by=? AND is_deleted=0");
-$total->execute([$uid]);
-$total = $total->fetchColumn();
+$total->execute([$uid]); $total = $total->fetchColumn();
 $p = paginate($total, 15, $page);
-$notifs = $db->prepare("SELECT id, title, type, priority, target_audience, is_public, status, reject_reason, content, attachment, created_at FROM notifications WHERE posted_by=? AND is_deleted=0 ORDER BY created_at DESC LIMIT ? OFFSET ?");
+$notifs = $db->prepare("SELECT id, title, type, priority, category, tags, target_audience, is_public, status, reject_reason, content, attachment, created_at FROM notifications WHERE posted_by=? AND is_deleted=0 ORDER BY created_at DESC LIMIT ? OFFSET ?");
 $notifs->execute([$uid, $p['per_page'], $p['offset']]);
 $notifs = $notifs->fetchAll();
 
@@ -90,6 +109,24 @@ require_once __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
                     </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="general">General</option>
+                                <option value="academic">Academic</option>
+                                <option value="administrative">Administrative</option>
+                                <option value="sports">Sports</option>
+                                <option value="cultural">Cultural</option>
+                                <option value="exam">Exam</option>
+                                <option value="holiday">Holiday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tags <span class="text-muted fw-normal">(comma-separated)</span></label>
+                            <input type="text" name="tags" class="form-control" placeholder="e.g. exam, result">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Target Audience</label>
                         <select name="target_audience" class="form-select" id="teacherTarget" onchange="toggleTeacherTarget()">
@@ -114,14 +151,17 @@ require_once __DIR__ . '/../includes/header.php';
                         <textarea name="content" class="form-control" rows="5" required maxlength="2000" placeholder="Write your notification..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Attachment <span class="text-muted">(optional, max 5MB)</span></label>
-                        <input type="file" name="attachment" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                        <label class="form-label fw-semibold">Attachments <span class="text-muted fw-normal">(max 10MB each)</span></label>
+                        <input type="file" name="attachments[]" class="form-control" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.zip,.xlsx,.pptx">
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" name="is_public" class="form-check-input" id="isPublic" value="1">
                         <label class="form-check-label" for="isPublic">Show on public website</label>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Submit for Approval</button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="save_as" value="draft" class="btn btn-outline-secondary flex-fill"><i class="bi bi-file-earmark me-1"></i>Save Draft</button>
+                        <button type="submit" name="save_as" value="pending" class="btn btn-primary flex-fill"><i class="bi bi-send me-1"></i>Submit for Approval</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -135,20 +175,19 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php else: ?>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-light"><tr><th>Title</th><th>Priority</th><th>Target</th><th>Public</th><th>Status</th><th>Date</th><th></th></tr></thead>
+                        <thead class="table-light"><tr><th>Title</th><th>Category</th><th>Priority</th><th>Target</th><th>Public</th><th>Status</th><th>Date</th><th></th></tr></thead>
                         <tbody>
                         <?php
-                        $prColors = ['normal' => 'secondary', 'important' => 'warning', 'urgent' => 'danger'];
+                        $prColors = ['normal'=>'secondary','important'=>'warning','urgent'=>'danger'];
+                        $stColors = ['draft'=>'secondary','pending'=>'warning','approved'=>'success','published'=>'primary','expired'=>'dark','rejected'=>'danger'];
                         foreach ($notifs as $n): ?>
                             <tr>
                                 <td style="font-size:.85rem;max-width:150px" class="text-truncate"><?= e($n['title']) ?></td>
+                                <td style="font-size:.78rem"><?= ucfirst(e($n['category'] ?? 'general')) ?></td>
                                 <td><span class="badge bg-<?= $prColors[$n['priority'] ?? 'normal'] ?>-subtle text-<?= $prColors[$n['priority'] ?? 'normal'] ?>" style="font-size:.65rem;"><?= ucfirst($n['priority'] ?? 'normal') ?></span></td>
                                 <td style="font-size:.8rem;"><?= ucfirst($n['target_audience'] ?? 'all') ?></td>
                                 <td><?= $n['is_public'] ? '<i class="bi bi-globe text-success"></i>' : '<i class="bi bi-lock text-muted"></i>' ?></td>
-                                <td>
-                                    <?php $sc = match($n['status']) { 'approved' => 'success', 'rejected' => 'danger', default => 'warning' }; ?>
-                                    <span class="badge bg-<?= $sc ?>-subtle text-<?= $sc ?>"><?= ucfirst($n['status']) ?></span>
-                                </td>
+                                <td><span class="badge bg-<?= $stColors[$n['status']] ?? 'secondary' ?>-subtle text-<?= $stColors[$n['status']] ?? 'secondary' ?>"><?= ucfirst($n['status']) ?></span></td>
                                 <td><small><?= date('d M Y', strtotime($n['created_at'])) ?></small></td>
                                 <td><button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="viewTeacherNotif(<?= $n['id'] ?>)"><i class="bi bi-eye"></i></button></td>
                             </tr>
@@ -174,21 +213,25 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
 const teacherNotifs = <?= json_encode(array_map(function($n) {
-    return ['id' => $n['id'], 'title' => $n['title'], 'content' => $n['content'], 'type' => $n['type'],
-        'priority' => $n['priority'] ?? 'normal', 'target_audience' => $n['target_audience'] ?? 'all',
-        'status' => $n['status'], 'reject_reason' => $n['reject_reason'] ?? '',
-        'attachment' => $n['attachment'] ?? '', 'created_at' => $n['created_at']];
+    return ['id'=>$n['id'],'title'=>$n['title'],'content'=>$n['content'],'type'=>$n['type'],
+        'priority'=>$n['priority']??'normal','target_audience'=>$n['target_audience']??'all',
+        'category'=>$n['category']??'general','tags'=>$n['tags']??'',
+        'status'=>$n['status'],'reject_reason'=>$n['reject_reason']??'',
+        'attachment'=>$n['attachment']??'','created_at'=>$n['created_at']];
 }, $notifs)) ?>;
 
 function viewTeacherNotif(id) {
     const n = teacherNotifs.find(x => x.id == id);
     if (!n) return;
     const esc = s => { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; };
+    const tags = n.tags ? n.tags.split(',').map(t=>`<span style="display:inline-block;background:#e0e7ff;color:#3730a3;font-size:.68rem;padding:2px 8px;border-radius:12px;margin:1px">${esc(t.trim())}</span>`).join('') : '';
     let html = `<h5 class="fw-bold">${esc(n.title)}</h5>
-        <div class="d-flex gap-2 mb-3">
+        <div class="d-flex gap-2 mb-3 flex-wrap">
             <span class="badge bg-secondary">${esc(n.type)}</span>
             <span class="badge bg-${n.priority==='urgent'?'danger':n.priority==='important'?'warning':'secondary'}">${n.priority}</span>
+            <span class="badge bg-light text-dark">${esc(n.category)}</span>
         </div>
+        ${tags ? `<div class="mb-3">${tags}</div>` : ''}
         <div class="p-3 bg-light rounded mb-3" style="white-space:pre-wrap;">${esc(n.content)}</div>
         <small class="text-muted">Created: ${n.created_at}</small>`;
     if (n.status === 'rejected' && n.reject_reason) {
