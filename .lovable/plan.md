@@ -1,136 +1,142 @@
 
 
-## Fix Logo Management System with Full Sync
+## Premium Admin Dashboard UI Enhancement
 
-### Problem
-When the Super Admin uploads a new logo, it does not reliably update across the site due to:
-1. **No cache-busting** -- browsers cache the old logo image at the same URL
-2. **No `logo_updated_at` timestamp** in the database to track changes
-3. **Logo sizes don't match the requested specs** (navbar should be 42px height, not 160px width)
-4. **Favicon is not auto-generated** from the uploaded logo
-5. **Admin sidebar logo** reads directly from `school_logo` setting without cache-busting
-6. **No "last updated" display** or "clear cache" button in admin
+### Overview
+Enhance the admin dashboard layout with three key features: a collapsible sidebar with smooth animations, a premium admin profile dropdown with status and quick actions, and a dark/light theme toggle with persistence. All changes are in `php-backend/includes/header.php` and `php-backend/includes/footer.php`.
 
-### Changes
+### 1. Collapsible Sidebar
 
-#### 1. Database: Add `logo_updated_at` setting
-In `admin/settings.php` logo upload handler, after saving the logo file, also save a `logo_updated_at` timestamp:
-```php
-$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('logo_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")
-   ->execute([time(), time()]);
-```
-Same for favicon upload -- save `favicon_updated_at`.
+**Behavior:**
+- Toggle button (chevron icon) added to the sidebar header, next to the brand area
+- **Expanded** (default, 260px): Logo + school name + full menu labels
+- **Collapsed** (70px): Only icons visible, logo shrinks to 40x40
+- Smooth CSS `width` transition (300ms ease)
+- Tooltips appear on hover for menu items when collapsed (using Bootstrap tooltips)
+- Collapsed state saved to `localStorage` key `sidebar_collapsed` and restored on page load
 
-#### 2. Cache-busting across all logo references
-Create a helper variable `$logoVersion` based on `logo_updated_at` and append `?v=$logoVersion` to all logo URLs.
+**CSS changes:**
+- Add `.sidebar.collapsed` styles: `width: 70px`, hide text labels, center icons, shrink brand area
+- `.main-content` margin-left transitions to match sidebar width
+- Collapse toggle button styled as a small circular button
 
-**Files affected:**
-- `includes/public-navbar.php` -- update `$logoPath` usage to append `?v=`
-- `includes/public-footer.php` -- same
-- `includes/header.php` -- admin sidebar logo gets `?v=`
-- All 7 public pages (`index.php`, `about.php`, etc.) -- set `$logoVersion` when constructing `$logoPath`
+### 2. Admin Profile Dropdown (Top Right Header)
 
-#### 3. Update logo display sizes per spec
+**Replace** the current simple dropdown with a premium version:
+- **Avatar**: Circular div with user initials (first letter of first + last name), colored background
+- **Green dot**: Online status indicator (absolute positioned)
+- **Dropdown menu** (Bootstrap 5 dropdown with custom styling):
+  - User name + role badge at top (non-clickable header)
+  - My Profile (links to settings)
+  - Change Password (links to settings with hash)
+  - System Settings (visible only to Super Admin, links to `/admin/settings.php`)
+  - Divider
+  - Switch Theme toggle (sun/moon icon, inline toggle)
+  - Divider
+  - Logout (red text)
+- Smooth animation via Bootstrap + custom CSS transitions
 
-| Location | Current | New |
-|----------|---------|-----|
-| Navbar desktop | `width: 160px` | `height: 42px; width: auto` |
-| Navbar mobile | `width: 120px` | `height: 34px; width: auto` |
-| Footer | `width: 140px` | `max-width: 120px; height: auto` |
-| Admin sidebar | `width: 140px` | `width: 64px; height: 64px; object-fit: contain` |
-| Favicon | manual upload | auto-generated 32x32 from logo |
+### 3. Dark / Light Theme System
 
-**CSS changes in `includes/public-navbar.php`:**
-- `.pn-logo-wrap img` changes from `width:160px;height:auto` to `height:42px;width:auto;max-width:200px`
-- Mobile media query changes from `width:120px!important` to `height:34px!important;width:auto!important`
+**Implementation:**
+- CSS variables approach: define `--bg-body`, `--bg-card`, `--text-primary`, `--text-muted`, `--border-color` etc. for both themes
+- `html[data-theme="dark"]` overrides all variables
+- Dark theme colors: body `#0f172a`, cards `#1e293b`, text `#e2e8f0`, borders `rgba(255,255,255,0.08)`
+- Light theme: current colors (body `#f1f5f9`, cards `#fff`, text `#334155`)
+- Toggle via JS: reads/writes `localStorage` key `admin_theme`, applies `data-theme` attribute on `<html>`
+- Theme icon in header (sun/moon) toggles on click
+- All existing elements updated to use CSS variables instead of hardcoded colors
 
-**CSS changes in `includes/public-footer.php`:**
-- Footer logo style changes to `max-width:120px;height:auto`
+**Elements themed:**
+- Body background, sidebar (already dark -- stays dark in both themes), top-bar, cards, tables, forms, badges, modals, alerts
 
-**CSS changes in `includes/header.php`:**
-- `.sidebar .brand img` changes to `width:64px;height:64px;object-fit:contain`
+### 4. Mobile Optimization
 
-#### 4. Auto-generate favicon from uploaded logo
-In `admin/settings.php`, after logo upload, use PHP GD library to create a 32x32 favicon PNG from the uploaded image and save it as `uploads/branding/favicon.png`. Also update `school_favicon` setting automatically.
-
-```php
-// Auto-generate favicon
-$srcImg = imagecreatefromstring(file_get_contents($uploadedPath));
-if ($srcImg) {
-    $favicon = imagecreatetruecolor(32, 32);
-    imagealphablending($favicon, false);
-    imagesavealpha($favicon, true);
-    imagecopyresampled($favicon, $srcImg, 0, 0, 0, 0, 32, 32, imagesx($srcImg), imagesy($srcImg));
-    @mkdir(__DIR__.'/../uploads/branding', 0755, true);
-    imagepng($favicon, __DIR__.'/../uploads/branding/favicon.png');
-    imagedestroy($favicon); imagedestroy($srcImg);
-    $db->prepare("INSERT INTO settings ... VALUES ('school_favicon','branding/favicon.png') ON DUPLICATE KEY UPDATE ...");
-}
-```
-
-#### 5. Store logo in `/uploads/branding/` directory
-Change upload destination from `uploads/logo/` to `uploads/branding/` for new uploads. Keep backward compatibility by checking both paths.
-
-Update the `$logoPath` construction in all pages:
-```php
-$navLogo = getSetting('school_logo', '');
-$logoVersion = getSetting('logo_updated_at', '0');
-if ($navLogo) {
-    // Support both old (uploads/logo/) and new (uploads/branding/) paths
-    $logoPath = (strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/branding/' . $navLogo;
-    $logoPath .= '?v=' . $logoVersion;
-}
-```
-
-#### 6. Dynamic favicon in HTML head
-All pages with `<link rel="icon">` will use the database favicon path with cache-busting:
-```php
-$favicon = getSetting('school_favicon', '');
-$favVer = getSetting('favicon_updated_at', '0');
-if ($favicon):
-    $favPath = (strpos($favicon, '/') === 0) ? $favicon : '/uploads/branding/' . $favicon;
-?>
-<link rel="icon" href="<?= e($favPath) ?>?v=<?= e($favVer) ?>">
-<?php endif; ?>
-```
-
-#### 7. Admin Settings UI improvements
-In `admin/settings.php`:
-- Add "Last updated: [timestamp]" below logo preview
-- Add "Clear Cache and Refresh Logo" button (JS that appends random `?v=` and reloads)
-- Update preview sizes to match new specs (42px navbar, 64px sidebar, 120px footer, 32px favicon)
-- Add file validation: minimum 160px width, accepted types only
-- Show success toast after upload
-
-#### 8. Super Admin permission check
-The logo upload handler already requires `requireAdmin()`. Add an explicit `isSuperAdmin()` check:
-```php
-if ($action === 'logo_upload') {
-    if (!isSuperAdmin()) { setFlash('error', 'Only Super Admin can change the logo.'); }
-    else { /* existing upload logic */ }
-}
-```
+- Sidebar overlay behavior stays the same (slide in/out)
+- Collapsed state disabled on mobile (always use full overlay sidebar)
+- Profile dropdown works as normal on mobile
+- Theme toggle accessible from both header icon and dropdown
 
 ### Files Modified
 
 | File | Changes |
 |------|---------|
-| `php-backend/admin/settings.php` | Logo upload to branding dir, auto-favicon, logo_updated_at, Super Admin check, updated preview UI, cache-clear button, last-updated display |
-| `php-backend/includes/public-navbar.php` | Logo size 42px height (34px mobile), cache-bust `?v=` on logo src |
-| `php-backend/includes/public-footer.php` | Logo max-width 120px, cache-bust `?v=` |
-| `php-backend/includes/header.php` | Sidebar logo 64x64, cache-bust `?v=` |
-| `php-backend/index.php` | `$logoPath` uses branding dir + `?v=` version, dynamic favicon |
-| `php-backend/public/about.php` | Same logo path + version update |
-| `php-backend/public/teachers.php` | Same |
-| `php-backend/public/notifications.php` | Same |
-| `php-backend/public/events.php` | Same |
-| `php-backend/public/gallery.php` | Same |
-| `php-backend/public/admission-form.php` | Same |
+| `php-backend/includes/header.php` | Add collapsible sidebar logic, premium profile dropdown, theme system CSS variables, theme toggle button, collapse toggle button, tooltip initialization |
+| `php-backend/includes/footer.php` | Add JS for sidebar collapse persistence, theme persistence, tooltip init, clock update |
+
+### Technical Details
+
+**Sidebar collapse CSS:**
+```css
+.sidebar { width: var(--sidebar-width); transition: width 0.3s ease; }
+.sidebar.collapsed { width: 70px; }
+.sidebar.collapsed .brand h5,
+.sidebar.collapsed .brand small,
+.sidebar.collapsed .nav-section-title,
+.sidebar.collapsed .nav-link span { display: none; }
+.sidebar.collapsed .nav-link { justify-content: center; padding: 0.7rem; }
+.sidebar.collapsed .nav-link i { margin: 0; font-size: 1.2rem; }
+.sidebar.collapsed .brand img { width: 40px; height: 40px; }
+.main-content { margin-left: var(--sidebar-width); transition: margin-left 0.3s ease; }
+.sidebar.collapsed ~ .main-content { margin-left: 70px; }
+```
+
+**Theme variables:**
+```css
+:root { --bg-body: #f1f5f9; --bg-card: #fff; --text-primary: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0; --bg-topbar: #fff; }
+html[data-theme="dark"] { --bg-body: #0f172a; --bg-card: #1e293b; --text-primary: #e2e8f0; --text-muted: #94a3b8; --border-color: rgba(255,255,255,0.08); --bg-topbar: #1e293b; }
+```
+
+**Profile dropdown HTML:**
+```html
+<div class="dropdown">
+    <button class="profile-avatar-btn" data-bs-toggle="dropdown">
+        <div class="avatar-circle">AB</div>
+        <span class="online-dot"></span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end profile-dropdown">
+        <div class="dropdown-header">Admin Name <span class="badge">Super Admin</span></div>
+        <a class="dropdown-item"><i class="bi bi-person"></i> My Profile</a>
+        <a class="dropdown-item"><i class="bi bi-key"></i> Change Password</a>
+        <!-- Super Admin only -->
+        <a class="dropdown-item"><i class="bi bi-gear"></i> System Settings</a>
+        <hr>
+        <div class="dropdown-item theme-switch">
+            <i class="bi bi-moon"></i> Dark Mode <toggle>
+        </div>
+        <hr>
+        <a class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </div>
+</div>
+```
+
+**JS persistence (in footer.php):**
+```javascript
+// Theme
+const savedTheme = localStorage.getItem('admin_theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
+// Sidebar collapse
+const collapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+if (collapsed) document.getElementById('sidebar')?.classList.add('collapsed');
+
+function toggleCollapse() {
+    const sb = document.getElementById('sidebar');
+    sb.classList.toggle('collapsed');
+    localStorage.setItem('sidebar_collapsed', sb.classList.contains('collapsed'));
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('admin_theme', next);
+}
+```
 
 ### Implementation Order
-1. Update `admin/settings.php` -- new upload logic, branding dir, auto-favicon, timestamps, UI
-2. Update `includes/public-navbar.php` -- new sizes + cache-bust
-3. Update `includes/public-footer.php` -- new size + cache-bust
-4. Update `includes/header.php` -- sidebar logo size + cache-bust
-5. Update all 7 public pages -- logo path construction with version
+1. Update `header.php` -- add CSS variables for theming, collapsible sidebar styles, profile dropdown markup, theme toggle button, collapse toggle button
+2. Update `footer.php` -- add JS for theme persistence, sidebar collapse persistence, tooltip initialization
+3. Wrap all nav-link text in `<span>` tags for hide/show on collapse
+4. Update all color references to use CSS variables
 
