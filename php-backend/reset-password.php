@@ -7,8 +7,9 @@ $token = $_GET['token'] ?? $_POST['token'] ?? '';
 
 if ($token) {
     $db = getDB();
-    $stmt = $db->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW() AND is_active = 1");
-    $stmt->execute([$token]);
+    $now = date('Y-m-d H:i:s');
+    $stmt = $db->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > ? AND is_active = 1");
+    $stmt->execute([$token, $now]);
     $user = $stmt->fetch();
     if ($user) $validToken = true;
     else $error = 'Invalid or expired reset link. Please request a new one.';
