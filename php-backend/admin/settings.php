@@ -201,6 +201,24 @@ if($action==='popup_ad'){
   auditLog('update_popup_ad','settings');setFlash('success','Popup ad settings updated.');
 }
 
+if($action==='smtp_settings'&&isSuperAdmin()){
+  foreach(['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_encryption'] as $k){
+    $v=trim($_POST[$k]??'');
+    $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
+  }
+  auditLog('update_smtp','settings');setFlash('success','SMTP email settings updated.');
+}
+
+if($action==='test_email'&&isSuperAdmin()){
+  require_once __DIR__.'/../config/mail.php';
+  $adminEmail=$_SESSION['user_email']??'';
+  if($adminEmail){
+    $ok=sendMail($adminEmail,'Test Email from JNV School','<h2>SMTP Test</h2><p>If you received this email, your SMTP configuration is working correctly.</p><p>Sent at: '.date('d M Y, h:i:s A').'</p>');
+    if($ok) setFlash('success','Test email sent to '.$adminEmail.'.');
+    else setFlash('error','Failed to send test email. Check SMTP credentials.');
+  }else setFlash('error','No email found for current user.');
+}
+
 if($action==='feature_access'&&isSuperAdmin()){
   $features=['feature_admissions','feature_gallery','feature_events','feature_slider','feature_notifications','feature_reports','feature_audit_logs'];
   foreach($features as $k){
@@ -268,6 +286,13 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
       <i class="bi bi-megaphone"></i><span class="d-none d-md-inline">Popup Ad</span>
     </button>
   </li>
+  <?php if(isSuperAdmin()):?>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link d-flex align-items-center gap-2 rounded-pill px-3 py-2" id="email-tab" data-bs-toggle="pill" data-bs-target="#tab-email" type="button" role="tab">
+      <i class="bi bi-envelope"></i><span class="d-none d-md-inline">Email</span>
+    </button>
+  </li>
+  <?php endif;?>
   <li class="nav-item" role="presentation">
     <button class="nav-link d-flex align-items-center gap-2 rounded-pill px-3 py-2" id="users-tab" data-bs-toggle="pill" data-bs-target="#tab-users" type="button" role="tab">
       <i class="bi bi-people"></i><span class="d-none d-md-inline">Users</span>
@@ -791,6 +816,77 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
     </div>
   </div>
 </div>
+
+<!-- ========== EMAIL / SMTP TAB ========== -->
+<?php if(isSuperAdmin()):?>
+<div class="tab-pane fade" id="tab-email" role="tabpanel">
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card border-0 rounded-3">
+        <div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-envelope me-2"></i>SMTP Email Configuration <span class="badge bg-warning text-dark ms-2" style="font-size:.6rem">Super Admin</span></h6></div>
+        <div class="card-body">
+          <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="smtp_settings">
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label fw-semibold" style="font-size:.8rem">SMTP Host</label>
+                <input type="text" name="smtp_host" class="form-control form-control-sm" value="<?=e($s['smtp_host']??'mail.awayindia.com')?>" placeholder="mail.example.com">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold" style="font-size:.8rem">SMTP Port</label>
+                <input type="number" name="smtp_port" class="form-control form-control-sm" value="<?=e($s['smtp_port']??'465')?>" placeholder="465">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold" style="font-size:.8rem">SMTP Username</label>
+                <input type="text" name="smtp_user" class="form-control form-control-sm" value="<?=e($s['smtp_user']??'noreply@jnvschool.awayindia.com')?>" placeholder="noreply@example.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold" style="font-size:.8rem">SMTP Password</label>
+                <div class="input-group input-group-sm">
+                  <input type="password" name="smtp_pass" id="smtpPassInput" class="form-control form-control-sm" value="<?=e($s['smtp_pass']??'')?>" placeholder="Enter SMTP password">
+                  <button type="button" class="btn btn-outline-secondary" onclick="var i=document.getElementById('smtpPassInput');i.type=i.type==='password'?'text':'password';this.innerHTML=i.type==='password'?'<i class=\'bi bi-eye\'></i>':'<i class=\'bi bi-eye-slash\'></i>';"><i class="bi bi-eye"></i></button>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold" style="font-size:.8rem">Sender Name</label>
+                <input type="text" name="smtp_from_name" class="form-control form-control-sm" value="<?=e($s['smtp_from_name']??'JNV School')?>" placeholder="School Name">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold" style="font-size:.8rem">Encryption</label>
+                <select name="smtp_encryption" class="form-select form-select-sm">
+                  <option value="ssl" <?=($s['smtp_encryption']??'ssl')==='ssl'?'selected':''?>>SSL</option>
+                  <option value="tls" <?=($s['smtp_encryption']??'')==='tls'?'selected':''?>>TLS</option>
+                  <option value="" <?=($s['smtp_encryption']??'ssl')===''?'selected':''?>>None</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm mt-3 w-100"><i class="bi bi-save me-1"></i>Save Email Settings</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 rounded-3">
+        <div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-send me-2"></i>Test Email</h6></div>
+        <div class="card-body">
+          <p class="text-muted" style="font-size:.8rem">Send a test email to <strong><?=e($_SESSION['user_email']??'your email')?></strong> to verify the SMTP configuration works correctly.</p>
+          <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="test_email">
+            <button class="btn btn-outline-success btn-sm w-100" onclick="return confirm('Send test email to <?=e($_SESSION['user_email']??'')?>?')"><i class="bi bi-envelope-check me-1"></i>Send Test Email</button>
+          </form>
+          <div class="mt-3 p-2 bg-light rounded-3">
+            <small class="text-muted" style="font-size:.7rem">
+              <i class="bi bi-info-circle me-1"></i><strong>Tips:</strong><br>
+              • For cPanel hosting, use <code>mail.yourdomain.com</code> as SMTP host<br>
+              • Port 465 uses SSL, Port 587 uses TLS<br>
+              • The username is usually the full email address<br>
+              • Make sure the email account exists in cPanel → Email Accounts
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif;?>
 
 <!-- ========== USERS TAB ========== -->
 <div class="tab-pane fade" id="tab-users" role="tabpanel">
