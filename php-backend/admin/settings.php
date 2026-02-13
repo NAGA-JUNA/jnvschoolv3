@@ -211,12 +211,18 @@ if($action==='smtp_settings'&&isSuperAdmin()){
 
 if($action==='test_email'&&isSuperAdmin()){
   require_once __DIR__.'/../config/mail.php';
-  $adminEmail=$_SESSION['user_email']??'';
-  if($adminEmail){
-    $ok=sendMail($adminEmail,'Test Email from JNV School','<h2>SMTP Test</h2><p>If you received this email, your SMTP configuration is working correctly.</p><p>Sent at: '.date('d M Y, h:i:s A').'</p>');
-    if($ok) setFlash('success','Test email sent to '.$adminEmail.'.');
+  $customEmail=trim($_POST['test_email_recipient']??'');
+  if($customEmail!==''){
+    if(!filter_var($customEmail,FILTER_VALIDATE_EMAIL)){setFlash('error','Invalid email address provided.');header('Location:settings.php');exit;}
+    $recipient=$customEmail;
+  }else{
+    $recipient=$_SESSION['user_email']??'';
+  }
+  if($recipient){
+    $ok=sendMail($recipient,'Test Email from JNV School','<h2>SMTP Test</h2><p>If you received this email, your SMTP configuration is working correctly.</p><p>Sent at: '.date('d M Y, h:i:s A').'</p>');
+    if($ok) setFlash('success','Test email sent to '.$recipient.'.');
     else setFlash('error','Failed to send test email. Check SMTP credentials.');
-  }else setFlash('error','No email found for current user.');
+  }else setFlash('error','No email address provided.');
 }
 
 if($action==='feature_access'&&isSuperAdmin()){
@@ -868,9 +874,13 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
       <div class="card border-0 rounded-3">
         <div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-send me-2"></i>Test Email</h6></div>
         <div class="card-body">
-          <p class="text-muted" style="font-size:.8rem">Send a test email to <strong><?=e($_SESSION['user_email']??'your email')?></strong> to verify the SMTP configuration works correctly.</p>
-          <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="test_email">
-            <button class="btn btn-outline-success btn-sm w-100" onclick="return confirm('Send test email to <?=e($_SESSION['user_email']??'')?>?')"><i class="bi bi-envelope-check me-1"></i>Send Test Email</button>
+          <p class="text-muted" style="font-size:.8rem">Send a test email to verify the SMTP configuration works correctly.</p>
+          <form method="POST" id="testEmailForm"><?=csrfField()?><input type="hidden" name="form_action" value="test_email">
+            <div class="mb-2">
+              <label class="form-label" style="font-size:.8rem;font-weight:600">Test Email Recipient</label>
+              <input type="email" name="test_email_recipient" class="form-control form-control-sm" placeholder="<?=e($_SESSION['user_email']??'Enter email address')?>" value="">
+            </div>
+            <button class="btn btn-outline-success btn-sm w-100" onclick="var em=document.querySelector('[name=test_email_recipient]').value||'<?=e($_SESSION['user_email']??'')?>'; return confirm('Send test email to '+em+'?')"><i class="bi bi-envelope-check me-1"></i>Send Test Email</button>
           </form>
           <div class="mt-3 p-2 bg-light rounded-3">
             <small class="text-muted" style="font-size:.7rem">
