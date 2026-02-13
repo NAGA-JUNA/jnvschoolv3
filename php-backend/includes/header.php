@@ -868,6 +868,9 @@ try {
                 <a href="/admin/slider.php" class="nav-link <?= navActive('/admin/slider') ?>" data-bs-title="Slider"><i class="bi bi-collection-play"></i> <span>Home Slider</span></a>
             </div>
             <?php endif; ?>
+            <div class="nav-item">
+                <a href="/admin/certificates.php" class="nav-link <?= navActive('/admin/certificates') ?>" data-bs-title="Certificates"><i class="bi bi-award"></i> <span>Certificates</span></a>
+            </div>
         </div>
 
         <div class="nav-group">

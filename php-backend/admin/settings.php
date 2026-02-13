@@ -249,6 +249,16 @@ if($action==='delete_user'&&isSuperAdmin()){$uid=(int)($_POST['delete_user_id']?
 
 if($action==='clear_audit_logs'&&isSuperAdmin()){$db->exec("DELETE FROM audit_logs");auditLog('clear_audit_logs','system');setFlash('success','Audit logs cleared.');}
 
+if($action==='certificate_settings'){
+  foreach(['home_certificates_show','certificates_page_enabled'] as $k){
+    $v=isset($_POST[$k])?'1':'0';
+    $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);
+  }
+  $maxVal=max(1,min(12,(int)($_POST['home_certificates_max']??6)));
+  $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('home_certificates_max',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$maxVal,$maxVal]);
+  auditLog('update_certificate_settings','settings');setFlash('success','Certificate settings updated.');
+}
+
 header('Location: /admin/settings.php');exit;}
 
 $settings=[];$stmt=$db->query("SELECT setting_key,setting_value FROM settings");while($r=$stmt->fetch())$settings[$r['setting_key']]=$r['setting_value'];
@@ -763,6 +773,42 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
     <?php endfor; ?>
     <div class="col-12"><button class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save Core Values</button></div>
     </div></form>
+  </div></div>
+
+  <!-- Certificates Settings -->
+  <div class="card border-0 rounded-3 mt-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-award me-2"></i>Certificates & Accreditations</h6></div><div class="card-body">
+    <p class="text-muted mb-3" style="font-size:.8rem">Control how certificates appear on the Home page and public site.</p>
+    <form method="POST"><?=csrfField()?><input type="hidden" name="form_action" value="certificate_settings">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="d-flex align-items-center justify-content-between bg-light rounded-3 p-3">
+          <div>
+            <div class="fw-semibold" style="font-size:.85rem">Show on Home Page</div>
+            <small class="text-muted" style="font-size:.7rem">Featured certificates section</small>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" name="home_certificates_show" <?=($s['home_certificates_show']??'1')==='1'?'checked':''?> style="width:2.5em;height:1.25em;">
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex align-items-center justify-content-between bg-light rounded-3 p-3">
+          <div>
+            <div class="fw-semibold" style="font-size:.85rem">Public Certificates Page</div>
+            <small class="text-muted" style="font-size:.7rem">Enable /certificates.php</small>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" name="certificates_page_enabled" <?=($s['certificates_page_enabled']??'1')==='1'?'checked':''?> style="width:2.5em;height:1.25em;">
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.85rem">Max on Home Page</label>
+        <input type="number" name="home_certificates_max" class="form-control form-control-sm" value="<?=e($s['home_certificates_max']??'6')?>" min="1" max="12">
+      </div>
+      <div class="col-12"><button class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save Certificate Settings</button></div>
+    </div>
+    </form>
   </div></div>
 </div>
 
