@@ -76,7 +76,7 @@ require_once __DIR__.'/../includes/header.php';
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-white fw-semibold"><i class="bi bi-lightning-fill text-warning me-2"></i>Quick Actions</div>
+            <div class="card-header fw-semibold"><i class="bi bi-lightning-fill text-warning me-2"></i>Quick Actions</div>
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2">
                     <a href="/teacher/attendance.php" class="btn btn-outline-primary btn-sm"><i class="bi bi-check2-square me-1"></i>Mark Attendance</a>
@@ -89,7 +89,7 @@ require_once __DIR__.'/../includes/header.php';
     </div>
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-white fw-semibold"><i class="bi bi-clock-history text-primary me-2"></i>Recent Submissions</div>
+            <div class="card-header fw-semibold"><i class="bi bi-clock-history me-2" style="color:var(--brand-primary)"></i>Recent Submissions</div>
             <div class="card-body p-0">
                 <?php if (empty($recentNotifs)): ?>
                     <p class="text-muted p-3 mb-0">No submissions yet.</p>

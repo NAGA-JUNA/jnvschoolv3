@@ -71,7 +71,7 @@ require_once __DIR__.'/../includes/header.php';
 
 <!-- Student Profile Modal -->
 <div class="modal fade" id="studentModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content border-0 rounded-3">
-  <div class="modal-header border-0 bg-primary bg-opacity-10">
+  <div class="modal-header border-0" style="background:var(--brand-primary-light)">
     <div class="d-flex align-items-center gap-3">
       <div id="sm-photo-wrap">
         <i class="bi bi-person-circle text-primary" style="font-size:3rem" id="sm-avatar-icon"></i>
@@ -88,7 +88,7 @@ require_once __DIR__.'/../includes/header.php';
   <div class="modal-body">
     <div class="row g-4">
       <div class="col-md-6">
-        <h6 class="fw-semibold text-primary mb-3"><i class="bi bi-person me-2"></i>Personal Info</h6>
+        <h6 class="fw-semibold mb-3" style="color:var(--brand-primary)"><i class="bi bi-person me-2"></i>Personal Info</h6>
         <table class="table table-sm table-borderless mb-0">
           <tr><td class="text-muted" style="width:40%">Father's Name</td><td class="fw-medium" id="sm-father_name"></td></tr>
           <tr><td class="text-muted">Mother's Name</td><td class="fw-medium" id="sm-mother_name"></td></tr>
@@ -100,13 +100,13 @@ require_once __DIR__.'/../includes/header.php';
         </table>
       </div>
       <div class="col-md-6">
-        <h6 class="fw-semibold text-primary mb-3"><i class="bi bi-mortarboard me-2"></i>Academic Info</h6>
+        <h6 class="fw-semibold mb-3" style="color:var(--brand-primary)"><i class="bi bi-mortarboard me-2"></i>Academic Info</h6>
         <table class="table table-sm table-borderless mb-0">
           <tr><td class="text-muted" style="width:40%">Class</td><td class="fw-medium" id="sm-class"></td></tr>
           <tr><td class="text-muted">Roll No</td><td class="fw-medium" id="sm-roll_no"></td></tr>
           <tr><td class="text-muted">Admission Date</td><td class="fw-medium" id="sm-admission_date"></td></tr>
         </table>
-        <h6 class="fw-semibold text-primary mb-3 mt-4"><i class="bi bi-telephone me-2"></i>Contact</h6>
+        <h6 class="fw-semibold mb-3 mt-4" style="color:var(--brand-primary)"><i class="bi bi-telephone me-2"></i>Contact</h6>
         <table class="table table-sm table-borderless mb-0">
           <tr><td class="text-muted" style="width:40%">Phone</td><td class="fw-medium" id="sm-phone"></td></tr>
           <tr><td class="text-muted">Email</td><td class="fw-medium" id="sm-email"></td></tr>

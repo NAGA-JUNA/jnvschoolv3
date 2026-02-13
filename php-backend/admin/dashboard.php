@@ -47,7 +47,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="d-flex align-items-center gap-3">
                         <div class="kpi-icon bg-<?= $k[3] ?>-subtle text-<?= $k[3] ?>"><i class="bi <?= $k[2] ?>"></i></div>
                         <div>
-                            <div class="fs-3 fw-bold text-dark"><?= $k[1] ?></div>
+                            <div class="fs-3 fw-bold"><?= $k[1] ?></div>
                             <div class="text-muted" style="font-size:.75rem"><?= $k[0] ?></div>
                         </div>
                     </div>
@@ -60,14 +60,14 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
-        <div class="card border-0 rounded-3">
-            <div class="card-header bg-white border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>Monthly Trends (<?= $year ?>)</h6></div>
+        <div class="card border-0">
+            <div class="card-header border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-bar-chart-line-fill me-2" style="color:var(--brand-primary)"></i>Monthly Trends (<?= $year ?>)</h6></div>
             <div class="card-body"><canvas id="trendChart" height="260"></canvas></div>
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="card border-0 rounded-3 mb-3">
-            <div class="card-header bg-white border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-lightning-fill me-2 text-warning"></i>Quick Actions</h6></div>
+        <div class="card border-0 mb-3">
+            <div class="card-header border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-lightning-fill me-2 text-warning"></i>Quick Actions</h6></div>
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <a href="/admin/student-form.php" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-plus-circle me-2"></i>Add Student</a>
@@ -77,20 +77,20 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
         </div>
-        <div class="card border-0 rounded-3">
-            <div class="card-header bg-white border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Upcoming Events</h6></div>
+        <div class="card border-0">
+            <div class="card-header border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-calendar3 me-2" style="color:var(--brand-primary)"></i>Upcoming Events</h6></div>
             <div class="card-body p-2">
                 <?php if (empty($events)): ?>
                     <p class="text-muted text-center py-3 mb-0" style="font-size:.85rem">No upcoming events</p>
                 <?php else: foreach ($events as $ev): ?>
-                    <div class="d-flex align-items-center gap-2 p-2 rounded" style="border-bottom:1px solid #f1f5f9">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded" style="border-bottom:1px solid var(--border-color)">
                         <div class="text-center" style="min-width:40px">
-                            <div class="fw-bold text-primary" style="font-size:1.1rem"><?= date('d', strtotime($ev['event_date'])) ?></div>
-                            <div style="font-size:.65rem;color:#94a3b8"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                            <div class="fw-bold" style="font-size:1.1rem;color:var(--brand-primary)"><?= date('d', strtotime($ev['event_date'])) ?></div>
+                            <div style="font-size:.65rem;color:var(--text-muted)"><?= date('M', strtotime($ev['event_date'])) ?></div>
                         </div>
                         <div>
                             <div class="fw-medium" style="font-size:.85rem"><?= e($ev['title']) ?></div>
-                            <?php if($ev['location']): ?><div style="font-size:.7rem;color:#94a3b8"><i class="bi bi-geo-alt me-1"></i><?= e($ev['location']) ?></div><?php endif; ?>
+                            <?php if($ev['location']): ?><div style="font-size:.7rem;color:var(--text-muted)"><i class="bi bi-geo-alt me-1"></i><?= e($ev['location']) ?></div><?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; endif; ?>
@@ -99,22 +99,22 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<div class="card border-0 rounded-3">
-    <div class="card-header bg-white border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-clock-history me-2 text-secondary"></i>Recent Activity</h6></div>
+<div class="card border-0">
+    <div class="card-header border-0 pb-0"><h6 class="fw-semibold mb-0"><i class="bi bi-clock-history me-2 text-secondary"></i>Recent Activity</h6></div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
-                <thead class="table-light"><tr><th>User</th><th>Action</th><th>Entity</th><th>Details</th><th>Time</th></tr></thead>
+                <thead><tr><th>User</th><th>Action</th><th>Entity</th><th>Details</th><th>Time</th></tr></thead>
                 <tbody>
                 <?php if (empty($recentLogs)): ?>
                     <tr><td colspan="5" class="text-center text-muted py-4">No activity recorded yet</td></tr>
                 <?php else: foreach ($recentLogs as $log): ?>
                     <tr>
                         <td style="font-size:.85rem"><?= e($log['user_name'] ?? 'System') ?></td>
-                        <td><span class="badge bg-light text-dark"><?= e($log['action']) ?></span></td>
+                        <td><span class="badge bg-light" style="color:var(--text-primary)"><?= e($log['action']) ?></span></td>
                         <td style="font-size:.85rem"><?= e($log['entity_type'] ?? '-') ?></td>
                         <td style="font-size:.8rem;max-width:200px" class="text-truncate"><?= e($log['details'] ?? '-') ?></td>
-                        <td style="font-size:.8rem;color:#94a3b8"><?= date('M d, H:i', strtotime($log['created_at'])) ?></td>
+                        <td style="font-size:.8rem;color:var(--text-muted)"><?= date('M d, H:i', strtotime($log['created_at'])) ?></td>
                     </tr>
                 <?php endforeach; endif; ?>
                 </tbody>
@@ -127,6 +127,10 @@ require_once __DIR__ . '/../includes/header.php';
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('trendChart')?.getContext('2d');
     if (!ctx) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9';
+    const tickColor = isDark ? '#9ca3af' : '#64748b';
+    const legendColor = isDark ? '#e5e5e5' : '#374151';
     new Chart(ctx, {
         type: 'bar',
         data: {
@@ -142,11 +146,11 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, color: legendColor } } },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Admissions' }, grid: { color: '#f1f5f9' } },
-                y1: { position: 'right', beginAtZero: true, max: 100, title: { display: true, text: 'Attendance %' }, grid: { display: false } },
-                x: { grid: { display: false } }
+                y: { beginAtZero: true, title: { display: true, text: 'Admissions', color: tickColor }, grid: { color: gridColor }, ticks: { color: tickColor } },
+                y1: { position: 'right', beginAtZero: true, max: 100, title: { display: true, text: 'Attendance %', color: tickColor }, grid: { display: false }, ticks: { color: tickColor } },
+                x: { grid: { display: false }, ticks: { color: tickColor } }
             }
         }
     });
