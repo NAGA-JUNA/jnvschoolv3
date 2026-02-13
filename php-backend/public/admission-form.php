@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $stmt = $db->prepare("INSERT INTO admissions (student_name, date_of_birth, gender, class_applied, father_name, mother_name, phone, email, address, previous_school, remarks, document_path, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
+        $stmt = $db->prepare("INSERT INTO admissions (student_name, dob, gender, class_applied, father_name, mother_name, phone, email, address, previous_school, remarks, documents, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
         $stmt->execute([$studentName, $dob, $gender, $classApplied, $fatherName, $motherName, $phone, $email ?: null, $address, $previousSchool, $remarks, $docPath]);
         auditLog('public_admission_submit', 'admission', (int)$db->lastInsertId(), "Student: $studentName, Class: $classApplied");
         $success = true;
