@@ -6,7 +6,9 @@ $schoolTagline = getSetting('school_tagline', 'Nurturing Talent, Shaping Future'
 $schoolEmail = getSetting('school_email', '');
 $schoolPhone = getSetting('school_phone', '');
 $navLogo = getSetting('school_logo', '');
-$logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
+$logoVersion = getSetting('logo_updated_at', '0');
+$logoPath = '';
+if ($navLogo) { $logoPath = (strpos($navLogo, '/uploads/') === 0) ? $navLogo : (file_exists(__DIR__.'/../uploads/branding/'.$navLogo) ? '/uploads/branding/'.$navLogo : '/uploads/logo/'.$navLogo); $logoPath .= '?v=' . $logoVersion; }
 $whatsappNumber = getSetting('whatsapp_api_number', '');
 $schoolAddress = getSetting('school_address', '');
 $primaryColor = getSetting('primary_color', '#1e40af');
@@ -44,7 +46,7 @@ $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHER
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Our Teachers — <?= e($schoolName) ?></title>
     <meta name="description" content="Meet the dedicated educators at <?= e($schoolName) ?>. Our qualified and experienced teachers are committed to academic excellence.">
-    <?php $favicon = getSetting('school_favicon', ''); if ($favicon): ?><link rel="icon" href="/uploads/logo/<?= e($favicon) ?>"><?php endif; ?>
+    <?php $favicon = getSetting('school_favicon', ''); if ($favicon): $favVer = getSetting('favicon_updated_at', '0'); $favPath = (strpos($favicon, '/uploads/') === 0) ? $favicon : (file_exists(__DIR__.'/../uploads/branding/'.$favicon) ? '/uploads/branding/'.$favicon : '/uploads/logo/'.$favicon); ?><link rel="icon" href="<?= e($favPath) ?>?v=<?= e($favVer) ?>"><?php endif; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">

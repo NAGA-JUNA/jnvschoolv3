@@ -49,9 +49,14 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
 $popupAdActive = getSetting('popup_ad_active', '0');
 $popupAdImage = getSetting('popup_ad_image', '');
 
-// Nav logo
+// Nav logo with cache-busting
 $navLogo = getSetting('school_logo', '');
-$logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/uploads/logo/' . $navLogo;
+$logoVersion = getSetting('logo_updated_at', '0');
+$logoPath = '';
+if ($navLogo) {
+    $logoPath = (strpos($navLogo, '/uploads/') === 0) ? $navLogo : (file_exists(__DIR__.'/uploads/branding/'.$navLogo) ? '/uploads/branding/'.$navLogo : '/uploads/logo/'.$navLogo);
+    $logoPath .= '?v=' . $logoVersion;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,7 +65,7 @@ $logoPath = ($navLogo && strpos($navLogo, '/uploads/') === 0) ? $navLogo : '/upl
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($schoolName) ?> — <?= e($schoolTagline) ?></title>
     <meta name="description" content="<?= e($schoolName) ?> — <?= e($schoolTagline) ?>. Official school website for admissions, notifications, gallery, and events.">
-    <?php $favicon = getSetting('school_favicon', ''); if ($favicon): ?><link rel="icon" href="/uploads/logo/<?= e($favicon) ?>"><?php endif; ?>
+    <?php $favicon = getSetting('school_favicon', ''); $favVer = getSetting('favicon_updated_at', '0'); if ($favicon): $favPath = (strpos($favicon, '/uploads/') === 0) ? $favicon : (file_exists(__DIR__.'/uploads/branding/'.$favicon) ? '/uploads/branding/'.$favicon : '/uploads/logo/'.$favicon); ?><link rel="icon" href="<?= e($favPath) ?>?v=<?= e($favVer) ?>"><?php endif; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">

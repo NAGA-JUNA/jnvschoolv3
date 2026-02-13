@@ -90,7 +90,7 @@ function _navIsActive($url, $currentPage) {
 .pn-logo-wrap { display: flex; align-items: center; text-decoration: none; transition: transform 0.3s; }
 .pn-logo-wrap:hover { transform: scale(1.03); }
 .pn-logo-wrap img {
-    width: 160px; height: auto; border-radius: 8px; object-fit: contain;
+    height: 42px; width: auto; max-width: 200px; border-radius: 8px; object-fit: contain;
     background: #fff; padding: 4px; border: 2px solid rgba(255,255,255,0.25);
     transition: box-shadow 0.3s;
 }
@@ -228,7 +228,7 @@ function _navIsActive($url, $currentPage) {
     .pn-hamburger { display: inline-block; }
     .pn-desktop-nav { display: none !important; }
     .pn-mobile-bottom-cta { display: block; }
-    .pn-logo-wrap img { width: 120px !important; }
+    .pn-logo-wrap img { height: 34px !important; width: auto !important; }
     body { padding-bottom: 60px; }
 }
 @media (min-width: 992px) {
