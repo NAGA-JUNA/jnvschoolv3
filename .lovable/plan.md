@@ -1,168 +1,125 @@
 
 
-## Automatic Brand Color Extraction from School Logo
+## Redesign Admin Sidebar to Premium SaaS Style
 
 ### Overview
-When the Super Admin uploads a new logo, the system will automatically extract 2-3 dominant colors and apply them as CSS variables across the entire Admin Dashboard UI for both Light and Dark themes. Colors are saved in the database and can be manually overridden.
+Completely redesign the admin sidebar in `header.php` to match the reference image's modern, minimal SaaS aesthetic. The sidebar becomes a floating, rounded card with soft shadows, featuring a clean icon set, rounded active-state pills, notification badges, a bottom-docked theme switcher (Light/Dark toggle pill), a profile card, and a polished collapsed/mini mode.
 
-### How It Works
+### Key Visual Changes
 
-1. **On logo upload** (in `admin/settings.php`), PHP GD analyzes the image pixels to find the top 3 dominant colors, skipping white/transparent/near-white pixels
-2. Colors are saved as `brand_primary`, `brand_secondary`, `brand_accent` in the `settings` table
-3. `includes/header.php` reads these settings and injects them as CSS variables (`--brand-primary`, `--brand-secondary`, `--brand-accent`) plus auto-computed light/dark variants
-4. All UI elements (sidebar active state, buttons, avatar, badges, highlights) reference these brand variables instead of hardcoded values
+| Element | Current | New (matching reference) |
+|---------|---------|--------------------------|
+| Sidebar container | Full-height flush dark panel | Floating rounded card with `border-radius: 20px`, margin from edges, soft shadow |
+| Background (Light) | N/A (always dark) | Soft cream/white `#faf8f5` with subtle shadow |
+| Background (Dark) | `#0f172a` gradient | Deep charcoal `#1a1a1a` with soft warm glow |
+| Active menu item | Full-width colored background | Rounded pill highlight with brand-primary bg, bold text |
+| Menu icons | Bootstrap Icons inline | Same icons but softer weight, centered in collapsed mode |
+| Notification badges | None | Red circular counters (e.g., 24, 99+) aligned right on Activity/Notifications |
+| Section dividers | Uppercase tiny title | Thin line divider + collapsible group header with chevron |
+| Theme switcher | Header button + dropdown toggle | Bottom-docked pill toggle: `[Sun Light | Moon Dark]` segmented control |
+| Profile card | Only in top-bar dropdown | Sticky bottom card: avatar + name + role badge + logout button |
+| Collapsed mode | Narrow 70px strip | Floating mini sidebar with rounded icons, tooltips, avatar at bottom |
+| Logo | Square 64px with border | Circular avatar-style logo (56px) with subtle shadow |
 
-### File Changes
+### Detailed Changes
 
-#### 1. `php-backend/admin/settings.php`
-
-**Backend color extraction** (added after logo upload succeeds, ~line 25):
-
-```php
-// Extract dominant colors from logo using GD
-function extractDominantColors($imagePath, $count = 3) {
-    $img = imagecreatefromstring(file_get_contents($imagePath));
-    if (!$img) return [];
-    $w = imagesx($img); $h = imagesy($img);
-    // Sample pixels (resize to 50x50 for speed)
-    $sample = imagecreatetruecolor(50, 50);
-    imagecopyresampled($sample, $img, 0,0,0,0, 50,50, $w,$h);
-    imagedestroy($img);
-    $colors = [];
-    for ($y=0; $y<50; $y++) {
-        for ($x=0; $x<50; $x++) {
-            $rgb = imagecolorat($sample, $x, $y);
-            $r = ($rgb>>16)&0xFF; $g = ($rgb>>8)&0xFF; $b = $rgb&0xFF;
-            $a = ($rgb>>24)&0x7F;
-            // Skip transparent, white, near-white, near-black
-            if ($a > 60) continue;
-            $brightness = ($r*299 + $g*587 + $b*114) / 1000;
-            if ($brightness > 240 || $brightness < 15) continue;
-            // Quantize to reduce similar colors
-            $qr = round($r/32)*32; $qg = round($g/32)*32; $qb = round($b/32)*32;
-            $key = "$qr,$qg,$qb";
-            $colors[$key] = ($colors[$key] ?? 0) + 1;
-        }
-    }
-    imagedestroy($sample);
-    arsort($colors);
-    $result = [];
-    foreach (array_slice(array_keys($colors), 0, $count) as $c) {
-        list($r,$g,$b) = explode(',', $c);
-        $result[] = sprintf('#%02x%02x%02x', $r, $g, $b);
-    }
-    // If single-color logo, generate complementary colors
-    if (count($result) === 1) {
-        // Shift hue for secondary and accent
-        $result[] = adjustHue($result[0], 30);
-        $result[] = adjustHue($result[0], 180);
-    } elseif (count($result) === 2) {
-        $result[] = adjustHue($result[0], 180);
-    }
-    return $result;
+#### 1. Sidebar Container Styles
+```css
+.sidebar {
+    width: 260px;
+    margin: 16px;
+    height: calc(100vh - 32px);
+    border-radius: 20px;
+    background: var(--sidebar-bg);
+    box-shadow: var(--sidebar-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 ```
 
-After the logo upload saves successfully, call this function and store results:
-```php
-$extracted = extractDominantColors($uploadedPath);
-if (!empty($extracted)) {
-    foreach (['brand_primary','brand_secondary','brand_accent'] as $i => $key) {
-        $val = $extracted[$i] ?? $extracted[0];
-        $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")
-           ->execute([$key, $val, $val]);
-    }
-    $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('brand_colors_auto','1') ON DUPLICATE KEY UPDATE setting_value=?")->execute(['1','1']);
-}
-```
-
-**UI additions in the Appearance tab** (~after the color picker section):
-
-Add a "Brand Colors" card showing:
-- Three color swatches showing extracted primary/secondary/accent
-- "Re-extract from Logo" button (form with `form_action=reextract_colors`)
-- Manual override: three color input fields for primary/secondary/accent
-- "Auto" badge when colors are auto-extracted, "Custom" when manually overridden
-- "Reset to Auto" button to re-extract
-
-**New form handler** for `reextract_colors` action and `brand_colors_manual` action.
-
-#### 2. `php-backend/includes/header.php`
-
-**Read brand colors** (add after line 6):
-```php
-$brandPrimary = getSetting('brand_primary', '#1e40af');
-$brandSecondary = getSetting('brand_secondary', '#6366f1');
-$brandAccent = getSetting('brand_accent', '#f59e0b');
-```
-
-**Update CSS variables** in the `:root` block (replace hardcoded `--primary`):
+Light theme sidebar variables:
 ```css
 :root {
-    --brand-primary: <?= e($brandPrimary) ?>;
-    --brand-secondary: <?= e($brandSecondary) ?>;
-    --brand-accent: <?= e($brandAccent) ?>;
-    /* Light variants (softer) */
-    --brand-primary-light: <?= e($brandPrimary) ?>22;
-    --brand-secondary-light: <?= e($brandSecondary) ?>22;
-    --brand-accent-light: <?= e($brandAccent) ?>22;
-}
-html[data-theme="dark"] {
-    /* Brighter for dark mode contrast */
-    --brand-primary-light: <?= e($brandPrimary) ?>33;
-    --brand-secondary-light: <?= e($brandSecondary) ?>33;
-    --brand-accent-light: <?= e($brandAccent) ?>33;
+    --sidebar-bg: #faf8f5;
+    --sidebar-text: #1a1a1a;
+    --sidebar-text-muted: #9ca3af;
+    --sidebar-hover: rgba(0,0,0,0.04);
+    --sidebar-active-bg: var(--brand-primary);
+    --sidebar-active-text: #fff;
+    --sidebar-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --sidebar-border: rgba(0,0,0,0.06);
 }
 ```
 
-**Apply brand colors to UI elements:**
-
-| Element | Current | New |
-|---------|---------|-----|
-| Sidebar `.nav-link.active` | `var(--primary)` | `var(--brand-primary)` |
-| `.btn-primary` background | Bootstrap default | `var(--brand-primary)` |
-| `.avatar-circle` gradient | `var(--primary), #6366f1` | `var(--brand-primary), var(--brand-secondary)` |
-| `.collapse-toggle` background | `var(--primary)` | `var(--brand-primary)` |
-| `.online-dot` | `#22c55e` | `var(--brand-accent)` |
-| `.badge.bg-primary` | Bootstrap blue | `var(--brand-primary)` |
-| `.theme-switch-track` (dark active) | `var(--primary)` | `var(--brand-primary)` |
-| Form focus ring | `rgba(37,99,235,0.25)` | brand-primary with alpha |
-
-Add overrides:
+Dark theme sidebar variables:
 ```css
-.btn-primary { background: var(--brand-primary) !important; border-color: var(--brand-primary) !important; }
-.btn-primary:hover { filter: brightness(1.1); }
-.badge.bg-primary { background: var(--brand-primary) !important; }
-.nav-pills .nav-link.active { background: var(--brand-primary) !important; }
+html[data-theme="dark"] {
+    --sidebar-bg: #1a1a1a;
+    --sidebar-text: #e5e5e5;
+    --sidebar-text-muted: #6b7280;
+    --sidebar-hover: rgba(255,255,255,0.06);
+    --sidebar-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 60px rgba(var(--brand-primary-rgb),0.05);
+    --sidebar-border: rgba(255,255,255,0.08);
+}
 ```
 
-#### 3. `php-backend/includes/footer.php`
+#### 2. Logo Area (Top)
+- Circular logo avatar: `width: 56px; height: 56px; border-radius: 50%` with white background and subtle shadow
+- Collapse toggle button: small `>>` chevron icon, top-right of header area
+- In collapsed mode: logo shrinks to 40px circle, centered
 
-No changes needed -- existing theme persistence JS remains the same.
+#### 3. Navigation Items
+- Clean layout: `padding: 10px 16px; border-radius: 12px; margin: 2px 12px`
+- Active state: rounded pill with `background: var(--sidebar-active-bg)` and white text
+- Hover: subtle `background: var(--sidebar-hover)` with `border-radius: 12px`
+- Icons: `font-size: 1.15rem; width: 22px`
+- Notification badges: red circular pills aligned to the right of the item (for Notifications, Activity items)
 
-### Smart Color Rules
+#### 4. Section Groups
+- Collapsible section headers with chevron (like "Setting" in reference) using `<details>` or JS toggle
+- Thin divider line between sections
+- Sub-items with colored dots (red, green, gray, yellow) matching the reference for settings sub-menu
 
-- **Single-color logo**: Auto-generate secondary (hue +30 degrees) and accent (complementary hue +180 degrees) using HSL color math in PHP
-- **Too dark colors** (brightness below 30): Lighten by 20%
-- **Too light colors** (brightness above 220): Darken by 20%
-- **Contrast check**: Ensure text readability by computing relative luminance
+#### 5. Theme Switcher (Bottom-Docked)
+- Segmented control pill at bottom: `[Sun Light | Moon Dark]`
+- Active segment gets white background with shadow in light mode, dark-card bg in dark mode
+- Container: rounded pill with `background: var(--sidebar-hover)`
+- Replaces the header theme toggle button entirely (keep the dropdown toggle too for convenience)
 
-### Database Settings Added
+#### 6. Profile Card (Bottom-Docked)
+- Sticky at bottom of sidebar
+- Shows: circular avatar (initials), full name, email/role badge
+- "Log out" button with arrow icon below
+- In collapsed mode: just the avatar circle
 
-| Key | Example Value | Description |
-|-----|---------------|-------------|
-| `brand_primary` | `#1e40af` | Primary brand color |
-| `brand_secondary` | `#6366f1` | Secondary brand color |
-| `brand_accent` | `#f59e0b` | Accent color |
-| `brand_colors_auto` | `1` or `0` | Whether colors are auto-extracted |
+#### 7. Collapsed/Mini Mode
+- Width: `70px` with same `border-radius: 20px` and margin
+- Icons centered, no text
+- Tooltips on hover (existing behavior, kept)
+- Bottom: settings gear icon, avatar circle, logout icon (stacked vertically)
+- Active item: circular/square highlight instead of pill
 
-### Permissions
-- Only Super Admin can manually override brand colors (same `isSuperAdmin()` check as logo upload)
-- Auto-extraction happens automatically on any logo upload by Super Admin
+#### 8. Main Content Adjustment
+- `margin-left` accounts for sidebar width + margins (260px + 32px = 292px expanded, 70px + 32px = 102px collapsed)
+
+#### 9. Mobile
+- Sidebar slides in as overlay (existing behavior)
+- Full-width rounded card appearance maintained
+- Overlay backdrop click to close
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `php-backend/includes/header.php` | Complete sidebar CSS rewrite (styles section), updated sidebar HTML structure with new classes, profile card at bottom, theme switcher pill, notification badges, collapsible setting sections, circular logo |
+| `php-backend/includes/footer.php` | Updated JS for new theme switcher pill state sync, settings section toggle |
 
 ### Implementation Order
-1. Add color extraction function and form handlers to `admin/settings.php`
-2. Add Brand Colors UI card in the Appearance tab of `admin/settings.php`
-3. Update `includes/header.php` CSS variables to use brand colors
-4. Replace all hardcoded color references with brand CSS variables
+1. Rewrite all sidebar CSS in `header.php` `<style>` block with new variables and classes
+2. Restructure sidebar HTML: circular logo, nav items with badges, collapsible sections, bottom-docked theme switcher + profile card
+3. Update collapsed mode styles for mini floating sidebar look
+4. Update `footer.php` JS to handle theme pill toggle state and section collapse
+5. Adjust main-content margins for new sidebar dimensions
+6. Ensure mobile overlay still works with new rounded design
 
