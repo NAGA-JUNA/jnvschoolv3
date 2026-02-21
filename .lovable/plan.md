@@ -1,87 +1,106 @@
 
 
-## Admin Dashboard UI Enhancement
+## Add Fee Structure Module
 
 ### Overview
-Upgrade the sidebar brand section and top bar with a modern, premium design while keeping everything dynamic from Admin Settings.
+Add a complete Fee Structure management system with an admin CRUD page, two new database tables, and a public-facing display page -- all following the existing PHP + MySQL patterns exactly.
 
-### Changes (Single File: `php-backend/includes/header.php`)
+### Database Schema (2 New Tables)
 
----
+**Table 1: `fee_structures`** -- One row per class + academic year combination
 
-### 1. Sidebar Brand Section -- Center-Aligned Brand Card
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | INT UNSIGNED AUTO_INCREMENT | Primary key |
+| class | VARCHAR(20) | e.g. LKG, UKG, Class 1-10 |
+| academic_year | VARCHAR(20) | e.g. 2025-2026 |
+| is_visible | TINYINT(1) DEFAULT 1 | Toggle public visibility |
+| notes | TEXT | Optional remarks |
+| created_by | INT UNSIGNED | FK to users |
+| created_at / updated_at | DATETIME | Timestamps |
 
-**Current** (lines 960-975): Logo and text sit side-by-side with a collapse button.
+Unique constraint on (class, academic_year) to prevent duplicates.
 
-**New Design:**
-- Center the logo, school name, and tagline vertically stacked
-- Logo displayed larger (56px) with a subtle glow ring using brand colors
-- School Name in bold below logo
-- School Tagline (loaded from `school_tagline` setting) in smaller muted text
-- Wrapped in a subtle brand card with a faint gradient border
-- When collapsed: show only the logo (centered, 38px), hide text gracefully
+**Table 2: `fee_components`** -- Multiple rows per fee structure
 
-**Dynamic data:** Already loads `$schoolName` and `$schoolLogo` from settings. Will add `$schoolTagline = getSetting('school_tagline', 'Management System')` at line 3.
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | INT UNSIGNED AUTO_INCREMENT | Primary key |
+| fee_structure_id | INT UNSIGNED | FK to fee_structures |
+| component_name | VARCHAR(100) | e.g. "Tuition Fee", "Transport Fee" |
+| amount | DECIMAL(10,2) | Fee amount |
+| frequency | ENUM('one-time','monthly','quarterly','yearly') | Payment frequency |
+| is_optional | TINYINT(1) DEFAULT 0 | Mark optional fees |
+| display_order | INT DEFAULT 0 | Sort order |
 
----
+### New Files
 
-### 2. Top Bar -- Curved Highlight Card with Logo + Greeting
+| File | Purpose |
+|------|---------|
+| `php-backend/admin/fee-structure.php` | Admin CRUD page (create, edit, delete fee structures + components) |
+| `php-backend/public/fee-structure.php` | Public page with class/year selector and responsive fee table |
 
-**Current** (lines 1124-1133): Plain greeting text with breadcrumb, no logo.
+### Admin Page (`admin/fee-structure.php`)
 
-**New Design:**
-- Wrap the greeting area in a pill-shaped container with:
-  - Small logo (28px) on the left
-  - School short name + greeting text
-  - Rounded corners (50px radius), soft shadow
-  - Subtle brand-colored gradient background (very light tint)
-- Premium glassmorphism card feel
-- Responsive: stacks nicely on mobile
+Follows the exact same pattern as `admin/events.php`:
+- `requireAdmin()` + CSRF protection on all actions
+- Left panel: Form to add/edit a fee structure (select class, academic year, toggle visibility)
+- Below the form: Dynamic component builder -- add rows for each fee component (name, amount, frequency, optional toggle)
+- Right panel: Table listing all fee structures with edit/delete actions
+- Audit logging on create, update, delete
+- Custom component support: admin types any component name (not limited to presets)
+- Preset buttons for quick-add of standard components (Admission, Tuition, Transport, Books, Activity/Lab)
 
----
+### Public Page (`public/fee-structure.php`)
 
-### 3. CSS Enhancements
+Follows the same pattern as `public/certificates.php`:
+- Loads school branding from settings
+- Uses public-navbar.php and public-footer.php includes
+- Two dropdown filters: Class and Academic Year
+- Responsive table showing component name, amount, frequency
+- Total row at the bottom
+- Only shows structures where `is_visible = 1`
+- Print-friendly CSS via `@media print` rules
 
-- **Sidebar brand card**: New `.sidebar-brand-card` class with centered layout, gradient border accent, smooth transitions
-- **Collapsed state**: Logo-only mode with clean shrink animation
-- **Top bar highlight pill**: `.topbar-highlight-pill` with rounded corners, soft shadow, brand tint background
-- **Hover effects**: Enhanced nav-link hover with left-border accent slide-in animation
-- **Sidebar expand/collapse**: Smoother CSS transitions (already using cubic-bezier, will refine timing)
+### Sidebar Navigation
 
----
+Add a "Fee Structure" link in the admin sidebar under the "Main" nav group in `header.php` (after Admissions):
+```
+<a href="/admin/fee-structure.php" class="nav-link">
+  <i class="bi bi-cash-stack"></i> <span>Fee Structure</span>
+</a>
+```
 
-### 4. No Backend Changes Needed
+### Public Navbar
 
-The settings already support:
-- `school_name` -- loaded on line 3
-- `school_tagline` -- already saved in General Settings form (line 91)
-- `school_logo` -- loaded on line 4
-- `school_short_name` -- already saved in settings
-- `brand_primary/secondary/accent` -- loaded on lines 7-9
+Add "Fee Structure" to the default fallback menu items in `public-navbar.php`, and admin can also add it via Navigation Settings.
 
-All values are already stored in the `settings` table and rendered as CSS variables. Changes reflect immediately on next page load.
+### Schema Update
 
----
+Add the CREATE TABLE statements to `schema.sql` for documentation. For the live database, run the SQL directly in phpMyAdmin.
+
+### Optional Enhancements Included
+
+- **Print-friendly view**: `@media print` styles hide navbar/footer, format table cleanly
+- **Visibility toggle**: `is_visible` column lets admin hide/show fee structure on public site
+- **PDF export**: A "Print / Save as PDF" button using `window.print()` (browser-native, no libraries needed)
 
 ### Technical Details
 
-**File:** `php-backend/includes/header.php`
+- All queries use PDO prepared statements (SQL injection safe)
+- All forms include CSRF tokens via `csrfField()` / `verifyCsrf()`
+- Output escaped with `e()` helper
+- Audit logging via `auditLog()` on all mutations
+- No new dependencies -- pure PHP + HTML + CSS + vanilla JS
+- FileHandler not needed (no file uploads in this module)
 
-**PHP changes (top section, ~line 3):**
-- Add `$schoolTagline = getSetting('school_tagline', 'Excellence in Education');`
-- Add `$schoolShortName = getSetting('school_short_name', 'JNV');`
+### Files Modified / Created
 
-**CSS changes (~lines 156-420):**
-- Replace `.sidebar-header` styles with new `.sidebar-brand-card` centered layout
-- Add gradient border-bottom accent to brand card
-- Add `.topbar-highlight-pill` styles (pill shape, soft shadow, brand tint)
-- Enhance `.nav-link:hover` with sliding left-border accent animation
-- Update collapsed state rules for the new centered brand card layout
-- Add dark mode variants for all new styles
-
-**HTML changes:**
-- **Lines 960-975** (sidebar header): Restructure to vertically stack logo, name, tagline inside a centered brand card
-- **Lines 1124-1133** (top bar greeting): Wrap in a pill-shaped highlight container with small logo
-
-**No new files created. No new dependencies. Pure CSS + minimal PHP.**
+| File | Action |
+|------|--------|
+| `php-backend/admin/fee-structure.php` | **NEW** -- Admin CRUD page |
+| `php-backend/public/fee-structure.php` | **NEW** -- Public display page |
+| `php-backend/schema.sql` | **MODIFIED** -- Add fee_structures + fee_components tables |
+| `php-backend/includes/header.php` | **MODIFIED** -- Add sidebar nav link |
+| `php-backend/includes/public-navbar.php` | **MODIFIED** -- Add to default menu fallback |
 
