@@ -500,28 +500,74 @@ if (getSetting('home_certificates_show', '1') === '1'):
             <h4 style="font-family:'Playfair Display',serif;font-weight:700;font-size:2rem;color:#1a1a2e;">Our Certifications & Accreditations</h4>
             <p class="text-muted mt-2" style="max-width:600px;margin:0 auto;">Recognized and accredited by leading educational bodies and government authorities.</p>
         </div>
-        <div class="row g-4 justify-content-center">
-            <?php foreach ($featuredCerts as $fc):
-                $fcThumb = $fc['thumb_path'] ? '/' . $fc['thumb_path'] : ($fc['file_type']==='pdf' ? '' : '/' . $fc['file_path']);
-                $fcCatLabel = $certCategories[$fc['category']] ?? ucfirst($fc['category']);
-                $fcCatColor = $certBadgeColors[$fc['category']] ?? 'secondary';
-            ?>
-            <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                <div class="card border-0 shadow-sm h-100 text-center" style="border-radius:16px;overflow:hidden;transition:transform .3s,box-shadow .3s;cursor:pointer;" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 12px 30px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="window.certLightbox('<?= e('/' . $fc['file_path']) ?>','<?= $fc['file_type'] ?>')">
-                    <?php if ($fc['file_type'] === 'pdf'): ?>
-                        <div class="d-flex align-items-center justify-content-center" style="height:160px;background:linear-gradient(135deg,#fef2f2,#fee2e2);"><i class="bi bi-file-earmark-pdf text-danger" style="font-size:2.5rem"></i></div>
-                    <?php elseif ($fcThumb): ?>
-                        <img src="<?= e($fcThumb) ?>" alt="<?= e($fc['title']) ?>" style="width:100%;height:160px;object-fit:cover;" loading="lazy">
-                    <?php endif; ?>
-                    <div class="card-body p-2">
-                        <span class="badge bg-<?= $fcCatColor ?>-subtle text-<?= $fcCatColor ?> mb-1" style="font-size:.6rem;border-radius:50px;"><?= e($fcCatLabel) ?></span>
-                        <h6 class="fw-semibold mb-0" style="font-size:.78rem;line-height:1.3;"><?= e($fc['title']) ?></h6>
-                        <?php if ($fc['year']): ?><small class="text-muted" style="font-size:.65rem"><?= $fc['year'] ?></small><?php endif; ?>
+        <!-- Certificate Slider -->
+        <style>
+        .cert-slider{position:relative;overflow:hidden;padding:0 50px;}
+        .cert-slider-track{display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);}
+        .cert-slider-card{flex:0 0 33.333%;padding:0 12px;box-sizing:border-box;}
+        .cert-slider-arrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:none;background:var(--theme-primary,#16a34a);color:#fff;font-size:1.2rem;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.15);transition:background .3s,transform .3s;}
+        .cert-slider-arrow:hover{background:var(--theme-primary-dark,#15803d);transform:translateY(-50%) scale(1.1);}
+        .cert-slider-arrow.prev{left:0;}
+        .cert-slider-arrow.next{right:0;}
+        .cert-dots{display:flex;justify-content:center;gap:8px;margin-top:1.2rem;}
+        .cert-dots .dot{width:10px;height:10px;border-radius:50%;background:#ccc;border:none;cursor:pointer;transition:background .3s,transform .3s;padding:0;}
+        .cert-dots .dot.active{background:var(--theme-primary,#16a34a);transform:scale(1.3);}
+        @media(max-width:991px){.cert-slider-card{flex:0 0 50%;}}
+        @media(max-width:575px){.cert-slider-card{flex:0 0 100%;}.cert-slider{padding:0 40px;}.cert-slider-arrow{width:36px;height:36px;font-size:1rem;}}
+        </style>
+        <div class="cert-slider" id="certSlider" onmouseenter="clearInterval(certAutoPlay)" onmouseleave="certStartAuto()">
+            <button class="cert-slider-arrow prev" onclick="certSlidePrev()" aria-label="Previous"><i class="bi bi-chevron-left"></i></button>
+            <div class="cert-slider-track" id="certTrack">
+                <?php foreach ($featuredCerts as $fc):
+                    $fcThumb = $fc['thumb_path'] ? '/' . $fc['thumb_path'] : ($fc['file_type']==='pdf' ? '' : '/' . $fc['file_path']);
+                    $fcCatLabel = $certCategories[$fc['category']] ?? ucfirst($fc['category']);
+                    $fcCatColor = $certBadgeColors[$fc['category']] ?? 'secondary';
+                ?>
+                <div class="cert-slider-card">
+                    <div class="card border-0 shadow-sm h-100 text-center" style="border-radius:16px;overflow:hidden;transition:transform .3s,box-shadow .3s;cursor:pointer;" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 12px 30px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="window.certLightbox('<?= e('/' . $fc['file_path']) ?>','<?= $fc['file_type'] ?>')">
+                        <?php if ($fc['file_type'] === 'pdf'): ?>
+                            <div class="d-flex align-items-center justify-content-center" style="height:180px;background:linear-gradient(135deg,#fef2f2,#fee2e2);"><i class="bi bi-file-earmark-pdf text-danger" style="font-size:3rem"></i></div>
+                        <?php elseif ($fcThumb): ?>
+                            <img src="<?= e($fcThumb) ?>" alt="<?= e($fc['title']) ?>" style="width:100%;height:180px;object-fit:cover;" loading="lazy">
+                        <?php endif; ?>
+                        <div class="card-body p-3">
+                            <span class="badge bg-<?= $fcCatColor ?>-subtle text-<?= $fcCatColor ?> mb-1" style="font-size:.65rem;border-radius:50px;"><?= e($fcCatLabel) ?></span>
+                            <h6 class="fw-semibold mb-0" style="font-size:.82rem;line-height:1.3;"><?= e($fc['title']) ?></h6>
+                            <?php if ($fc['year']): ?><small class="text-muted" style="font-size:.68rem"><?= $fc['year'] ?></small><?php endif; ?>
+                        </div>
                     </div>
                 </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
+            <button class="cert-slider-arrow next" onclick="certSlideNext()" aria-label="Next"><i class="bi bi-chevron-right"></i></button>
         </div>
+        <div class="cert-dots" id="certDots"></div>
+        <script>
+        (function(){
+            var track=document.getElementById('certTrack'),cards=track.querySelectorAll('.cert-slider-card'),total=cards.length,idx=0;
+            function getVisible(){return window.innerWidth<=575?1:window.innerWidth<=991?2:3;}
+            function maxIdx(){return Math.max(0,total-getVisible());}
+            function update(){
+                var v=getVisible(),pct=100/v;
+                track.style.transform='translateX(-'+(idx*(100/total))+'%)';
+                // dots
+                var dots=document.getElementById('certDots'),m=maxIdx()+1;
+                dots.innerHTML='';
+                for(var i=0;i<m;i++){var d=document.createElement('button');d.className='dot'+(i===idx?' active':'');d.setAttribute('aria-label','Slide '+(i+1));d.onclick=(function(n){return function(){idx=n;update();};})(i);dots.appendChild(d);}
+            }
+            window.certSlideNext=function(){idx=idx>=maxIdx()?0:idx+1;update();};
+            window.certSlidePrev=function(){idx=idx<=0?maxIdx():idx-1;update();};
+            update();
+            // Auto-play
+            window.certAutoPlay=setInterval(window.certSlideNext,4000);
+            window.certStartAuto=function(){clearInterval(window.certAutoPlay);window.certAutoPlay=setInterval(window.certSlideNext,4000);};
+            // Touch/swipe
+            var sx=0;track.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+            track.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>40){dx<0?window.certSlideNext():window.certSlidePrev();}},{passive:true});
+            // Resize
+            window.addEventListener('resize',function(){if(idx>maxIdx())idx=maxIdx();update();});
+        })();
+        </script>
         <?php if (getSetting('certificates_page_enabled', '1') === '1'): ?>
         <div class="text-center mt-4">
             <a href="/public/certificates.php" class="btn fw-bold px-4 rounded-pill text-uppercase" style="font-size:.8rem;letter-spacing:1px;background:var(--theme-primary);color:#fff;">View All Certificates <i class="bi bi-arrow-right ms-1"></i></a>
