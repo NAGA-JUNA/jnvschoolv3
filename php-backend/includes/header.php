@@ -149,7 +149,7 @@ try {
             z-index: 1040;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: visible;
             transition: width 0.3s cubic-bezier(.4,0,.2,1), transform 0.3s cubic-bezier(.4,0,.2,1), margin 0.3s;
         }
 
@@ -435,20 +435,30 @@ try {
 
         /* ========== PREMIUM TOP BAR ========== */
         .top-bar {
-            background: rgba(255,255,255,0.72);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: none;
             padding: 1rem 1.75rem;
             display: flex; align-items: center; justify-content: space-between;
             position: sticky; top: 0; z-index: 1030;
             transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .top-bar::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary), var(--brand-accent));
+            opacity: 0.7;
         }
         html[data-theme="dark"] .top-bar {
-            background: rgba(28,28,28,0.78);
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            box-shadow: 0 1px 8px rgba(0,0,0,0.2);
+            background: rgba(28,28,28,0.88);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+        html[data-theme="dark"] .top-bar::after {
+            opacity: 0.5;
         }
 
         /* Greeting & Breadcrumb */
