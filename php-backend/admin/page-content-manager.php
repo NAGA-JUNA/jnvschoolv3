@@ -4,6 +4,14 @@ require_once __DIR__ . '/../includes/auth.php';
 requireAdmin();
 $db = getDB();
 
+// Load current quote from site_quotes table
+$currentQuote = null;
+try {
+    $currentQuote = $db->query("SELECT q.*, u.name as updater_name FROM site_quotes q LEFT JOIN users u ON q.updated_by=u.id WHERE q.is_active=1 ORDER BY q.id DESC LIMIT 1")->fetch();
+} catch (Exception $e) {
+    // Table may not exist yet
+}
+
 // Define all page content settings with defaults
 $pageConfigs = [
     'home' => [
@@ -52,6 +60,8 @@ $pageConfigs = [
             ['key' => 'about_leadership_title', 'label' => 'Leadership Section Title', 'type' => 'text', 'default' => 'Meet Our Leadership'],
             ['key' => 'about_leadership_subtitle', 'label' => 'Leadership Subtitle / Quote', 'type' => 'textarea', 'default' => 'With dedication and passion, our team creates an environment where every student thrives.'],
             ['key' => 'about_quote_show', 'label' => 'Show Inspirational Quote', 'type' => 'toggle', 'default' => '1'],
+            ['key' => 'about_quote_text', 'label' => 'Quote Message', 'type' => 'textarea', 'default' => '', 'source' => 'site_quotes', 'hint' => 'The inspirational quote displayed on the About Us page'],
+            ['key' => 'about_quote_author', 'label' => 'Quote Author Name', 'type' => 'text', 'default' => '', 'source' => 'site_quotes', 'hint' => 'Optional — who said this quote'],
             ['key' => 'about_footer_cta_show', 'label' => 'Show Footer CTA', 'type' => 'toggle', 'default' => '1'],
         ],
     ],
@@ -134,8 +144,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_P
     if (!isset($pageConfigs[$pageKey])) { setFlash('error', 'Invalid page.'); header('Location: /admin/page-content-manager.php'); exit; }
     
     $updated = 0;
+    $quoteText = null;
+    $quoteAuthor = null;
     foreach ($pageConfigs[$pageKey]['fields'] as $field) {
         $key = $field['key'];
+        
+        // Handle site_quotes fields separately
+        if (isset($field['source']) && $field['source'] === 'site_quotes') {
+            if ($key === 'about_quote_text') $quoteText = trim($_POST[$key] ?? '');
+            if ($key === 'about_quote_author') $quoteAuthor = trim($_POST[$key] ?? '');
+            continue;
+        }
+        
         if ($field['type'] === 'toggle') {
             $value = isset($_POST[$key]) ? '1' : '0';
         } else {
@@ -148,6 +168,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_P
         $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
         $stmt->execute([$key, $value]);
         $updated++;
+    }
+    
+    // Save quote to site_quotes table if quote fields were present
+    if ($quoteText !== null) {
+        if ($quoteText !== '') {
+            $existing = $db->query("SELECT id FROM site_quotes WHERE is_active=1 ORDER BY id DESC LIMIT 1")->fetch();
+            if ($existing) {
+                $db->prepare("UPDATE site_quotes SET quote_text=?, author_name=?, updated_by=?, updated_at=NOW() WHERE id=?")
+                   ->execute([$quoteText, $quoteAuthor ?: null, currentUserId(), $existing['id']]);
+            } else {
+                $db->prepare("INSERT INTO site_quotes (quote_text, author_name, updated_by) VALUES (?, ?, ?)")
+                   ->execute([$quoteText, $quoteAuthor ?: null, currentUserId()]);
+            }
+            $updated += 2;
+        }
     }
     
     auditLog('page_content_update', 'page_content', null, "Updated {$updated} settings for page: {$pageConfigs[$pageKey]['label']}");
@@ -231,7 +266,16 @@ require_once __DIR__ . '/../includes/header.php';
                 $parts = explode('_', str_replace($activePage . '_', '', $field['key']), 2);
                 $category = $parts[0] ?? '';
                 
-                $currentValue = getSetting($field['key'], $field['default']);
+                // For site_quotes fields, get value from the quote record
+                if (isset($field['source']) && $field['source'] === 'site_quotes') {
+                    if ($field['key'] === 'about_quote_text') {
+                        $currentValue = $currentQuote['quote_text'] ?? '';
+                    } elseif ($field['key'] === 'about_quote_author') {
+                        $currentValue = $currentQuote['author_name'] ?? '';
+                    }
+                } else {
+                    $currentValue = getSetting($field['key'], $field['default']);
+                }
             ?>
             
             <div class="field-group">
@@ -257,6 +301,15 @@ require_once __DIR__ . '/../includes/header.php';
                 <label for="<?= e($field['key']) ?>"><?= e($field['label']) ?></label>
                 <input type="text" class="form-control form-control-sm" name="<?= e($field['key']) ?>" id="<?= e($field['key']) ?>" value="<?= e($currentValue) ?>" maxlength="500">
                 <?php if (isset($field['hint'])): ?><div class="field-hint"><?= e($field['hint']) ?></div><?php endif; ?>
+                <?php endif; ?>
+                <?php // Show "Last updated" info after the quote author field ?>
+                <?php if (isset($field['source']) && $field['source'] === 'site_quotes' && $field['key'] === 'about_quote_author' && $currentQuote && $currentQuote['updated_at']): ?>
+                <div class="bg-light rounded-3 p-2 mt-2">
+                    <small class="text-muted" style="font-size:.72rem">
+                        <i class="bi bi-clock me-1"></i>Quote last updated: <?= date('d M Y, h:i A', strtotime($currentQuote['updated_at'])) ?>
+                        <?php if ($currentQuote['updater_name']): ?> by <strong><?= e($currentQuote['updater_name']) ?></strong><?php endif; ?>
+                    </small>
+                </div>
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>
