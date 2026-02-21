@@ -337,46 +337,225 @@ if ($navLogo) {
 </div>
 <?php endif; ?>
 
-<?php if (getSetting('home_quicklinks_show', '1') === '1'): ?>
-<!-- Quick Links Section -->
-<section class="py-5">
+<?php if (getSetting('home_quicklinks_show', '1') === '1'):
+// Fetch feature cards from DB (fallback to defaults if table doesn't exist)
+$featureCards = [];
+try {
+    $featureCards = $db->query("SELECT * FROM feature_cards WHERE is_visible=1 ORDER BY sort_order ASC")->fetchAll();
+} catch (Exception $e) { /* table may not exist yet */ }
+
+// Live stats
+$galleryCount = 0;
+$nextEvent = null;
+try {
+    $galleryCount = (int)$db->query("SELECT COUNT(*) FROM gallery_items WHERE status='approved'")->fetchColumn();
+    $nextEvent = $db->query("SELECT title, event_date FROM events WHERE is_public=1 AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 1")->fetch();
+} catch (Exception $e) {}
+
+// Build stats map
+$cardStats = [
+    'admissions' => $admissionOpen === '1' ? 'Admissions Open' : 'Admissions Closed',
+    'notifications' => $notifCount . ' new this week',
+    'gallery' => $galleryCount . ' photos & videos',
+    'events' => $nextEvent ? e($nextEvent['title']) . ' — ' . date('d M', strtotime($nextEvent['event_date'])) : 'No upcoming events',
+];
+$cardStatsIcon = [
+    'admissions' => $admissionOpen === '1' ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger',
+    'notifications' => 'bi-envelope-open-fill',
+    'gallery' => 'bi-camera-fill',
+    'events' => 'bi-clock-fill',
+];
+
+// Dynamic badge overrides
+if ($notifCount > 0) {
+    foreach ($featureCards as &$fc) {
+        if ($fc['slug'] === 'notifications') $fc['badge_text'] = $notifCount . ' New';
+    }
+    unset($fc);
+}
+?>
+
+<style>
+/* ===== Feature Cards — Glassmorphism ===== */
+.fcard-section { padding: 4rem 0; }
+.fcard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+.fcard {
+    position: relative; background: rgba(255,255,255,0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 1.25rem; padding: 2rem 1.5rem 1.5rem;
+    text-align: center; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.4s ease;
+    overflow: hidden; cursor: default;
+}
+.fcard::before {
+    content: ''; position: absolute; inset: -1px; border-radius: 1.25rem; padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.5), transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+}
+.fcard:hover { transform: translateY(-10px); box-shadow: 0 20px 50px rgba(0,0,0,0.12); }
+.fcard.featured { box-shadow: 0 0 0 2px var(--card-accent, var(--theme-primary)), 0 8px 30px rgba(0,0,0,0.1); }
+.fcard.featured::after {
+    content: ''; position: absolute; inset: -2px; border-radius: 1.25rem;
+    background: conic-gradient(from 0deg, transparent, var(--card-accent, var(--theme-primary)), transparent 30%);
+    opacity: 0.3; animation: fcardGlow 4s linear infinite; pointer-events: none; z-index: -1;
+}
+@keyframes fcardGlow { 100% { transform: rotate(360deg); } }
+
+.fcard-icon {
+    width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1.25rem;
+    display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+    background: linear-gradient(135deg, var(--card-accent, var(--theme-primary)), color-mix(in srgb, var(--card-accent, var(--theme-primary)) 70%, white));
+    color: #fff; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--card-accent, var(--theme-primary)) 30%, transparent);
+}
+.fcard:hover .fcard-icon { transform: scale(1.12) rotate(-8deg); }
+
+.fcard-badge {
+    position: absolute; top: 1rem; right: 1rem; font-size: 0.65rem; font-weight: 700;
+    padding: 0.25rem 0.65rem; border-radius: 50px; color: #fff; letter-spacing: 0.5px;
+    text-transform: uppercase; animation: fcardBadgePulse 2s ease-in-out infinite;
+}
+@keyframes fcardBadgePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+.fcard h5 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; color: #1a1a2e; }
+.fcard p { font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem; line-height: 1.5; }
+
+.fcard-stats {
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    font-size: 0.75rem; color: #9ca3af; margin-bottom: 1rem; font-weight: 500;
+}
+.fcard-stats i { font-size: 0.8rem; }
+
+.fcard .btn-fcard {
+    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.4rem;
+    border-radius: 50px; font-size: 0.8rem; font-weight: 600; text-decoration: none;
+    border: 1.5px solid var(--card-accent, var(--theme-primary));
+    color: var(--card-accent, var(--theme-primary)); background: transparent;
+    transition: all 0.3s ease; position: relative; overflow: hidden;
+}
+.fcard .btn-fcard:hover {
+    background: var(--card-accent, var(--theme-primary)); color: #fff;
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--card-accent, var(--theme-primary)) 30%, transparent);
+}
+
+/* Ripple */
+.fcard .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.4); transform: scale(0); animation: fcardRipple 0.6s ease-out; pointer-events: none; }
+@keyframes fcardRipple { to { transform: scale(4); opacity: 0; } }
+
+/* Mobile carousel */
+@media (max-width: 991.98px) { .fcard-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575.98px) {
+    .fcard-grid {
+        display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 1rem;
+        -ms-overflow-style: none; scrollbar-width: none; padding-bottom: 0.5rem;
+    }
+    .fcard-grid::-webkit-scrollbar { display: none; }
+    .fcard { min-width: 260px; scroll-snap-align: start; flex-shrink: 0; }
+    .fcard-section { padding: 2.5rem 0; }
+}
+
+/* Skeleton */
+.fcard-skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: fcardShimmer 1.5s infinite; border-radius: 1.25rem; height: 280px; }
+@keyframes fcardShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Fade-in on scroll */
+.fcard-animate { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fcard-animate.visible { opacity: 1; transform: translateY(0); }
+</style>
+
+<!-- Feature Cards Section -->
+<section class="fcard-section">
     <div class="container">
-        <div class="row g-4">
-            <div class="col-md-6 col-lg-3">
-                <div class="card info-card h-100 text-center p-4">
-                    <div class="feature-icon bg-primary-subtle text-primary mx-auto mb-3"><i class="bi bi-mortarboard-fill"></i></div>
-                    <h6 class="fw-bold"><?= e(getSetting('home_cta_admissions_title', 'Admissions')) ?></h6>
-                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_admissions_desc', 'Apply online for admission to JNV School.')) ?></p>
-                    <a href="/public/admission-form.php" class="btn btn-sm btn-outline-primary mt-auto">Apply Now</a>
-                </div>
+        <?php if (!empty($featureCards)): ?>
+        <div class="fcard-grid">
+            <?php foreach ($featureCards as $i => $card):
+                $accent = ($card['accent_color'] === 'auto' || empty($card['accent_color'])) ? $primaryColor : $card['accent_color'];
+                $stat = $cardStats[$card['slug']] ?? '';
+                $statIcon = $cardStatsIcon[$card['slug']] ?? 'bi-info-circle';
+            ?>
+            <div class="fcard fcard-animate <?= $card['is_featured'] ? 'featured' : '' ?>" style="--card-accent:<?= e($accent) ?>; transition-delay: <?= $i * 0.1 ?>s;" role="article" aria-label="<?= e($card['title']) ?>" onclick="trackCardClick('<?= e($card['slug']) ?>')">
+                <?php if (!empty($card['badge_text'])): ?>
+                    <span class="fcard-badge" style="background:<?= e($card['badge_color'] ?: '#ef4444') ?>"><?= e($card['badge_text']) ?></span>
+                <?php endif; ?>
+                <div class="fcard-icon"><i class="bi <?= e($card['icon_class']) ?>"></i></div>
+                <h5><?= e($card['title']) ?></h5>
+                <p><?= e($card['description']) ?></p>
+                <?php if ($card['show_stats'] && $stat): ?>
+                    <div class="fcard-stats"><i class="bi <?= e($statIcon) ?>"></i> <?= $stat ?></div>
+                <?php endif; ?>
+                <a href="<?= e($card['btn_link']) ?>" class="btn-fcard" aria-label="<?= e($card['btn_text']) ?> — <?= e($card['title']) ?>"><?= e($card['btn_text']) ?> <i class="bi bi-arrow-right"></i></a>
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="card info-card h-100 text-center p-4">
-                    <div class="feature-icon bg-warning-subtle text-warning mx-auto mb-3"><i class="bi bi-bell-fill"></i></div>
-                    <h6 class="fw-bold"><?= e(getSetting('home_cta_notifications_title', 'Notifications')) ?></h6>
-                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_notifications_desc', 'Stay updated with latest announcements.')) ?></p>
-                    <a href="/public/notifications.php" class="btn btn-sm btn-outline-warning mt-auto">View All</a>
-                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <!-- Fallback to settings-based cards -->
+        <div class="fcard-grid">
+            <div class="fcard fcard-animate featured" style="--card-accent:#3b82f6">
+                <span class="fcard-badge" style="background:#22c55e"><?= $admissionOpen === '1' ? 'Open' : 'Closed' ?></span>
+                <div class="fcard-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                <h5><?= e(getSetting('home_cta_admissions_title', 'Admissions')) ?></h5>
+                <p><?= e(getSetting('home_cta_admissions_desc', 'Apply online for admission.')) ?></p>
+                <div class="fcard-stats"><i class="bi <?= $admissionOpen === '1' ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger' ?>"></i> <?= $admissionOpen === '1' ? 'Admissions Open' : 'Admissions Closed' ?></div>
+                <a href="/public/admission-form.php" class="btn-fcard">Apply Now <i class="bi bi-arrow-right"></i></a>
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="card info-card h-100 text-center p-4">
-                    <div class="feature-icon bg-success-subtle text-success mx-auto mb-3"><i class="bi bi-images"></i></div>
-                    <h6 class="fw-bold"><?= e(getSetting('home_cta_gallery_title', 'Gallery')) ?></h6>
-                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_gallery_desc', 'Explore photos & videos from school life.')) ?></p>
-                    <a href="/public/gallery.php" class="btn btn-sm btn-outline-success mt-auto">Browse</a>
-                </div>
+            <div class="fcard fcard-animate" style="--card-accent:#f59e0b; transition-delay:0.1s">
+                <?php if ($notifCount > 0): ?><span class="fcard-badge" style="background:#ef4444"><?= $notifCount ?> New</span><?php endif; ?>
+                <div class="fcard-icon"><i class="bi bi-bell-fill"></i></div>
+                <h5><?= e(getSetting('home_cta_notifications_title', 'Notifications')) ?></h5>
+                <p><?= e(getSetting('home_cta_notifications_desc', 'Stay updated with latest announcements.')) ?></p>
+                <div class="fcard-stats"><i class="bi bi-envelope-open-fill"></i> <?= $notifCount ?> new this week</div>
+                <a href="/public/notifications.php" class="btn-fcard">View All <i class="bi bi-arrow-right"></i></a>
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="card info-card h-100 text-center p-4">
-                    <div class="feature-icon bg-danger-subtle text-danger mx-auto mb-3"><i class="bi bi-calendar-event-fill"></i></div>
-                    <h6 class="fw-bold"><?= e(getSetting('home_cta_events_title', 'Events')) ?></h6>
-                    <p class="text-muted small mb-3"><?= e(getSetting('home_cta_events_desc', 'Check upcoming school events & dates.')) ?></p>
-                    <a href="/public/events.php" class="btn btn-sm btn-outline-danger mt-auto">View Events</a>
-                </div>
+            <div class="fcard fcard-animate" style="--card-accent:#10b981; transition-delay:0.2s">
+                <div class="fcard-icon"><i class="bi bi-images"></i></div>
+                <h5><?= e(getSetting('home_cta_gallery_title', 'Gallery')) ?></h5>
+                <p><?= e(getSetting('home_cta_gallery_desc', 'Explore photos & videos from school life.')) ?></p>
+                <div class="fcard-stats"><i class="bi bi-camera-fill"></i> <?= $galleryCount ?> photos & videos</div>
+                <a href="/public/gallery.php" class="btn-fcard">Browse <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="fcard fcard-animate" style="--card-accent:#ef4444; transition-delay:0.3s">
+                <div class="fcard-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <h5><?= e(getSetting('home_cta_events_title', 'Events')) ?></h5>
+                <p><?= e(getSetting('home_cta_events_desc', 'Check upcoming school events & dates.')) ?></p>
+                <div class="fcard-stats"><i class="bi bi-clock-fill"></i> <?= $nextEvent ? e($nextEvent['title']) . ' — ' . date('d M', strtotime($nextEvent['event_date'])) : 'No upcoming events' ?></div>
+                <a href="/public/events.php" class="btn-fcard">View Events <i class="bi bi-arrow-right"></i></a>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </section>
+
+<script>
+// Intersection Observer for fade-in
+(function(){
+    var cards = document.querySelectorAll('.fcard-animate');
+    if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+        }, { threshold: 0.15 });
+        cards.forEach(function(c) { obs.observe(c); });
+    } else { cards.forEach(function(c) { c.classList.add('visible'); }); }
+})();
+
+// Click ripple
+document.querySelectorAll('.fcard').forEach(function(card) {
+    card.addEventListener('click', function(e) {
+        var r = document.createElement('span');
+        r.className = 'ripple';
+        var rect = card.getBoundingClientRect();
+        var sz = Math.max(rect.width, rect.height);
+        r.style.width = r.style.height = sz + 'px';
+        r.style.left = (e.clientX - rect.left - sz / 2) + 'px';
+        r.style.top = (e.clientY - rect.top - sz / 2) + 'px';
+        card.appendChild(r);
+        setTimeout(function() { r.remove(); }, 600);
+    });
+});
+
+// Track card clicks
+function trackCardClick(slug) {
+    fetch('/admin/ajax/feature-card-actions.php?action=track_click&slug=' + encodeURIComponent(slug), { method: 'POST' }).catch(function(){});
+}
+</script>
 <?php endif; ?>
 
 <!-- Latest Notifications & Upcoming Events -->

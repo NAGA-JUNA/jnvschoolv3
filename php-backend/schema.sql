@@ -728,4 +728,38 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('home_certificates_max', '6'),
 ('certificates_page_enabled', '1');
 
+-- --------------------------------------------------------
+-- 22. Feature Cards (Home page quick-link cards)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `feature_cards`;
+
+CREATE TABLE `feature_cards` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `slug` VARCHAR(50) NOT NULL,
+  `title` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500) DEFAULT NULL,
+  `icon_class` VARCHAR(100) NOT NULL DEFAULT 'bi-star',
+  `accent_color` VARCHAR(20) NOT NULL DEFAULT 'auto',
+  `btn_text` VARCHAR(50) NOT NULL DEFAULT 'Learn More',
+  `btn_link` VARCHAR(255) NOT NULL DEFAULT '#',
+  `badge_text` VARCHAR(50) DEFAULT NULL,
+  `badge_color` VARCHAR(20) DEFAULT '#ef4444',
+  `is_visible` TINYINT(1) NOT NULL DEFAULT 1,
+  `is_featured` TINYINT(1) NOT NULL DEFAULT 0,
+  `show_stats` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `click_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  KEY `idx_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `feature_cards` (`slug`, `title`, `description`, `icon_class`, `accent_color`, `btn_text`, `btn_link`, `badge_text`, `badge_color`, `is_featured`, `sort_order`) VALUES
+('admissions', 'Admissions', 'Apply online for admission to JNV School.', 'bi-mortarboard-fill', '#3b82f6', 'Apply Now', '/public/admission-form.php', 'Open', '#22c55e', 1, 1),
+('notifications', 'Notifications', 'Stay updated with latest announcements.', 'bi-bell-fill', '#f59e0b', 'View All', '/public/notifications.php', NULL, '#ef4444', 0, 2),
+('gallery', 'Gallery', 'Explore photos & videos from school life.', 'bi-images', '#10b981', 'Browse', '/public/gallery.php', NULL, '#8b5cf6', 0, 3),
+('events', 'Events', 'Check upcoming school events & dates.', 'bi-calendar-event-fill', '#ef4444', 'View Events', '/public/events.php', NULL, '#3b82f6', 0, 4);
+
 COMMIT;

@@ -1013,6 +1013,9 @@ try {
             <div class="nav-item">
                 <a href="/admin/certificates.php" class="nav-link <?= navActive('/admin/certificates') ?>" data-bs-title="Certificates"><i class="bi bi-award"></i> <span>Certificates</span></a>
             </div>
+            <div class="nav-item">
+                <a href="/admin/feature-cards.php" class="nav-link <?= navActive('/admin/feature-cards') ?>" data-bs-title="Feature Cards"><i class="bi bi-grid-1x2-fill"></i> <span>Feature Cards</span></a>
+            </div>
         </div>
 
         <div class="nav-group">
