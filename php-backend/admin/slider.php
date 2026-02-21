@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/../includes/auth.php';
+require_once __DIR__.'/../includes/file-handler.php';
 requireAdmin();
 $db = getDB();
 
@@ -25,23 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         // Handle image upload
         $imagePath = $_POST['existing_image'] ?? '';
         if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $file = $_FILES['image'];
-            $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-            $maxSize = 5 * 1024 * 1024;
-
-            if (in_array($file['type'], $allowed) && $file['size'] <= $maxSize) {
-                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-                $filename = 'slider_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                $uploadDir = __DIR__ . '/../uploads/slider/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-                if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
-                    if ($imagePath && file_exists(__DIR__ . '/../' . $imagePath)) {
-                        @unlink(__DIR__ . '/../' . $imagePath);
-                    }
-                    $imagePath = 'uploads/slider/' . $filename;
+            $result = FileHandler::uploadImage($_FILES['image'], 'slider', 'slider_', 5);
+            if ($result['success']) {
+                if ($imagePath) {
+                    FileHandler::deleteFile(__DIR__ . '/../' . $imagePath);
                 }
+                $imagePath = $result['path'];
             } else {
-                setFlash('error', 'Image must be JPG/PNG/WebP, max 5MB.');
+                setFlash('error', $result['error']);
                 header('Location: /admin/slider.php');
                 exit;
             }
@@ -73,9 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         $slide->execute([$id]);
         $slide = $slide->fetch();
         if ($slide) {
-            if ($slide['image_path'] && file_exists(__DIR__ . '/../' . $slide['image_path'])) {
-                @unlink(__DIR__ . '/../' . $slide['image_path']);
-            }
+            FileHandler::deleteFile(__DIR__ . '/../' . $slide['image_path']);
             $db->prepare("DELETE FROM home_slider WHERE id=?")->execute([$id]);
             auditLog('delete_slider', 'home_slider', $id);
             setFlash('success', 'Slide deleted.');
