@@ -1,5 +1,5 @@
 <?php
-$pageTitle='Gallery';require_once __DIR__.'/../includes/auth.php';requireAdmin();$db=getDB();
+$pageTitle='Gallery';require_once __DIR__.'/../includes/auth.php';requireAdmin();require_once __DIR__.'/../includes/file-handler.php';$db=getDB();
 
 // ── Image compression helper ──
 function compressGalleryImage($sourcePath, $destPath, $maxWidth = 1600) {
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         if (!$title) { setFlash('error', 'Title is required.'); header('Location: /admin/gallery.php'); exit; }
 
         $uploadDir = __DIR__ . '/../uploads/gallery/';
-        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        FileHandler::ensureDir($uploadDir);
         $batchId = bin2hex(random_bytes(16));
         $allowed = ['image/jpeg','image/png','image/webp','image/gif'];
         $maxSize = 5 * 1024 * 1024;
@@ -151,12 +151,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                 $origSize = $file['size']; $compSize = $origSize; $finalPath = 'uploads/gallery/' . $filename;
                 if ($compress) {
                     $tmpDest = $uploadDir . 'tmp_' . $filename;
-                    if (move_uploaded_file($file['tmp_name'], $tmpDest)) {
-                        $res = compressGalleryImage($tmpDest, $destPath); unlink($tmpDest);
+                    if (FileHandler::saveUploadedFile($file['tmp_name'], $tmpDest)) {
+                        $res = compressGalleryImage($tmpDest, $destPath); FileHandler::deleteFile($tmpDest);
                         if ($res) { $compSize = $res['compressed_size']; $finalPath = str_replace($uploadDir, 'uploads/gallery/', $res['path']); }
                     } else continue;
                 } else {
-                    if (!move_uploaded_file($file['tmp_name'], $destPath)) continue;
+                    if (!FileHandler::saveUploadedFile($file['tmp_name'], $destPath)) continue;
                 }
                 $imgTitle = count($files) > 1 ? $title . ' (' . ($idx + 1) . ')' : $title;
                 $useBatch = count($files) > 1 ? $batchId : null;

@@ -2,6 +2,7 @@
 $pageTitle = 'Upload Gallery';
 require_once __DIR__.'/../includes/auth.php';
 requireAdmin();
+require_once __DIR__.'/../includes/file-handler.php';
 $db = getDB();
 $uid = currentUserId();
 
@@ -74,9 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($item) {
             // Delete file
             $filePath = __DIR__ . '/../' . $item['file_path'];
-            if (file_exists($filePath) && is_file($filePath)) {
-                unlink($filePath);
-            }
+            FileHandler::deleteFile($filePath);
             // Delete record
             $db->prepare("DELETE FROM gallery_items WHERE id=?")->execute([$itemId]);
             auditLog('admin_delete_upload', 'gallery_item', $itemId, "Deleted own upload");
@@ -131,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
     if (!$title) { setFlash('error', 'Title is required.'); header('Location: /admin/upload-gallery.php'); exit; }
 
     $uploadDir = __DIR__ . '/../uploads/gallery/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+    FileHandler::ensureDir($uploadDir);
     $batchId = bin2hex(random_bytes(16));
     $allowed = ['image/jpeg','image/png','image/webp','image/gif'];
     $maxSize = 5 * 1024 * 1024;
@@ -199,9 +198,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
 
             if ($compress) {
                 $tmpDest = $uploadDir . 'tmp_' . $filename;
-                if (move_uploaded_file($file['tmp_name'], $tmpDest)) {
+                if (FileHandler::saveUploadedFile($file['tmp_name'], $tmpDest)) {
                     $res = compressGalleryImage($tmpDest, $destPath);
-                    unlink($tmpDest);
+                    FileHandler::deleteFile($tmpDest);
                     if ($res) {
                         $compSize = $res['compressed_size'];
                         $finalPath = str_replace($uploadDir, 'uploads/gallery/', $res['path']);
@@ -210,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                     }
                 } else { $failCount++; continue; }
             } else {
-                if (!move_uploaded_file($file['tmp_name'], $destPath)) { $failCount++; continue; }
+                if (!FileHandler::saveUploadedFile($file['tmp_name'], $destPath)) { $failCount++; continue; }
             }
 
             $imgTitle = count($files) > 1 ? $title . ' (' . ($idx + 1) . ')' : $title;

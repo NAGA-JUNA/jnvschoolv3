@@ -5,7 +5,7 @@
  */
 class FileHandler {
 
-    private static $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    private static $allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
     /**
      * Upload an image file to a subdirectory under uploads/
@@ -21,8 +21,8 @@ class FileHandler {
         }
 
         $maxSize = $maxMB * 1024 * 1024;
-        if (!in_array($file['type'], self::$allowedTypes)) {
-            return ['success' => false, 'path' => null, 'error' => 'File type not allowed. Use JPG/PNG/WebP.'];
+        if (!in_array($file['type'], self::$allowedImageTypes)) {
+            return ['success' => false, 'path' => null, 'error' => 'File type not allowed. Use JPG/PNG/WebP/GIF.'];
         }
         if ($file['size'] > $maxSize) {
             return ['success' => false, 'path' => null, 'error' => "File exceeds {$maxMB}MB limit."];
@@ -32,15 +32,36 @@ class FileHandler {
         $filename = $prefix . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
         $uploadDir = __DIR__ . '/../uploads/' . $subdir . '/';
 
-        if (!is_dir($uploadDir)) {
-            @mkdir($uploadDir, 0755, true);
-        }
+        self::ensureDir($uploadDir);
 
         if (@move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
             return ['success' => true, 'path' => 'uploads/' . $subdir . '/' . $filename, 'error' => null];
         }
 
         return ['success' => false, 'path' => null, 'error' => 'Failed to save uploaded file.'];
+    }
+
+    /**
+     * Save an uploaded file (move from tmp) - wrapper for move_uploaded_file
+     * @param string $tmpName  Temp file path from $_FILES
+     * @param string $destPath Full destination path
+     * @return bool
+     */
+    public static function saveUploadedFile($tmpName, $destPath) {
+        return @move_uploaded_file($tmpName, $destPath);
+    }
+
+    /**
+     * Ensure a directory exists, create if not
+     * @param string $path Full directory path
+     * @param int    $perms Directory permissions
+     * @return bool
+     */
+    public static function ensureDir($path, $perms = 0755) {
+        if (!is_dir($path)) {
+            return @mkdir($path, $perms, true);
+        }
+        return true;
     }
 
     /**

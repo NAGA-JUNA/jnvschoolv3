@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
+require_once __DIR__ . '/../../includes/file-handler.php';
 $db = getDB();
 
 header('Content-Type: application/json');
@@ -70,15 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle cover image upload
         $coverImage = null;
         if (!empty($_FILES['cover_image']['name']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../../uploads/gallery/categories/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-            $ext = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
-            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-            if (in_array($ext, $allowed) && $_FILES['cover_image']['size'] <= 5 * 1024 * 1024) {
-                $filename = 'cat_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $uploadDir . $filename)) {
-                    $coverImage = 'uploads/gallery/categories/' . $filename;
-                }
+            $result = FileHandler::uploadImage($_FILES['cover_image'], 'gallery/categories', 'cat_', 5);
+            if ($result['success']) {
+                $coverImage = $result['path'];
             }
         }
 
@@ -172,15 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle cover image
         $coverImage = null;
         if (!empty($_FILES['cover_image']['name']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../../uploads/gallery/albums/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-            $ext = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
-            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-            if (in_array($ext, $allowed) && $_FILES['cover_image']['size'] <= 5 * 1024 * 1024) {
-                $filename = 'album_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $uploadDir . $filename)) {
-                    $coverImage = 'uploads/gallery/albums/' . $filename;
-                }
+            $result = FileHandler::uploadImage($_FILES['cover_image'], 'gallery/albums', 'album_', 5);
+            if ($result['success']) {
+                $coverImage = $result['path'];
             }
         }
 
