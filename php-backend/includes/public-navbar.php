@@ -30,6 +30,7 @@ if (empty($_navMenuItems)) {
         ['label'=>'Notifications','url'=>'/public/notifications.php','icon'=>'bi-bell','is_cta'=>0,'link_type'=>'internal'],
         ['label'=>'Gallery','url'=>'/public/gallery.php','icon'=>'bi-images','is_cta'=>0,'link_type'=>'internal'],
         ['label'=>'Events','url'=>'/public/events.php','icon'=>'bi-calendar-event','is_cta'=>0,'link_type'=>'internal'],
+        ['label'=>'Fee Structure','url'=>'/public/fee-structure.php','icon'=>'bi-cash-stack','is_cta'=>0,'link_type'=>'internal'],
         ['label'=>'Apply Now','url'=>'/public/admission-form.php','icon'=>'bi-pencil-square','is_cta'=>1,'link_type'=>'internal'],
     ];
 }

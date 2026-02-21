@@ -762,4 +762,41 @@ INSERT INTO `feature_cards` (`slug`, `title`, `description`, `icon_class`, `acce
 ('gallery', 'Gallery', 'Explore photos & videos from school life.', 'bi-images', '#10b981', 'Browse', '/public/gallery.php', NULL, '#8b5cf6', 0, 3),
 ('events', 'Events', 'Check upcoming school events & dates.', 'bi-calendar-event-fill', '#ef4444', 'View Events', '/public/events.php', NULL, '#3b82f6', 0, 4);
 
+-- --------------------------------------------------------
+-- 23. Fee Structures
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `fee_components`;
+DROP TABLE IF EXISTS `fee_structures`;
+
+CREATE TABLE `fee_structures` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `class` VARCHAR(20) NOT NULL,
+  `academic_year` VARCHAR(20) NOT NULL,
+  `is_visible` TINYINT(1) NOT NULL DEFAULT 1,
+  `notes` TEXT DEFAULT NULL,
+  `created_by` INT UNSIGNED DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_class_year` (`class`, `academic_year`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `fk_fee_creator` FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 24. Fee Components
+-- --------------------------------------------------------
+CREATE TABLE `fee_components` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `fee_structure_id` INT UNSIGNED NOT NULL,
+  `component_name` VARCHAR(100) NOT NULL,
+  `amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `frequency` ENUM('one-time','monthly','quarterly','yearly') NOT NULL DEFAULT 'yearly',
+  `is_optional` TINYINT(1) NOT NULL DEFAULT 0,
+  `display_order` INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `fee_structure_id` (`fee_structure_id`),
+  CONSTRAINT `fk_comp_structure` FOREIGN KEY (`fee_structure_id`) REFERENCES `fee_structures`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 COMMIT;

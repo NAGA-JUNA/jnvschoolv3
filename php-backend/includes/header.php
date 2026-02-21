@@ -1051,6 +1051,9 @@ try {
                 <a href="/admin/admissions.php" class="nav-link <?= navActive('/admin/admissions') ?>" data-bs-title="Admissions"><i class="bi bi-file-earmark-plus"></i> <span>Admissions</span><?php if ($_admissionCount > 0): ?><span class="nav-badge"><?= $_admissionCount > 99 ? '99+' : $_admissionCount ?></span><?php endif; ?></a>
             </div>
             <?php endif; ?>
+            <div class="nav-item">
+                <a href="/admin/fee-structure.php" class="nav-link <?= navActive('/admin/fee-structure') ?>" data-bs-title="Fee Structure"><i class="bi bi-cash-stack"></i> <span>Fee Structure</span></a>
+            </div>
         </div>
 
         <div class="nav-group">
