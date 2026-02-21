@@ -1,5 +1,5 @@
 <?php
-$pageTitle='Settings';require_once __DIR__.'/../includes/auth.php';requireAdmin();$db=getDB();
+$pageTitle='Settings';require_once __DIR__.'/../includes/auth.php';requireAdmin();require_once __DIR__.'/../includes/file-handler.php';$db=getDB();
 
 // === Brand Color Extraction Functions ===
 function extractDominantColors($imagePath, $count = 3) {
@@ -95,8 +95,8 @@ if($action==='logo_upload'){
   }elseif(!empty($_FILES['school_logo']['name'])&&$_FILES['school_logo']['error']===UPLOAD_ERR_OK){
     $ext=strtolower(pathinfo($_FILES['school_logo']['name'],PATHINFO_EXTENSION));
     if(in_array($ext,['jpg','jpeg','png','webp','svg'])){
-      @mkdir(__DIR__.'/../uploads/branding',0755,true);
-      $fname='school_logo.'.$ext;move_uploaded_file($_FILES['school_logo']['tmp_name'],__DIR__.'/../uploads/branding/'.$fname);
+      FileHandler::ensureDir(__DIR__.'/../uploads/branding');
+      $fname='school_logo.'.$ext;FileHandler::saveUploadedFile($_FILES['school_logo']['tmp_name'],__DIR__.'/../uploads/branding/'.$fname);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('school_logo',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('logo_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([time(),time()]);
       // Auto-generate favicon 32x32
@@ -151,8 +151,8 @@ if($action==='favicon_upload'){
   }elseif(!empty($_FILES['school_favicon']['name'])&&$_FILES['school_favicon']['error']===UPLOAD_ERR_OK){
     $ext=strtolower(pathinfo($_FILES['school_favicon']['name'],PATHINFO_EXTENSION));
     if(in_array($ext,['ico','png','svg','jpg','jpeg'])){
-      @mkdir(__DIR__.'/../uploads/branding',0755,true);
-      $fname='favicon.'.$ext;move_uploaded_file($_FILES['school_favicon']['tmp_name'],__DIR__.'/../uploads/branding/'.$fname);
+      FileHandler::ensureDir(__DIR__.'/../uploads/branding');
+      $fname='favicon.'.$ext;FileHandler::saveUploadedFile($_FILES['school_favicon']['tmp_name'],__DIR__.'/../uploads/branding/'.$fname);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('school_favicon',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('favicon_updated_at',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([time(),time()]);
       auditLog('update_favicon','settings');setFlash('success','Favicon updated.');
@@ -193,8 +193,8 @@ if($action==='popup_ad'){
   if(!empty($_FILES['popup_ad_image']['name'])&&$_FILES['popup_ad_image']['error']===UPLOAD_ERR_OK){
     $ext=strtolower(pathinfo($_FILES['popup_ad_image']['name'],PATHINFO_EXTENSION));
     if(in_array($ext,['jpg','jpeg','png','webp','gif'])){
-      @mkdir(__DIR__.'/../uploads/ads',0755,true);
-      $fname='popup_ad.'.$ext;move_uploaded_file($_FILES['popup_ad_image']['tmp_name'],__DIR__.'/../uploads/ads/'.$fname);
+      FileHandler::ensureDir(__DIR__.'/../uploads/ads');
+      $fname='popup_ad.'.$ext;FileHandler::saveUploadedFile($_FILES['popup_ad_image']['tmp_name'],__DIR__.'/../uploads/ads/'.$fname);
       $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('popup_ad_image',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
     }else setFlash('error','Ad image must be JPG, PNG, WebP or GIF.');
   }

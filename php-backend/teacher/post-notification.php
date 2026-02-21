@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireTeacher();
+require_once __DIR__ . '/../includes/file-handler.php';
 $db = getDB();
 $uid = currentUserId();
 
@@ -35,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                 if (!in_array($ext, $allowedExts) || $files['size'][$i] > $maxSize) continue;
                 $saveName = 'notif_' . $newId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 $dest = __DIR__ . '/../uploads/documents/' . $saveName;
-                if (move_uploaded_file($files['tmp_name'][$i], $dest)) {
+                if (FileHandler::saveUploadedFile($files['tmp_name'][$i], $dest)) {
                     $ftype = in_array($ext, ['jpg','jpeg','png','gif']) ? 'image' : ($ext === 'pdf' ? 'pdf' : 'document');
                     $db->prepare("INSERT INTO notification_attachments (notification_id, file_name, file_path, file_type, file_size, uploaded_by) VALUES (?,?,?,?,?,?)")
                         ->execute([$newId, $files['name'][$i], $saveName, $ftype, $files['size'][$i], $uid]);
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
             if (in_array($ext, $allowedExts) && $_FILES['attachment']['size'] <= 5 * 1024 * 1024) {
                 $filename = 'notif_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 $dest = __DIR__ . '/../uploads/documents/' . $filename;
-                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $dest)) {
+                if (FileHandler::saveUploadedFile($_FILES['attachment']['tmp_name'], $dest)) {
                     $db->prepare("UPDATE notifications SET attachment=? WHERE id=?")->execute([$filename, $newId]);
                 }
             }

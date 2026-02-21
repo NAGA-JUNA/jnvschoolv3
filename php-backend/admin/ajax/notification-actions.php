@@ -6,6 +6,7 @@
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
+require_once __DIR__ . '/../../includes/file-handler.php';
 $db = getDB();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -68,7 +69,7 @@ try {
                     if (!in_array($ext, $allowedExts) || $size > $maxSize) continue;
                     $saveName = 'notif_' . $nid . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                     $dest = __DIR__ . '/../../uploads/documents/' . $saveName;
-                    if (move_uploaded_file($tmp, $dest)) {
+                    if (FileHandler::saveUploadedFile($tmp, $dest)) {
                         $ftype = in_array($ext, ['jpg','jpeg','png','gif']) ? 'image' : (($ext === 'pdf') ? 'pdf' : 'document');
                         $db->prepare("INSERT INTO notification_attachments (notification_id, file_name, file_path, file_type, file_size, uploaded_by) VALUES (?,?,?,?,?,?)")
                             ->execute([$nid, $name, $saveName, $ftype, $size, currentUserId()]);
@@ -89,7 +90,7 @@ try {
             $att = $att->fetch();
             if ($att) {
                 $filepath = __DIR__ . '/../../uploads/documents/' . $att['file_path'];
-                if (file_exists($filepath)) @unlink($filepath);
+                FileHandler::deleteFile($filepath);
                 $db->prepare("DELETE FROM notification_attachments WHERE id=?")->execute([$aid]);
                 auditLog('delete_attachment', 'notification_attachment', $aid);
             }

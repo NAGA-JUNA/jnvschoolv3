@@ -1,5 +1,5 @@
 <?php
-$pageTitle='Certificates';require_once __DIR__.'/../includes/auth.php';requireAdmin();$db=getDB();
+$pageTitle='Certificates';require_once __DIR__.'/../includes/auth.php';requireAdmin();require_once __DIR__.'/../includes/file-handler.php';$db=getDB();
 
 // ── Image compression & thumbnail helper ──
 function compressCertImage($sourcePath, $destPath, $maxWidth = 1600) {
@@ -54,8 +54,8 @@ function generateCertThumb($sourcePath, $thumbPath, $maxWidth = 400) {
 // Ensure upload dirs
 $uploadDir = __DIR__ . '/../uploads/certificates/';
 $thumbDir  = __DIR__ . '/../uploads/certificates/thumbs/';
-@mkdir($uploadDir, 0755, true);
-@mkdir($thumbDir, 0755, true);
+FileHandler::ensureDir($uploadDir);
+FileHandler::ensureDir($thumbDir);
 
 $allowedImg = ['jpg','jpeg','png','webp'];
 $allowedAll = ['jpg','jpeg','png','webp','pdf'];
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
 
                 if (!$isPdf) {
                     // Compress image
-                    move_uploaded_file($files['tmp_name'][$i], $destPath);
+                    FileHandler::saveUploadedFile($files['tmp_name'][$i], $destPath);
                     $res = compressCertImage($destPath, $destPath);
                     if ($res) {
                         $filePath = 'uploads/certificates/' . basename($res['path']);
@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                         if ($thumbResult) $thumbPathRel = 'uploads/certificates/thumbs/' . basename($thumbResult);
                     }
                 } else {
-                    move_uploaded_file($files['tmp_name'][$i], $destPath);
+                    FileHandler::saveUploadedFile($files['tmp_name'][$i], $destPath);
                     $thumbPathRel = ''; // PDF gets no thumbnail
                 }
 
@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                     $isPdf = ($ext === 'pdf');
                     $fname = 'cert_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                     $destPath = $uploadDir . $fname;
-                    move_uploaded_file($_FILES['cert_file']['tmp_name'], $destPath);
+                    FileHandler::saveUploadedFile($_FILES['cert_file']['tmp_name'], $destPath);
                     $filePath = 'uploads/certificates/' . $fname;
                     $thumbPathRel = '';
                     if (!$isPdf) {
@@ -247,8 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
             $cert->execute([$id]);
             $c = $cert->fetch();
             if ($c) {
-                @unlink(__DIR__ . '/../' . $c['file_path']);
-                if ($c['thumb_path']) @unlink(__DIR__ . '/../' . $c['thumb_path']);
+                FileHandler::deleteFile(__DIR__ . '/../' . $c['file_path']);
+                if ($c['thumb_path']) FileHandler::deleteFile(__DIR__ . '/../' . $c['thumb_path']);
             }
             $db->prepare("DELETE FROM certificates WHERE id=?")->execute([$id]);
             auditLog('cert_perm_delete', 'certificates', $id, 'Permanently deleted');

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
+require_once __DIR__ . '/../../includes/file-handler.php';
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
@@ -12,17 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !verifyCsrf()) {
 }
 
 $db = getDB();
-$uploadDir = __DIR__ . '/../../uploads/photos/';
-if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+FileHandler::ensureDir(__DIR__ . '/../../uploads/photos/');
 
 function handlePhotoUpload(): ?string {
-    global $uploadDir;
     if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) return null;
-    $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ['jpg','jpeg','png','webp','gif'])) return null;
-    $fname = 'teacher_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $fname)) {
-        return '/uploads/photos/' . $fname;
+    $result = FileHandler::uploadImage($_FILES['photo'], 'photos', 'teacher_', 5);
+    if ($result['success']) {
+        return '/' . $result['path'];
     }
     return null;
 }
