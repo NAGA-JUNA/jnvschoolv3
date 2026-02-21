@@ -2,6 +2,8 @@
 // Header include — requires auth.php already loaded
 $schoolName = getSetting('school_name', 'JNV School');
 $schoolLogo = getSetting('school_logo', '');
+$schoolTagline = getSetting('school_tagline', 'Excellence in Education');
+$schoolShortName = getSetting('school_short_name', 'JNV');
 $_logoVer = getSetting('logo_updated_at', '0');
 $primaryColor = getSetting('primary_color', '#1e40af');
 $brandPrimary = getSetting('brand_primary', '#1e40af');
@@ -153,43 +155,49 @@ try {
             transition: width 0.3s cubic-bezier(.4,0,.2,1), transform 0.3s cubic-bezier(.4,0,.2,1), margin 0.3s;
         }
 
-        /* -- Sidebar Header / Logo -- */
-        .sidebar-header {
-            padding: 20px 20px 12px;
+        /* -- Sidebar Brand Card (Center-Aligned) -- */
+        .sidebar-brand-card {
+            padding: 20px 16px 16px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
+            text-align: center;
             position: relative;
             flex-shrink: 0;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary), var(--brand-accent)) 1;
+            transition: all 0.3s cubic-bezier(.4,0,.2,1);
         }
         .sidebar-logo {
-            width: 48px; height: 48px;
+            width: 56px; height: 56px;
             border-radius: 50%;
             background: #fff;
             object-fit: contain;
             padding: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb, 30,64,175), 0.15), 0 2px 12px rgba(0,0,0,0.08);
             flex-shrink: 0;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(.4,0,.2,1);
         }
-        html[data-theme="dark"] .sidebar-logo { background: #2a2a2a; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        html[data-theme="dark"] .sidebar-logo { background: #2a2a2a; box-shadow: 0 0 0 3px rgba(99,102,241,0.2), 0 2px 12px rgba(0,0,0,0.3); }
         .sidebar-logo-fallback {
-            width: 48px; height: 48px;
+            width: 56px; height: 56px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             color: #fff;
             display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 1.1rem;
+            font-weight: 700; font-size: 1.2rem;
             flex-shrink: 0;
-            transition: all 0.3s;
+            box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb, 30,64,175), 0.15);
+            transition: all 0.3s cubic-bezier(.4,0,.2,1);
         }
         .sidebar-brand-text {
+            margin-top: 10px;
             overflow: hidden;
-            white-space: nowrap;
-            transition: opacity 0.2s, width 0.2s;
+            transition: opacity 0.25s, max-height 0.3s, margin 0.3s;
+            max-height: 60px;
         }
-        .sidebar-brand-text h6 { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--sidebar-text); line-height: 1.2; }
-        .sidebar-brand-text small { color: var(--sidebar-text-muted); font-size: 0.7rem; }
+        .sidebar-brand-text h6 { margin: 0; font-size: 0.88rem; font-weight: 700; color: var(--sidebar-text); line-height: 1.3; }
+        .sidebar-brand-text .brand-tagline { color: var(--sidebar-text-muted); font-size: 0.68rem; margin-top: 2px; display: block; }
 
         /* Collapse toggle */
         .sidebar-collapse-btn {
@@ -247,6 +255,18 @@ try {
             position: relative;
             font-weight: 450;
             text-decoration: none;
+        }
+        .sidebar .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 50%; transform: translateY(-50%);
+            width: 3px; height: 0;
+            background: var(--brand-primary);
+            border-radius: 0 3px 3px 0;
+            transition: height 0.2s ease;
+        }
+        .sidebar .nav-link:hover::before {
+            height: 60%;
         }
         .sidebar .nav-link:hover {
             background: var(--sidebar-hover);
@@ -397,10 +417,10 @@ try {
 
         /* ========== COLLAPSED STATE ========== */
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-        .sidebar.collapsed .sidebar-header { padding: 16px 0 12px; justify-content: center; }
+        .sidebar.collapsed .sidebar-brand-card { padding: 16px 0 12px; }
         .sidebar.collapsed .sidebar-logo,
-        .sidebar.collapsed .sidebar-logo-fallback { width: 38px; height: 38px; }
-        .sidebar.collapsed .sidebar-brand-text { opacity: 0; width: 0; overflow: hidden; }
+        .sidebar.collapsed .sidebar-logo-fallback { width: 38px; height: 38px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .sidebar.collapsed .sidebar-brand-text { opacity: 0; max-height: 0; margin-top: 0; overflow: hidden; }
         .sidebar.collapsed .nav-group-label { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
         .sidebar.collapsed .nav-item { margin: 2px 8px; }
         .sidebar.collapsed .nav-link { justify-content: center; padding: 10px 0; gap: 0; }
@@ -459,6 +479,44 @@ try {
         }
         html[data-theme="dark"] .top-bar::after {
             opacity: 0.5;
+        }
+
+        /* Topbar Highlight Pill */
+        .topbar-highlight-pill {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, rgba(var(--brand-primary-rgb, 30,64,175), 0.06), rgba(var(--brand-secondary-rgb, 99,102,241), 0.04));
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            padding: 8px 18px 8px 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
+            border: 1px solid rgba(var(--brand-primary-rgb, 30,64,175), 0.08);
+            transition: all 0.3s ease;
+        }
+        html[data-theme="dark"] .topbar-highlight-pill {
+            background: linear-gradient(135deg, rgba(var(--brand-primary-rgb, 30,64,175), 0.12), rgba(var(--brand-secondary-rgb, 99,102,241), 0.08));
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.06);
+        }
+        .topbar-pill-logo {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            object-fit: contain;
+            background: #fff;
+            padding: 2px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        html[data-theme="dark"] .topbar-pill-logo { background: #2a2a2a; }
+        .topbar-pill-fallback {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.7rem;
+            flex-shrink: 0;
         }
 
         /* Greeting & Breadcrumb */
@@ -957,7 +1015,7 @@ try {
 <!-- ========== PREMIUM SIDEBAR ========== -->
 <nav class="sidebar" id="sidebar">
     <!-- Header / Logo -->
-    <div class="sidebar-header">
+    <div class="sidebar-brand-card">
         <?php if ($schoolLogo):
             $_sidebarLogoPath = (strpos($schoolLogo, '/uploads/') === 0) ? $schoolLogo : (file_exists(__DIR__.'/../uploads/branding/'.$schoolLogo) ? '/uploads/branding/'.$schoolLogo : '/uploads/logo/'.$schoolLogo);
         ?>
@@ -967,7 +1025,7 @@ try {
         <?php endif; ?>
         <div class="sidebar-brand-text">
             <h6><?= e($schoolName) ?></h6>
-            <small>Management System</small>
+            <span class="brand-tagline"><?= e($schoolTagline) ?></span>
         </div>
         <button class="sidebar-collapse-btn d-none d-lg-flex" onclick="toggleCollapse()" title="Toggle sidebar">
             <i class="bi bi-chevron-left"></i>
@@ -1124,10 +1182,17 @@ try {
     <div class="top-bar">
         <div class="d-flex align-items-center gap-3">
             <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-            <div class="topbar-greeting">
-                <p class="greeting-line"><span id="greetText">Hello</span>, <?= e(explode(' ', $_userName)[0]) ?> <span class="wave-emoji">👋</span></p>
-                <div class="breadcrumb-line">
-                    <i class="bi bi-house-fill"></i> <span><?= e($pageTitle) ?></span>
+            <div class="topbar-highlight-pill">
+                <?php if ($schoolLogo): ?>
+                    <img src="<?= e($_sidebarLogoPath) ?>?v=<?= e($_logoVer) ?>" alt="Logo" class="topbar-pill-logo">
+                <?php else: ?>
+                    <div class="topbar-pill-fallback"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
+                <?php endif; ?>
+                <div class="topbar-greeting">
+                    <p class="greeting-line"><span id="greetText">Hello</span>, <?= e(explode(' ', $_userName)[0]) ?> <span class="wave-emoji">👋</span></p>
+                    <div class="breadcrumb-line">
+                        <i class="bi bi-house-fill"></i> <span><?= e($pageTitle) ?></span>
+                    </div>
                 </div>
             </div>
         </div>
