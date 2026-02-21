@@ -99,6 +99,85 @@
             clockEl.textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
         }, 30000);
     }
+
+    // ===== Greeting Logic =====
+    var greetEl = document.getElementById('greetText');
+    if (greetEl) {
+        var h = new Date().getHours();
+        greetEl.textContent = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+    }
+
+    // ===== Top Bar Search =====
+    var searchInput = document.getElementById('topbarSearchInput');
+    var searchResults = document.getElementById('searchResults');
+    if (searchInput && searchResults) {
+        var pages = [
+            {name:'Dashboard', icon:'bi-speedometer2', url:'/admin/dashboard.php'},
+            {name:'Students', icon:'bi-people', url:'/admin/students.php'},
+            {name:'Teachers', icon:'bi-person-workspace', url:'/admin/teachers.php'},
+            {name:'Admissions', icon:'bi-person-badge', url:'/admin/admissions.php'},
+            {name:'Notifications', icon:'bi-bell', url:'/admin/notifications.php'},
+            {name:'Events', icon:'bi-calendar-event', url:'/admin/events.php'},
+            {name:'Gallery', icon:'bi-images', url:'/admin/gallery.php'},
+            {name:'Certificates', icon:'bi-award', url:'/admin/certificates.php'},
+            {name:'Slider', icon:'bi-film', url:'/admin/slider.php'},
+            {name:'Reports', icon:'bi-bar-chart', url:'/admin/reports.php'},
+            {name:'Settings', icon:'bi-gear', url:'/admin/settings.php'},
+            {name:'Audit Logs', icon:'bi-shield-check', url:'/admin/audit-logs.php'},
+            {name:'Navigation', icon:'bi-signpost-split', url:'/admin/navigation-settings.php'},
+            {name:'Footer Manager', icon:'bi-layout-text-sidebar', url:'/admin/footer-manager.php'},
+            {name:'Page Content', icon:'bi-file-richtext', url:'/admin/page-content-manager.php'},
+            {name:'Quote Highlight', icon:'bi-chat-quote', url:'/admin/quote-highlight.php'},
+            {name:'Import Students', icon:'bi-upload', url:'/admin/import-students.php'},
+            {name:'Import Teachers', icon:'bi-upload', url:'/admin/import-teachers.php'},
+            {name:'Support', icon:'bi-question-circle', url:'/admin/support.php'}
+        ];
+        searchInput.addEventListener('input', function() {
+            var q = this.value.trim().toLowerCase();
+            if (!q) { searchResults.classList.remove('show'); return; }
+            var matches = pages.filter(function(p){ return p.name.toLowerCase().includes(q); });
+            if (matches.length === 0) {
+                searchResults.innerHTML = '<div class="no-results">No pages found</div>';
+            } else {
+                searchResults.innerHTML = matches.map(function(p){
+                    return '<a href="'+p.url+'"><i class="bi '+p.icon+'"></i> '+p.name+'</a>';
+                }).join('');
+            }
+            searchResults.classList.add('show');
+        });
+        searchInput.addEventListener('blur', function(){ setTimeout(function(){ searchResults.classList.remove('show'); }, 200); });
+        searchInput.addEventListener('focus', function(){ if(this.value.trim()) this.dispatchEvent(new Event('input')); });
+        // Ctrl+K shortcut
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); }
+        });
+    }
+
+    // ===== Notification Dropdown =====
+    window.toggleNotifDropdown = function(e) {
+        e.stopPropagation();
+        var dd = document.getElementById('notifDropdown');
+        if (dd) dd.classList.toggle('show');
+    };
+    document.addEventListener('click', function(e) {
+        var dd = document.getElementById('notifDropdown');
+        if (dd && !dd.closest('.topbar-bell')?.contains(e.target) && !dd.contains(e.target)) {
+            dd.classList.remove('show');
+        }
+    });
+
+    // ===== Fullscreen Toggle =====
+    window.toggleFullScreen = function() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(function(){});
+            var ic = document.getElementById('fsIcon');
+            if(ic) { ic.classList.remove('bi-arrows-fullscreen'); ic.classList.add('bi-fullscreen-exit'); }
+        } else {
+            document.exitFullscreen();
+            var ic = document.getElementById('fsIcon');
+            if(ic) { ic.classList.remove('bi-fullscreen-exit'); ic.classList.add('bi-arrows-fullscreen'); }
+        }
+    };
 })();
 </script>
 <?php endif; ?>

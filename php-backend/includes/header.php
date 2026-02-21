@@ -433,15 +433,147 @@ try {
             margin-left: calc(var(--sidebar-collapsed-width) + var(--sidebar-margin) * 2);
         }
 
+        /* ========== PREMIUM TOP BAR ========== */
         .top-bar {
-            background: var(--bg-topbar); border-bottom: 1px solid var(--border-color);
-            padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding: 1rem 1.75rem;
+            display: flex; align-items: center; justify-content: space-between;
             position: sticky; top: 0; z-index: 1030;
-            transition: background 0.3s, border-color 0.3s;
-            box-shadow: var(--shadow-sm);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.04);
         }
-        .top-bar .page-title { margin: 0; font-weight: 600; font-size: 1.1rem; color: var(--text-primary); }
-        .top-bar .user-info { display: flex; align-items: center; gap: 0.75rem; }
+        html[data-theme="dark"] .top-bar {
+            background: rgba(28,28,28,0.78);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 1px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Greeting & Breadcrumb */
+        .topbar-greeting { line-height: 1.3; }
+        .topbar-greeting .greeting-line {
+            font-size: 1.08rem; font-weight: 700; color: var(--text-primary); margin: 0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .topbar-greeting .greeting-line .wave-emoji { display: inline-block; animation: wave 2s ease-in-out infinite; transform-origin: 70% 70%; }
+        @keyframes wave { 0%,60%,100%{transform:rotate(0)} 10%{transform:rotate(14deg)} 20%{transform:rotate(-8deg)} 30%{transform:rotate(14deg)} 40%{transform:rotate(-4deg)} 50%{transform:rotate(10deg)} }
+        .topbar-greeting .breadcrumb-line {
+            font-size: 0.72rem; color: var(--text-muted); margin: 2px 0 0; display: flex; align-items: center; gap: 4px;
+        }
+        .topbar-greeting .breadcrumb-line i { font-size: 0.6rem; }
+
+        /* Search Bar */
+        .topbar-search {
+            position: relative; max-width: 320px; flex: 1; margin: 0 1.5rem;
+        }
+        .topbar-search input {
+            width: 100%; padding: 0.5rem 0.85rem 0.5rem 2.2rem;
+            border: 1px solid var(--border-color); border-radius: 50px;
+            background: var(--bg-body); color: var(--text-primary);
+            font-size: 0.82rem; outline: none;
+            transition: all 0.25s ease;
+        }
+        .topbar-search input::placeholder { color: var(--text-muted); }
+        .topbar-search input:focus {
+            border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.10);
+            background: var(--bg-card);
+        }
+        html[data-theme="dark"] .topbar-search input:focus { box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .topbar-search .search-icon {
+            position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 0.9rem; pointer-events: none;
+        }
+        .topbar-search .search-hint {
+            position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+            font-size: 0.62rem; color: var(--text-muted);
+            background: var(--border-color); padding: 1px 6px; border-radius: 4px; font-weight: 600;
+            pointer-events: none;
+        }
+        .topbar-search .search-results {
+            position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; box-shadow: var(--shadow-md);
+            max-height: 300px; overflow-y: auto; display: none; z-index: 1060;
+        }
+        .topbar-search .search-results.show { display: block; animation: dropdownFadeIn 0.2s ease; }
+        .topbar-search .search-results a {
+            display: flex; align-items: center; gap: 10px;
+            padding: 0.6rem 1rem; color: var(--text-secondary);
+            text-decoration: none; font-size: 0.82rem; transition: background 0.15s;
+        }
+        .topbar-search .search-results a:hover { background: rgba(0,0,0,0.04); color: var(--text-primary); }
+        html[data-theme="dark"] .topbar-search .search-results a:hover { background: rgba(255,255,255,0.06); }
+        .topbar-search .search-results a i { font-size: 1rem; width: 20px; text-align: center; color: var(--text-muted); }
+        .topbar-search .search-results .no-results { padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem; }
+
+        /* Notification Bell */
+        .topbar-bell {
+            position: relative; background: none; border: 1px solid var(--border-color);
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-muted);
+            transition: all 0.2s; font-size: 1.1rem;
+        }
+        .topbar-bell:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+        html[data-theme="dark"] .topbar-bell:hover { background: rgba(255,255,255,0.08); }
+        .topbar-bell .bell-badge {
+            position: absolute; top: -2px; right: -2px;
+            background: #ef4444; color: #fff;
+            font-size: 0.55rem; font-weight: 700;
+            min-width: 16px; height: 16px;
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            padding: 0 4px; border: 2px solid var(--bg-topbar);
+            animation: bellPulse 2s ease-in-out infinite;
+        }
+        @keyframes bellPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        .notif-dropdown {
+            position: absolute; top: calc(100% + 8px); right: 0; width: 320px;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; box-shadow: var(--shadow-md);
+            display: none; z-index: 1060; overflow: hidden;
+        }
+        .notif-dropdown.show { display: block; animation: dropdownFadeIn 0.2s ease; }
+        .notif-dropdown .notif-header {
+            padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.85rem; font-weight: 600; color: var(--text-primary);
+        }
+        .notif-dropdown .notif-item {
+            padding: 0.7rem 1rem; display: flex; align-items: flex-start; gap: 10px;
+            border-bottom: 1px solid var(--border-color); transition: background 0.15s;
+        }
+        .notif-dropdown .notif-item:hover { background: rgba(0,0,0,0.03); }
+        html[data-theme="dark"] .notif-dropdown .notif-item:hover { background: rgba(255,255,255,0.04); }
+        .notif-dropdown .notif-item .notif-icon {
+            width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 0.85rem;
+        }
+        .notif-dropdown .notif-item .notif-text { flex: 1; }
+        .notif-dropdown .notif-item .notif-text p { margin: 0; font-size: 0.78rem; color: var(--text-primary); font-weight: 500; }
+        .notif-dropdown .notif-item .notif-text small { color: var(--text-muted); font-size: 0.68rem; }
+        .notif-dropdown .notif-footer {
+            padding: 0.6rem 1rem; text-align: center;
+        }
+        .notif-dropdown .notif-footer a {
+            font-size: 0.78rem; font-weight: 600; color: var(--brand-primary); text-decoration: none;
+        }
+        .notif-dropdown .notif-footer a:hover { text-decoration: underline; }
+
+        /* Quick Action Buttons */
+        .topbar-quick-btn {
+            background: none; border: 1px solid var(--border-color);
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-muted);
+            transition: all 0.2s; font-size: 1rem;
+            text-decoration: none;
+        }
+        .topbar-quick-btn:hover { background: rgba(0,0,0,0.05); color: var(--brand-primary); }
+        html[data-theme="dark"] .topbar-quick-btn:hover { background: rgba(255,255,255,0.08); }
+
+        .top-bar .user-info { display: flex; align-items: center; gap: 0.6rem; }
         .content-area { padding: 1.5rem; }
 
         /* Profile Avatar (top bar) */
@@ -453,16 +585,26 @@ try {
         .profile-avatar-btn:hover { background: rgba(0,0,0,0.05); }
         html[data-theme="dark"] .profile-avatar-btn:hover { background: rgba(255,255,255,0.08); }
         .avatar-circle {
-            width: 36px; height: 36px; border-radius: 50%;
+            width: 38px; height: 38px; border-radius: 50%;
             background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             color: #fff; display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 0.8rem;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            outline: 2px solid var(--brand-primary);
+            outline-offset: 1px;
         }
         .online-dot {
             position: absolute; bottom: 2px; right: 2px;
             width: 10px; height: 10px; border-radius: 50%;
             background: #22c55e; border: 2px solid var(--bg-topbar);
+        }
+
+        /* Hide search on small screens */
+        @media (max-width: 767.98px) {
+            .topbar-search { display: none; }
+            .topbar-greeting .greeting-line { font-size: 0.95rem; }
         }
 
         /* Profile Dropdown */
@@ -969,13 +1111,80 @@ try {
     <div class="top-bar">
         <div class="d-flex align-items-center gap-3">
             <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-            <h5 class="page-title"><?= e($pageTitle) ?></h5>
+            <div class="topbar-greeting">
+                <p class="greeting-line"><span id="greetText">Hello</span>, <?= e(explode(' ', $_userName)[0]) ?> <span class="wave-emoji">👋</span></p>
+                <div class="breadcrumb-line">
+                    <i class="bi bi-house-fill"></i> <span><?= e($pageTitle) ?></span>
+                </div>
+            </div>
         </div>
+
+        <!-- Search -->
+        <div class="topbar-search d-none d-md-block">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" id="topbarSearchInput" placeholder="Search pages..." autocomplete="off">
+            <span class="search-hint">Ctrl+K</span>
+            <div class="search-results" id="searchResults"></div>
+        </div>
+
         <div class="user-info">
-            <span class="text-muted d-none d-md-inline" style="font-size:0.8rem;">
+            <span class="text-muted d-none d-lg-inline" style="font-size:0.75rem;">
                 <i class="bi bi-calendar3 me-1"></i><?= date('d M Y') ?>
                 <i class="bi bi-clock ms-2 me-1"></i><span id="headerClock"><?= date('h:i A') ?></span>
             </span>
+
+            <!-- Quick Actions -->
+            <?php if (isAdmin()): ?>
+            <a href="/admin/student-form.php" class="topbar-quick-btn d-none d-md-flex" title="Add Student"><i class="bi bi-person-plus"></i></a>
+            <?php endif; ?>
+
+            <!-- Notification Bell -->
+            <?php
+            $_totalBadge = $_notifCount + $_admissionCount;
+            ?>
+            <div style="position:relative;">
+                <button class="topbar-bell" onclick="toggleNotifDropdown(event)" title="Notifications">
+                    <i class="bi bi-bell"></i>
+                    <?php if ($_totalBadge > 0): ?>
+                    <span class="bell-badge"><?= $_totalBadge > 99 ? '99+' : $_totalBadge ?></span>
+                    <?php endif; ?>
+                </button>
+                <div class="notif-dropdown" id="notifDropdown">
+                    <div class="notif-header">
+                        <span>Notifications</span>
+                        <span style="font-size:0.7rem;color:var(--text-muted);"><?= $_totalBadge ?> pending</span>
+                    </div>
+                    <?php if ($_notifCount > 0): ?>
+                    <div class="notif-item">
+                        <div class="notif-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;"><i class="bi bi-megaphone"></i></div>
+                        <div class="notif-text">
+                            <p><?= $_notifCount ?> notification<?= $_notifCount>1?'s':'' ?> pending review</p>
+                            <small>Requires approval</small>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($_admissionCount > 0): ?>
+                    <div class="notif-item">
+                        <div class="notif-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i class="bi bi-person-badge"></i></div>
+                        <div class="notif-text">
+                            <p><?= $_admissionCount ?> admission<?= $_admissionCount>1?'s':'' ?> pending</p>
+                            <small>New applications received</small>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($_totalBadge == 0): ?>
+                    <div class="notif-item" style="justify-content:center;padding:1.5rem;">
+                        <span style="color:var(--text-muted);font-size:0.82rem;">All caught up! 🎉</span>
+                    </div>
+                    <?php endif; ?>
+                    <div class="notif-footer">
+                        <a href="/admin/notifications.php">View All Notifications →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fullscreen Toggle -->
+            <button class="topbar-quick-btn d-none d-md-flex" onclick="toggleFullScreen()" title="Fullscreen"><i class="bi bi-arrows-fullscreen" id="fsIcon"></i></button>
 
             <!-- Theme Toggle -->
             <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">
