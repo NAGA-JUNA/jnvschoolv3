@@ -271,24 +271,30 @@ CREATE TABLE `gallery_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- 8. Events
+-- 8. Events (v3.3 — full event management)
 -- --------------------------------------------------------
 CREATE TABLE `events` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `title` VARCHAR(200) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
   `description` TEXT DEFAULT NULL,
-  `event_date` DATE NOT NULL,
+  `start_date` DATE NOT NULL,
   `end_date` DATE DEFAULT NULL,
-  `event_time` TIME DEFAULT NULL,
-  `location` VARCHAR(200) DEFAULT NULL,
-  `type` ENUM('academic','cultural','sports','holiday','exam','meeting','other') NOT NULL DEFAULT 'other',
-  `image` VARCHAR(255) DEFAULT NULL,
+  `start_time` TIME DEFAULT NULL,
+  `end_time` TIME DEFAULT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+  `type` ENUM('sports','cultural','exam','holiday','activity','academic','meeting','other') NOT NULL DEFAULT 'activity',
+  `status` ENUM('active','draft','cancelled','completed') NOT NULL DEFAULT 'active',
   `is_public` TINYINT(1) NOT NULL DEFAULT 1,
+  `is_featured` TINYINT(1) NOT NULL DEFAULT 0,
+  `poster` VARCHAR(255) DEFAULT NULL,
+  `views` INT UNSIGNED NOT NULL DEFAULT 0,
   `created_by` INT UNSIGNED DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_date` (`event_date`),
+  KEY `idx_start_date` (`start_date`),
+  KEY `idx_status` (`status`),
+  KEY `idx_featured` (`is_featured`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `fk_event_creator` FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
