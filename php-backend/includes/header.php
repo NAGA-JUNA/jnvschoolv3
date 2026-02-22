@@ -1237,11 +1237,6 @@ try {
                 <?php else: ?>
                     <div class="topbar-pill-fallback"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
                 <?php endif; ?>
-                <div class="topbar-pill-brand">
-                    <div class="pill-school-name"><?= e($schoolName) ?></div>
-                    <div class="pill-school-tagline"><?= e($schoolTagline) ?></div>
-                </div>
-                <div class="topbar-pill-divider"></div>
                 <div class="topbar-greeting">
                     <p class="greeting-line"><span id="greetText">Hello</span>, <?= e(explode(' ', $_userName)[0]) ?> <span class="wave-emoji">👋</span></p>
                     <div class="breadcrumb-line">
