@@ -164,10 +164,12 @@ try {
             text-align: center;
             position: relative;
             flex-shrink: 0;
-            border-bottom: 2px solid transparent;
+            border-bottom: 3px solid transparent;
             border-image: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary), var(--brand-accent)) 1;
             transition: all 0.3s cubic-bezier(.4,0,.2,1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
         }
+        html[data-theme="dark"] .sidebar-brand-card { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
         .sidebar-logo {
             width: 56px; height: 56px;
             border-radius: 50%;
@@ -271,6 +273,14 @@ try {
         .sidebar .nav-link:hover {
             background: var(--sidebar-hover);
             color: var(--sidebar-text);
+            transform: translateX(2px);
+        }
+        .sidebar .nav-link i {
+            transition: color 0.2s ease;
+        }
+        .sidebar .nav-link:hover i {
+            color: var(--brand-primary);
+            opacity: 1;
         }
         .sidebar .nav-link.active {
             background: var(--sidebar-active-bg);
@@ -517,6 +527,42 @@ try {
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 0.7rem;
             flex-shrink: 0;
+        }
+
+        /* Topbar Pill Brand Section */
+        .topbar-pill-brand {
+            line-height: 1.25;
+            min-width: 0;
+        }
+        .topbar-pill-brand .pill-school-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        .topbar-pill-brand .pill-school-tagline {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin: 1px 0 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        .topbar-pill-divider {
+            width: 1px;
+            height: 28px;
+            background: var(--border-color);
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+        @media (max-width: 767.98px) {
+            .topbar-pill-brand,
+            .topbar-pill-divider { display: none; }
         }
 
         /* Greeting & Breadcrumb */
@@ -1191,6 +1237,11 @@ try {
                 <?php else: ?>
                     <div class="topbar-pill-fallback"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
                 <?php endif; ?>
+                <div class="topbar-pill-brand">
+                    <div class="pill-school-name"><?= e($schoolName) ?></div>
+                    <div class="pill-school-tagline"><?= e($schoolTagline) ?></div>
+                </div>
+                <div class="topbar-pill-divider"></div>
                 <div class="topbar-greeting">
                     <p class="greeting-line"><span id="greetText">Hello</span>, <?= e(explode(' ', $_userName)[0]) ?> <span class="wave-emoji">👋</span></p>
                     <div class="breadcrumb-line">
