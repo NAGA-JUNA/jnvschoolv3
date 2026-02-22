@@ -11,7 +11,7 @@ $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'
 $pendingAdmissions = $db->query("SELECT COUNT(*) FROM admissions WHERE status='pending'")->fetchColumn();
 $pendingNotifications = $db->query("SELECT COUNT(*) FROM notifications WHERE status='pending'")->fetchColumn();
 $pendingGallery = $db->query("SELECT COUNT(*) FROM gallery_items WHERE status='pending'")->fetchColumn();
-$upcomingEvents = $db->query("SELECT COUNT(*) FROM events WHERE event_date >= CURDATE()")->fetchColumn();
+$upcomingEvents = $db->query("SELECT COUNT(*) FROM events WHERE start_date >= CURDATE()")->fetchColumn();
 
 // Chart data — monthly admissions
 $year = date('Y');
@@ -24,7 +24,7 @@ $stmt = $db->query("SELECT MONTH(date) as m, ROUND(SUM(CASE WHEN status='present
 while ($r = $stmt->fetch()) { $monthlyAttendance[$r['m'] - 1] = (float)$r['rate']; }
 
 $recentLogs = $db->query("SELECT a.*, u.name as user_name FROM audit_logs a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.created_at DESC LIMIT 15")->fetchAll();
-$events = $db->query("SELECT * FROM events WHERE event_date >= CURDATE() ORDER BY event_date LIMIT 5")->fetchAll();
+$events = $db->query("SELECT * FROM events WHERE start_date >= CURDATE() ORDER BY start_date LIMIT 5")->fetchAll();
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -85,8 +85,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php else: foreach ($events as $ev): ?>
                     <div class="d-flex align-items-center gap-2 p-2 rounded" style="border-bottom:1px solid var(--border-color)">
                         <div class="text-center" style="min-width:40px">
-                            <div class="fw-bold" style="font-size:1.1rem;color:var(--brand-primary)"><?= date('d', strtotime($ev['event_date'])) ?></div>
-                            <div style="font-size:.65rem;color:var(--text-muted)"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                            <div class="fw-bold" style="font-size:1.1rem;color:var(--brand-primary)"><?= date('d', strtotime($ev['start_date'])) ?></div>
+                            <div style="font-size:.65rem;color:var(--text-muted)"><?= date('M', strtotime($ev['start_date'])) ?></div>
                         </div>
                         <div>
                             <div class="fw-medium" style="font-size:.85rem"><?= e($ev['title']) ?></div>
