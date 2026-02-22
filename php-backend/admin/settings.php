@@ -88,7 +88,7 @@ function saveBrandColors($db, $colors, $auto = true) {
 
 if($_SERVER['REQUEST_METHOD']==='POST'&&verifyCsrf()){$action=$_POST['form_action']??'settings';
 
-if($action==='settings'){$keys=['school_name','school_short_name','school_tagline','school_email','school_phone','school_address','primary_color','academic_year','admission_open'];foreach($keys as $k){$v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);}auditLog('update_settings','settings');setFlash('success','Settings updated.');}
+if($action==='settings'){$keys=['school_name','school_short_name','school_tagline','school_email','school_phone','school_address','primary_color','academic_year','admission_open'];foreach($keys as $k){$v=trim($_POST[$k]??'');$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$k,$v,$v]);}$mmVal=isset($_POST['maintenance_mode'])?'1':'0';$db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('maintenance_mode',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$mmVal,$mmVal]);auditLog('update_settings','settings');setFlash('success','Settings updated.');}
 
 if($action==='logo_upload'){
   if(!isSuperAdmin()){setFlash('error','Only Super Admin can change the logo.');
@@ -347,6 +347,19 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
           <div class="col-12"><label class="form-label">Address</label><textarea name="school_address" class="form-control" rows="2"><?=e($s['school_address']??'')?></textarea></div>
           <div class="col-md-6"><label class="form-label">Academic Year</label><input type="text" name="academic_year" class="form-control" value="<?=e($s['academic_year']??'')?>"></div>
           <div class="col-md-6"><label class="form-label">Admissions</label><select name="admission_open" class="form-select"><option value="1" <?=($s['admission_open']??'1')==='1'?'selected':''?>>Open</option><option value="0" <?=($s['admission_open']??'1')==='0'?'selected':''?>>Closed</option></select></div>
+          <div class="col-12">
+            <div class="card border-0 rounded-3 mb-3" style="background:<?=($s['maintenance_mode']??'0')==='1'?'#fef2f2':'#f0fdf4'?>;border:1px solid <?=($s['maintenance_mode']??'0')==='1'?'#fecaca':'#bbf7d0'?> !important;">
+              <div class="card-body py-3 d-flex align-items-center justify-content-between">
+                <div>
+                  <h6 class="fw-semibold mb-1"><i class="bi bi-tools me-2"></i>Maintenance Mode</h6>
+                  <small class="text-muted">When enabled, public visitors will see a maintenance page. Admins remain unaffected.</small>
+                </div>
+                <div class="form-check form-switch ms-3">
+                  <input class="form-check-input" type="checkbox" name="maintenance_mode" id="maintenanceMode" value="1" <?=($s['maintenance_mode']??'0')==='1'?'checked':''?> style="width:3rem;height:1.5rem;cursor:pointer;">
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="col-12"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Settings</button></div>
         </div></form>
       </div></div>

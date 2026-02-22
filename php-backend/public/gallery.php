@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/../includes/auth.php';
+checkMaintenance();
 $db = getDB();
 
 // ── AJAX endpoint for images (must be before any output) ──

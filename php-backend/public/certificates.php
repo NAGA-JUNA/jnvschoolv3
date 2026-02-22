@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/../includes/auth.php';
+checkMaintenance();
 $db = getDB();
 
 // Check if certificates page is enabled

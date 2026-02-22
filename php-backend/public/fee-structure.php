@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+checkMaintenance();
 $db = getDB();
 
 $schoolName = getSetting('school_name', 'JNV School');

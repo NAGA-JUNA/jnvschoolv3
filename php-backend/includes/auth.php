@@ -146,3 +146,25 @@ function paginationHtml(array $p, string $baseUrl): string {
     $html .= '</ul></nav>';
     return $html;
 }
+
+// Maintenance mode check
+function checkMaintenance(): void {
+    if (getSetting('maintenance_mode', '0') === '1' && !isLoggedIn()) {
+        $schoolName = getSetting('school_name', 'JNV School');
+        $logoFile = getSetting('school_logo', '');
+        $logoVer = getSetting('logo_updated_at', '0');
+        $logoUrl = '';
+        if ($logoFile) {
+            $logoUrl = (strpos($logoFile, '/uploads/') === 0) ? $logoFile : '/uploads/branding/' . $logoFile;
+            $logoUrl .= '?v=' . $logoVer;
+        }
+        http_response_code(503);
+        header('Retry-After: 3600');
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maintenance — ' . htmlspecialchars($schoolName, ENT_QUOTES, 'UTF-8') . '</title><style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",system-ui,-apple-system,sans-serif}body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1e40af 100%);color:#fff;text-align:center;padding:2rem}.container{max-width:520px}.logo{max-width:120px;max-height:120px;object-fit:contain;margin-bottom:2rem;border-radius:16px;background:rgba(255,255,255,.1);padding:12px}.icon{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;font-size:2.5rem;animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.05);opacity:1}}h1{font-size:2rem;font-weight:700;margin-bottom:.75rem}p{color:rgba(255,255,255,.7);font-size:1.05rem;line-height:1.7;margin-bottom:1.5rem}.login-link{display:inline-block;color:rgba(255,255,255,.5);font-size:.85rem;text-decoration:none;border:1px solid rgba(255,255,255,.2);padding:.4rem 1.2rem;border-radius:50px;transition:all .3s}.login-link:hover{color:#fff;border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.05)}</style></head><body><div class="container">';
+        if ($logoUrl) {
+            echo '<img src="' . htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') . '" alt="Logo" class="logo">';
+        }
+        echo '<div class="icon">🔧</div><h1>We\'ll be back soon!</h1><p>Our website is currently undergoing scheduled maintenance.<br>We apologize for any inconvenience and appreciate your patience.</p><a href="/login.php" class="login-link">Admin Login</a></div></body></html>';
+        exit;
+    }
+}
