@@ -44,7 +44,7 @@ A complete school management system built with **pure PHP 8+** and **MySQL**. No
 | 9 | `gallery_items` | Gallery uploads with approval, batch support, compression tracking |
 | 10 | `gallery_categories` | Gallery categories (Academic, Cultural, Sports, etc.) |
 | 11 | `gallery_albums` | Albums within categories with cover images |
-| 12 | `events` | School events/calendar with type, location, images |
+| 12 | `events` | School events/calendar with type, status, poster, featured flag, view tracking |
 | 13 | `attendance` | Daily attendance by class (present/absent/late/excused) |
 | 14 | `exam_results` | Exam marks with auto-grading (A+ to F scale) |
 | 15 | `audit_logs` | System action logs with IP, user, entity tracking |
@@ -722,13 +722,29 @@ INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('home_certificates_max', '6'),
 ('certificates_page_enabled', '1');
 
--- 8. Create upload directories:
+-- 8. Upgrade events table (rename columns, add new fields)
+ALTER TABLE `events`
+  CHANGE COLUMN `event_date` `start_date` DATE NOT NULL,
+  ADD COLUMN `end_date` DATE DEFAULT NULL AFTER `start_date`,
+  CHANGE COLUMN `event_time` `start_time` TIME DEFAULT NULL,
+  ADD COLUMN `end_time` TIME DEFAULT NULL AFTER `start_time`,
+  ADD COLUMN `status` ENUM('active','draft','cancelled','completed') NOT NULL DEFAULT 'active' AFTER `type`,
+  ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_public`,
+  CHANGE COLUMN `image` `poster` VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN `views` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `poster`,
+  ADD COLUMN `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  MODIFY COLUMN `type` ENUM('sports','cultural','exam','holiday','activity','academic','meeting','other') NOT NULL DEFAULT 'activity',
+  ADD KEY `idx_events_status` (`status`),
+  ADD KEY `idx_events_featured` (`is_featured`);
+
+-- 9. Create upload directories:
 --    uploads/branding/
 --    uploads/certificates/
 --    uploads/feature-cards/
+--    uploads/events/
 ```
 
-No existing table structures are changed — only new tables and settings are added.
+No existing table structures are changed — only new tables, columns, and settings are added.
 
 ---
 
