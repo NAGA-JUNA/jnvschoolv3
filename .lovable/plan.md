@@ -1,39 +1,80 @@
 
 
-## Move Quote Highlight Editor into About Us Content Settings
+## Maintenance Mode Toggle
 
-### What Changes
-The quote editing fields (Quote Message and Author Name) will be embedded directly inside the **About Us** tab of the Page Content Manager, appearing right below the "Show Inspirational Quote" toggle. The standalone Quote Highlight page will remain functional but become optional/redundant.
+### Overview
+Add a Maintenance Mode on/off toggle in the admin Settings page. When enabled, all public visitors will see a professional "Site Under Maintenance" page. Admins and teachers who are logged in can still access the backend normally.
 
-### How It Will Work
-1. When admin selects "About Us" in Page Content Manager, they will see the existing fields plus two new fields right after the "Show Inspirational Quote" toggle:
-   - **Quote Message** (textarea, required)
-   - **Quote Author** (text, optional)
-2. These fields will read from and write to the `site_quotes` table (not the `settings` table), preserving the existing data structure.
-3. The "Last updated" info will display below the fields.
-4. Saving the About Us form will also save the quote in one submission.
+### How It Works
+- A new toggle switch in the **General** tab of Settings lets you turn Maintenance Mode on or off
+- When ON, any visitor who is **not logged in** will see a full-screen maintenance page instead of the website
+- Logged-in admins and teachers can browse the site normally (so you never lock yourself out)
+- The maintenance page will show the school name, logo, and a friendly message
+
+---
+
+### Changes
+
+**1. Settings Page -- Add toggle (General tab)**
+File: `php-backend/admin/settings.php`
+
+- Add a "Maintenance Mode" on/off toggle switch in the General tab (near the top, after School Name or before the Save button)
+- The toggle saves a setting key called `maintenance_mode` with value `1` (on) or `0` (off)
+- Add a small warning text: "When enabled, public visitors will see a maintenance page. Admins remain unaffected."
+
+**2. Save handler -- Handle the new toggle**
+File: `php-backend/admin/settings.php`
+
+- Add `maintenance_mode` to the list of keys saved in the `settings` action handler (the `$keys` array on line 91)
+- Use checkbox logic: `isset($_POST['maintenance_mode']) ? '1' : '0'`
+
+**3. Auth include -- Add maintenance check**
+File: `php-backend/includes/auth.php`
+
+- At the bottom of the file, add a new function `checkMaintenance()` that:
+  - Reads `getSetting('maintenance_mode', '0')`
+  - If `1` AND the user is NOT logged in, display a full-screen maintenance HTML page and `exit`
+  - Logged-in users pass through without interruption
+
+**4. Public pages -- Call the check**
+Files: `php-backend/index.php` and all files in `php-backend/public/` (about.php, teachers.php, gallery.php, events.php, notifications.php, fee-structure.php, admission-form.php, certificates.php)
+
+- Add `checkMaintenance();` near the top of each file (right after the `require_once` for auth.php)
+- This single line activates the gate on every public page
+
+**5. Login page -- Allow access**
+File: `php-backend/login.php`
+
+- No maintenance check here -- admins must still be able to log in
+
+---
+
+### Maintenance Page Design
+The maintenance page will be a self-contained HTML page (no external dependencies needed) showing:
+- School logo (if available)
+- School name
+- "We'll be back soon!" heading
+- A short message: "Our website is currently undergoing scheduled maintenance."
+- A subtle animation or icon for visual appeal
+
+---
 
 ### Technical Details
 
-**File: `php-backend/admin/page-content-manager.php`**
+**New setting key:** `maintenance_mode` (values: `0` or `1`, default: `0`)
 
-1. **Add quote fields to the `about` config** (after line 54, the `about_quote_show` toggle):
-   - Add two new special-type fields:
-     - `about_quote_text` (textarea, label: "Quote Message")
-     - `about_quote_author` (text, label: "Quote Author Name")
-   - These will have a special flag like `'source' => 'site_quotes'` to differentiate them from regular settings fields.
+**`checkMaintenance()` function logic:**
+```text
+if maintenance_mode == '1' AND user is NOT logged in:
+    show maintenance HTML page
+    exit
+```
 
-2. **Load the current quote at the top of the file** (near line 5):
-   - Query `site_quotes` table for the active quote, similar to `quote-highlight.php` line 33-37.
+**Files modified:** 
+- `php-backend/includes/auth.php` (add function)
+- `php-backend/admin/settings.php` (add toggle + save logic)
+- `php-backend/index.php` (add one-line call)
+- 8 public page files (add one-line call each)
 
-3. **Update the form rendering logic** (around lines 227-265):
-   - When rendering the `about` page fields, detect the special `source` flag.
-   - For quote fields, populate values from the `site_quotes` query instead of the `settings` table.
-   - Show the "Last updated" info below the author field.
-
-4. **Update the save handler** (around lines 130-157):
-   - When saving the `about` page, detect the quote fields and save them to the `site_quotes` table (INSERT or UPDATE) instead of the `settings` table.
-   - Use the same upsert logic from `quote-highlight.php` lines 16-23.
-
-**No other files need to change.** The standalone `quote-highlight.php` continues to work independently if needed, and the `site_quotes` table structure stays the same.
+**No database schema changes needed** -- uses the existing `settings` table.
 
