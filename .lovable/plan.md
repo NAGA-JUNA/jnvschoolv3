@@ -1,29 +1,50 @@
 
 
-## Remove Info Card, Make Map Full Width
+## Fix SQL Error and Ensure Core Team Section Displays
 
-### Change
+### Problem 1: SQLSTATE[HY093] Error
 
-**File: `php-backend/index.php`** (lines 940-986)
+**File: `php-backend/admin/teacher-form.php`** (line 25)
 
-Remove the two-column layout (map on left, info card on right) and replace with a single full-width map embed. The map will span the entire container width with a taller height for better visibility.
+The UPDATE query uses PHP's array spread operator `[...array_values($d), $id]` which can cause parameter count mismatches in certain PHP configurations. The fix is to replace the spread with an explicit `array_merge` call and use a safer parameter-building approach.
 
-**What gets removed:**
-- The right-side info card showing school name, address, landmark, phone
-- The "Get Directions", "Open in Google Maps", and "Copy Address" buttons
-- The two-column `row` / `col-lg-7` / `col-lg-5` grid
+**Fix:**
+- Replace `[...array_values($d), $id]` with `array_merge(array_values($d), [$id])`
+- This ensures reliable parameter passing across all PHP 8.x versions
 
-**What stays:**
-- Section header ("Our Location" with subtitle)
-- Full-width Google Maps iframe embed in a rounded card with hover effect
-- The background gradient and overall section styling
-- The `copyAddress` JS and hover CSS can be removed since the card is gone
+### Problem 2: Core Team Section Not Showing on Homepage
 
-**Result:** A clean, full-width embedded map section -- similar to the screenshot reference but without the side panel.
+**File: `php-backend/index.php`** (line 687)
+
+The section only renders when `$coreTeam` is not empty. The query on line 56 fetches teachers with `is_core_team=1`. If no teachers are flagged as core team members, the section is hidden entirely.
+
+**No code change needed here** -- the section logic is correct. The user needs to:
+1. Go to Admin > Teachers
+2. Edit a teacher
+3. Enable the "Core Team Member" toggle
+4. Save
+
+Once at least one teacher has `is_core_team=1`, the section will appear on the homepage.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `php-backend/index.php` | Replace two-column layout (lines 940-985) with single full-width map; remove `copyAddress` JS (lines 992-1003) |
+| `php-backend/admin/teacher-form.php` | Replace spread operator with `array_merge` for safer SQL parameter binding |
+
+### Technical Detail
+
+Current (broken in some environments):
+```php
+->execute([...array_values($d), $id])
+```
+
+Fixed:
+```php
+$params = array_values($d);
+$params[] = $id;
+->execute($params)
+```
+
+This is a one-line fix that resolves the SQLSTATE[HY093] error reliably.
 
