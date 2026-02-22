@@ -1,111 +1,161 @@
 
 
-## Update README.md and schema.sql — Complete v3.3 Documentation
+## Complete Events Management System Overhaul
 
-### Overview
-Rewrite the README.md with full documentation of every admin/teacher/public feature, complete setup guide, and accurate file structure. Update schema.sql to v3.3 with the missing `maintenance_mode` setting and correct table count.
-
----
-
-### 1. README.md — Full Rewrite
-
-**Version bump:** v3.2 to v3.3, table count 13 to 24
-
-**New/updated sections:**
-
-- **Overview** — v3.3, 24 tables
-- **Deployment Guide** — Same 9 steps but with corrected table count (24), updated directory tree including all new files:
-  - `admin/certificates.php`
-  - `admin/feature-cards.php`
-  - `admin/fee-structure.php`
-  - `admin/footer-manager.php`
-  - `admin/navigation-settings.php`
-  - `admin/page-content-manager.php`
-  - `admin/quote-highlight.php`
-  - `admin/upload-gallery.php`
-  - `admin/ajax/` folder (7 AJAX handlers)
-  - `public/certificates.php`
-  - `public/fee-structure.php`
-  - `uploads/branding/` subfolder
-  - `uploads/certificates/` subfolder
-  - `uploads/feature-cards/` subfolder
-- **Full table listing** — All 24 tables with descriptions:
-  1. users
-  2. students
-  3. teachers
-  4. admissions
-  5. notifications
-  6. notification_reads
-  7. notification_versions
-  8. notification_attachments
-  9. gallery_items
-  10. gallery_categories
-  11. gallery_albums
-  12. events
-  13. attendance
-  14. exam_results
-  15. audit_logs
-  16. settings
-  17. home_slider
-  18. site_quotes
-  19. leadership_profiles
-  20. nav_menu_items
-  21. certificates
-  22. feature_cards
-  23. fee_structures
-  24. fee_components
-
-- **Admin Panel features** — Document every admin page:
-  - Dashboard, Students, Teachers, Admissions, Notifications, Gallery, Events, Slider
-  - **Certificates** — Upload/manage school certificates and accreditations
-  - **Feature Cards** — Manage homepage quick-link cards with icons, colors, badges, analytics
-  - **Fee Structure** — Class-wise fee management with components and frequencies
-  - **Footer Manager** — Edit footer description, quick links, programs, contact info, social links
-  - **Navigation Settings** — Drag-and-drop navbar menu editor with visibility, CTA, icons
-  - **Page Content Manager** — Per-page hero text, section toggles, inline quote editing
-  - **Quote Highlight** — Standalone inspirational quote editor (also available inline in Page Content Manager)
-  - **Settings** — General (school info, logo, favicon, maintenance mode), Theme Color (with brand extraction), User Management, SMTP/Email, Danger Zone
-  - **Reports** — CSV exports
-  - **Audit Logs** — Searchable log viewer
-  - **Support** — Help/support page
-
-- **Teacher Panel** — Same as before
-
-- **Public Website** — Add new public pages:
-  - **Certificates** — Public certificates showcase
-  - **Fee Structure** — Public fee information
-
-- **Maintenance Mode** — New section explaining:
-  - Toggle in Settings > General tab
-  - Shows branded maintenance page to non-logged-in visitors
-  - Admins/teachers can still access the site
-  - Login page always accessible
-
-- **Settings Keys Reference** — Complete list of all ~80+ settings keys with descriptions
-
-- **Upgrade section** — Add v3.2 to v3.3 migration (maintenance_mode setting + any new tables)
-
-- **Troubleshooting** — Keep existing + add maintenance mode troubleshooting
+### What Changes
+Replace the basic single-file events system with a full-featured Events Management System including poster uploads, status management, featured events, pagination, public detail pages, filters, WhatsApp sharing, and view tracking.
 
 ---
 
-### 2. schema.sql — Update to v3.3
+### 1. Database Schema Update
 
-**Changes:**
-- Update header comment from v3.2 to v3.3 with 24 tables
-- Add missing `maintenance_mode` setting:
-  ```sql
-  ('maintenance_mode', '0'),
-  ```
-- Ensure all settings keys used by the codebase are present in the INSERT statements
+**Drop and recreate the `events` table** with new columns:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | INT AUTO_INCREMENT | Primary key |
+| title | VARCHAR(255) | Event title |
+| description | TEXT | Full description |
+| start_date | DATE | Start date (replaces `event_date`) |
+| end_date | DATE | End date |
+| start_time | TIME | Start time (replaces `event_time`) |
+| end_time | TIME | End time (new) |
+| location | VARCHAR(255) | Venue |
+| type | ENUM | sports, cultural, exam, holiday, activity, academic, meeting, other |
+| status | ENUM | active, draft, cancelled, completed |
+| is_public | TINYINT(1) | Visibility toggle |
+| is_featured | TINYINT(1) | Featured flag (new) |
+| poster | VARCHAR(255) | Poster image path (new) |
+| views | INT | View counter (new) |
+| created_by | INT UNSIGNED | Creator reference |
+| created_at | TIMESTAMP | Auto timestamp |
+| updated_at | TIMESTAMP | Auto update timestamp |
+
+**Migration SQL** will be provided for existing installations to run before deploying.
+
+---
+
+### 2. Admin Panel — Rebuilt `admin/events.php`
+
+Replace the current compact single-page layout with a professional full-featured admin page:
+
+**Listing View (default):**
+- Stats row: Total Events, Active, Upcoming, Featured (KPI cards)
+- Action bar: "Add Event" button + search input + type filter dropdown + status filter
+- Paginated table with columns:
+  - Poster thumbnail (small)
+  - Title
+  - Date range (formatted nicely, multi-day shown as range)
+  - Type (colored badge)
+  - Status (colored badge: green=active, yellow=draft, red=cancelled, blue=completed)
+  - Public toggle (inline switch)
+  - Featured star (clickable)
+  - Views count
+  - Actions: Edit / Delete
+- Pagination at bottom
+- "Today / Tomorrow" badges on relevant events
+- Confirm-before-delete modal
+
+**Add/Edit Form (separate section or modal):**
+- Accessed via `?action=add` or `?action=edit&id=X`
+- Fields: Title, Description (textarea), Start Date, End Date, Start Time, End Time, Location, Type dropdown, Status dropdown, Poster upload (with preview), Public checkbox, Featured checkbox
+- Client-side validation: end_date >= start_date
+- CSRF protection
+- Uses `FileHandler::uploadImage()` for poster (stored in `uploads/events/`)
+- On edit, shows current poster with option to change/remove
+- Cancel button returns to listing
+
+**AJAX Toggles:**
+- New `admin/ajax/event-actions.php` for:
+  - Toggle public on/off
+  - Toggle featured on/off
+  - These use CSRF verification and return JSON
+
+**Auto-complete past events:**
+- When loading admin page, auto-UPDATE events where `start_date < CURDATE()` AND `status = 'active'` to `status = 'completed'`
+
+---
+
+### 3. Public Events Page — Rebuilt `public/events.php`
+
+**Hero section** (uses existing Page Content Manager settings `events_hero_title`, etc.)
+
+**Filter bar:**
+- Search input (by title)
+- Type filter dropdown
+- Upcoming / Past toggle buttons
+
+**Featured events section** (top, only if any featured upcoming events exist):
+- Large card layout with poster image, title, date, location, type badge
+
+**Upcoming Events:**
+- Card-based layout (not table)
+- Each card shows: poster image (if any), title, date range, time, location, type badge, short description (truncated)
+- "Today" / "Tomorrow" badge on relevant cards
+- WhatsApp share button on each card
+- Click card to go to detail page
+
+**Past Events:**
+- Separate section below, slightly muted styling
+- Same card layout but with reduced opacity
+- Limited to 12 initially, "Load more" or pagination
+
+---
+
+### 4. Public Event Detail Page — New `public/event-view.php`
+
+**New file** that shows a single event:
+- Full poster image (if any)
+- Title, full description
+- Date range with day names
+- Time range
+- Location with icon
+- Type badge
+- WhatsApp share button
+- View count incremented on load (via simple UPDATE query)
+- "Back to Events" link
+- Related events sidebar or bottom section (same type, upcoming)
+
+---
+
+### 5. Admin Sidebar Update
+
+The events link in the sidebar already exists — no changes needed there.
 
 ---
 
 ### Technical Details
 
-**Files modified:**
-- `php-backend/README.md` — Full rewrite with comprehensive documentation
-- `php-backend/schema.sql` — Version bump + add `maintenance_mode` setting
+**Files created:**
+- `php-backend/admin/ajax/event-actions.php` — AJAX handler for public/featured toggles
+- `php-backend/public/event-view.php` — Public event detail page
 
-**No structural or logic changes** — documentation and schema defaults only.
+**Files modified:**
+- `php-backend/schema.sql` — Updated events table with new columns
+- `php-backend/admin/events.php` — Complete rewrite with full admin UI
+- `php-backend/public/events.php` — Complete rewrite with filters, cards, featured section
+
+**Directories created:**
+- `uploads/events/` — Created automatically by FileHandler on first poster upload
+
+**Patterns followed:**
+- `FileHandler::uploadImage()` for poster uploads (same as gallery/slider)
+- `paginate()` + `paginationHtml()` from auth.php for pagination
+- `verifyCsrf()` on all mutations
+- `auditLog()` on create/update/delete
+- `checkMaintenance()` on public page
+- `e()` for all output escaping
+- Bootstrap 5.3 + Bootstrap Icons for UI
+- Dark mode compatible admin styles (inherits from header.php)
+- Mobile responsive with existing breakpoints
+
+**Security:**
+- All inputs sanitized with prepared statements
+- CSRF on all forms and AJAX calls
+- File upload validation via FileHandler (JPG/PNG/WebP only, 5MB max)
+- Role check via `requireAdmin()`
+- Public pages filter by `is_public=1` AND `status IN ('active','completed')`
+
+**Migration for existing data:**
+Since the column names change (`event_date` to `start_date`, `event_time` to `start_time`), the schema.sql will include the new structure, and a migration SQL block will be documented for existing installations.
 
