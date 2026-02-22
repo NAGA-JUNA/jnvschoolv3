@@ -31,7 +31,7 @@ $slides = $db->query("SELECT * FROM home_slider WHERE is_active=1 ORDER BY sort_
 $coreTeam = $db->query("SELECT * FROM teachers WHERE status='active' AND is_core_team=1 ORDER BY FIELD(designation,'Principal','Director','Correspondent','Vice Principal','Teacher'), name ASC")->fetchAll();
 
 // Get upcoming events (next 3)
-$events = $db->query("SELECT title, event_date, location FROM events WHERE is_public=1 AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 3")->fetchAll();
+$events = $db->query("SELECT title, start_date, location FROM events WHERE is_public=1 AND start_date >= CURDATE() ORDER BY start_date ASC LIMIT 3")->fetchAll();
 
 // Get latest notifications (3 for section)
 $notifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 3")->fetchAll();
@@ -350,7 +350,7 @@ $galleryCount = 0;
 $nextEvent = null;
 try {
     $galleryCount = (int)$db->query("SELECT COUNT(*) FROM gallery_items WHERE status='approved'")->fetchColumn();
-    $nextEvent = $db->query("SELECT title, event_date FROM events WHERE is_public=1 AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 1")->fetch();
+    $nextEvent = $db->query("SELECT title, start_date FROM events WHERE is_public=1 AND start_date >= CURDATE() ORDER BY start_date ASC LIMIT 1")->fetch();
 } catch (Exception $e) {}
 
 // Build stats map
@@ -358,7 +358,7 @@ $cardStats = [
     'admissions' => $admissionOpen === '1' ? 'Admissions Open' : 'Admissions Closed',
     'notifications' => $notifCount . ' new this week',
     'gallery' => $galleryCount . ' photos & videos',
-    'events' => $nextEvent ? e($nextEvent['title']) . ' — ' . date('d M', strtotime($nextEvent['event_date'])) : 'No upcoming events',
+    'events' => $nextEvent ? e($nextEvent['title']) . ' — ' . date('d M', strtotime($nextEvent['start_date'])) : 'No upcoming events',
 ];
 $cardStatsIcon = [
     'admissions' => $admissionOpen === '1' ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger',
@@ -517,7 +517,7 @@ if ($notifCount > 0) {
                 <div class="fcard-icon"><i class="bi bi-calendar-event-fill"></i></div>
                 <h5><?= e(getSetting('home_cta_events_title', 'Events')) ?></h5>
                 <p><?= e(getSetting('home_cta_events_desc', 'Check upcoming school events & dates.')) ?></p>
-                <div class="fcard-stats"><i class="bi bi-clock-fill"></i> <?= $nextEvent ? e($nextEvent['title']) . ' — ' . date('d M', strtotime($nextEvent['event_date'])) : 'No upcoming events' ?></div>
+                <div class="fcard-stats"><i class="bi bi-clock-fill"></i> <?= $nextEvent ? e($nextEvent['title']) . ' — ' . date('d M', strtotime($nextEvent['start_date'])) : 'No upcoming events' ?></div>
                 <a href="/public/events.php" class="btn-fcard">View Events <i class="bi bi-arrow-right"></i></a>
             </div>
         </div>
@@ -596,8 +596,8 @@ function trackCardClick(slug) {
                     <div class="card info-card mb-3">
                         <div class="card-body py-3 d-flex gap-3 align-items-center">
                             <div class="text-center flex-shrink-0" style="width:50px;">
-                                <div class="fw-bold text-primary" style="font-size:1.3rem;line-height:1;"><?= date('d', strtotime($ev['event_date'])) ?></div>
-                                <small class="text-muted text-uppercase" style="font-size:0.65rem;"><?= date('M', strtotime($ev['event_date'])) ?></small>
+                                <div class="fw-bold text-primary" style="font-size:1.3rem;line-height:1;"><?= date('d', strtotime($ev['start_date'])) ?></div>
+                                <small class="text-muted text-uppercase" style="font-size:0.65rem;"><?= date('M', strtotime($ev['start_date'])) ?></small>
                             </div>
                             <div>
                                 <h6 class="fw-semibold mb-0"><?= e($ev['title']) ?></h6>
