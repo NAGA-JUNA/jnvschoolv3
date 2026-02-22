@@ -3,7 +3,7 @@ $pageTitle='Teacher Form';require_once __DIR__.'/../includes/auth.php';requireAd
 $id=(int)($_GET['id']??0);$teacher=null;
 if($id){$stmt=$db->prepare("SELECT * FROM teachers WHERE id=?");$stmt->execute([$id]);$teacher=$stmt->fetch();if(!$teacher){setFlash('error','Not found.');header('Location: /admin/teachers.php');exit;}$pageTitle='Edit Teacher';}else{$pageTitle='Add Teacher';}
 if($_SERVER['REQUEST_METHOD']==='POST'){if(!verifyCsrf()){setFlash('error','Invalid.');header("Location:/admin/teacher-form.php?id=$id");exit;}
-$d=['employee_id'=>trim($_POST['employee_id']??''),'name'=>trim($_POST['name']??''),'designation'=>trim($_POST['designation']??'Teacher'),'email'=>trim($_POST['email']??''),'phone'=>trim($_POST['phone']??''),'subject'=>trim($_POST['subject']??''),'qualification'=>trim($_POST['qualification']??''),'experience_years'=>(int)($_POST['experience_years']??0),'dob'=>$_POST['dob']?:null,'gender'=>$_POST['gender']?:null,'address'=>trim($_POST['address']??''),'joining_date'=>$_POST['joining_date']?:null,'status'=>$_POST['status']??'active','is_core_team'=>isset($_POST['is_core_team'])?1:0,'bio'=>trim($_POST['bio']??'')];
+$d=['employee_id'=>trim($_POST['employee_id']??''),'name'=>trim($_POST['name']??''),'designation'=>trim($_POST['designation']??'Teacher'),'email'=>trim($_POST['email']??''),'phone'=>trim($_POST['phone']??''),'subject'=>trim($_POST['subject']??''),'qualification'=>trim($_POST['qualification']??''),'experience_years'=>(int)($_POST['experience_years']??0),'dob'=>$_POST['dob']?:null,'gender'=>$_POST['gender']?:null,'address'=>trim($_POST['address']??''),'joining_date'=>$_POST['joining_date']?:null,'status'=>$_POST['status']??'active','bio'=>trim($_POST['bio']??'')];
 
 // Handle photo upload
 $photoName = $teacher['photo'] ?? null;
@@ -22,7 +22,7 @@ if(!empty($_FILES['photo']['name']) && $_FILES['photo']['error']===UPLOAD_ERR_OK
 $d['photo'] = $photoName;
 
 if(!$d['employee_id']||!$d['name'])setFlash('error','Employee ID and Name required.');
-else{try{if($id){$params=array_values($d);$params[]=$id;$db->prepare("UPDATE teachers SET employee_id=?,name=?,designation=?,email=?,phone=?,subject=?,qualification=?,experience_years=?,dob=?,gender=?,address=?,joining_date=?,status=?,is_core_team=?,bio=?,photo=? WHERE id=?")->execute($params);auditLog('update_teacher','teacher',$id);setFlash('success','Updated.');}else{$db->prepare("INSERT INTO teachers (employee_id,name,designation,email,phone,subject,qualification,experience_years,dob,gender,address,joining_date,status,is_core_team,bio,photo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute(array_values($d));auditLog('create_teacher','teacher',(int)$db->lastInsertId());setFlash('success','Added.');if($d['email']){try{$db->prepare("INSERT INTO users (name,email,password,role) VALUES (?,?,?,'teacher')")->execute([$d['name'],$d['email'],password_hash('Teacher@123',PASSWORD_DEFAULT)]);}catch(Exception $e){}}}header('Location: /admin/teachers.php');exit;}catch(PDOException $e){if($e->getCode()==23000)setFlash('error','Employee ID exists.');else setFlash('error',$e->getMessage());}}}
+else{try{if($id){$params=array_values($d);$params[]=$id;$db->prepare("UPDATE teachers SET employee_id=?,name=?,designation=?,email=?,phone=?,subject=?,qualification=?,experience_years=?,dob=?,gender=?,address=?,joining_date=?,status=?,bio=?,photo=? WHERE id=?")->execute($params);auditLog('update_teacher','teacher',$id);setFlash('success','Updated.');}else{$db->prepare("INSERT INTO teachers (employee_id,name,designation,email,phone,subject,qualification,experience_years,dob,gender,address,joining_date,status,bio,photo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute(array_values($d));auditLog('create_teacher','teacher',(int)$db->lastInsertId());setFlash('success','Added.');if($d['email']){try{$db->prepare("INSERT INTO users (name,email,password,role) VALUES (?,?,?,'teacher')")->execute([$d['name'],$d['email'],password_hash('Teacher@123',PASSWORD_DEFAULT)]);}catch(Exception $e){}}}header('Location: /admin/teachers.php');exit;}catch(PDOException $e){if($e->getCode()==23000)setFlash('error','Employee ID exists.');else setFlash('error',$e->getMessage());}}}
 $t=$teacher??[];require_once __DIR__.'/../includes/header.php';?>
 <div class="card border-0 rounded-3"><div class="card-body"><form method="POST" enctype="multipart/form-data"><?=csrfField()?><div class="row g-3">
 <div class="col-md-4"><label class="form-label">Employee ID *</label><input type="text" name="employee_id" class="form-control" required value="<?=e($t['employee_id']??'')?>"></div>
@@ -43,13 +43,6 @@ $t=$teacher??[];require_once __DIR__.'/../includes/header.php';?>
   <?php if(!empty($t['photo'])):?><div class="mt-2"><img src="/uploads/photos/<?=e($t['photo'])?>" class="rounded" style="width:60px;height:60px;object-fit:cover" alt="Current photo"><small class="text-muted ms-2">Current photo</small></div><?php endif;?>
 </div>
 <div class="col-12"><label class="form-label">Address</label><textarea name="address" class="form-control" rows="2"><?=e($t['address']??'')?></textarea></div>
-<div class="col-md-4">
-  <div class="form-check form-switch mt-4">
-    <input class="form-check-input" type="checkbox" name="is_core_team" id="isCoreTeam" <?=(!empty($t['is_core_team']))?'checked':''?>>
-    <label class="form-check-label fw-medium" for="isCoreTeam"><i class="bi bi-star-fill text-warning me-1"></i>Core Team Member</label>
-  </div>
-  <small class="text-muted">Show on homepage "Our Core Team" section</small>
-</div>
 <div class="col-12"><label class="form-label">Bio / Message <small class="text-muted">(used for Principal's Message section)</small></label><textarea name="bio" class="form-control" rows="3" placeholder="Optional: Enter a message or bio for the public teachers page..."><?=e($t['bio']??'')?></textarea></div>
 <div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i><?=$id?'Update':'Add'?></button><a href="/admin/teachers.php" class="btn btn-outline-secondary">Cancel</a></div>
 </div></form></div></div>
