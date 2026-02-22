@@ -853,6 +853,66 @@ window.certLightbox = function(src, type) {
 </section>
 <?php endif; ?>
 
+<?php
+// === School Location / Map Section ===
+$mapEnabled = getSetting('school_map_enabled', '0');
+if ($mapEnabled === '1'):
+    $mapEmbedUrl  = getSetting('school_map_embed_url', '');
+    $mapLat       = getSetting('school_latitude', '');
+    $mapLng       = getSetting('school_longitude', '');
+    $mapLandmark  = getSetting('school_landmark', '');
+    if ($mapEmbedUrl):
+?>
+<section class="py-5" style="background:linear-gradient(135deg,#f8fafc 0%,#f0f4ff 100%);">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h4 class="fw-bold"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Our Location</h4>
+            <p class="text-muted">Find us on the map and visit our campus</p>
+        </div>
+        <div class="row g-4 align-items-stretch">
+            <div class="col-lg-7">
+                <div style="border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.1);height:100%;min-height:320px;">
+                    <iframe src="<?= e($mapEmbedUrl) ?>" width="100%" height="100%" style="border:0;min-height:320px;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+            <div class="col-lg-5 d-flex">
+                <div class="card border-0 shadow-sm rounded-3 w-100">
+                    <div class="card-body p-4 d-flex flex-column justify-content-center">
+                        <h5 class="fw-bold mb-3"><?= e($schoolName) ?></h5>
+                        <?php if ($schoolAddress): ?>
+                        <div class="d-flex gap-2 mb-2">
+                            <i class="bi bi-geo-alt-fill text-primary mt-1"></i>
+                            <span class="text-muted"><?= e($schoolAddress) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($mapLandmark): ?>
+                        <div class="d-flex gap-2 mb-2">
+                            <i class="bi bi-signpost-2-fill text-info mt-1"></i>
+                            <span class="text-muted"><?= e($mapLandmark) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($schoolPhone): ?>
+                        <div class="d-flex gap-2 mb-3">
+                            <i class="bi bi-telephone-fill text-success mt-1"></i>
+                            <a href="tel:<?= e($schoolPhone) ?>" class="text-muted text-decoration-none"><?= e($schoolPhone) ?></a>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($mapLat && $mapLng): ?>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($mapLat) ?>,<?= urlencode($mapLng) ?>" target="_blank" rel="noopener" class="btn btn-primary rounded-pill px-4 mt-auto">
+                            <i class="bi bi-cursor-fill me-2"></i>Get Directions
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<?php
+    endif;
+endif;
+?>
+
 <?php include __DIR__ . '/includes/public-footer.php'; ?>
 <?php if (count($slides) > 1): ?>
 <script>
