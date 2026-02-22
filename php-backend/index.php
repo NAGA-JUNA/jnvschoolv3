@@ -937,70 +937,14 @@ if ($mapEnabled === '1'):
             <h4 class="fw-bold"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Our Location</h4>
             <p class="text-muted">Find us on the map and visit our campus</p>
         </div>
-        <div class="row g-4 align-items-stretch">
-            <div class="col-lg-7">
-                <div class="map-card-hover" style="border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.1);height:100%;min-height:320px;transition:transform .3s ease,box-shadow .3s ease;">
-                    <iframe src="<?= e($mapEmbedUrl) ?>" width="100%" height="100%" style="border:0;min-height:320px;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                </div>
-            </div>
-            <div class="col-lg-5 d-flex">
-                <div class="card border-0 shadow-sm w-100 map-card-hover" style="border-radius:20px;transition:transform .3s ease,box-shadow .3s ease;">
-                    <div class="card-body p-4 d-flex flex-column justify-content-center">
-                        <h5 class="fw-bold mb-3"><?= e($schoolName) ?></h5>
-                        <?php if ($schoolAddress): ?>
-                        <div class="d-flex gap-2 mb-2">
-                            <i class="bi bi-geo-alt-fill text-primary mt-1"></i>
-                            <span class="text-muted" id="school-address-text"><?= e($schoolAddress) ?></span>
-                        </div>
-                        <?php endif; ?>
-                        <?php if ($mapLandmark): ?>
-                        <div class="d-flex gap-2 mb-2">
-                            <i class="bi bi-signpost-2-fill text-info mt-1"></i>
-                            <span class="text-muted"><?= e($mapLandmark) ?></span>
-                        </div>
-                        <?php endif; ?>
-                        <?php if ($schoolPhone): ?>
-                        <div class="d-flex gap-2 mb-3">
-                            <i class="bi bi-telephone-fill text-success mt-1"></i>
-                            <a href="tel:<?= e($schoolPhone) ?>" class="text-muted text-decoration-none"><?= e($schoolPhone) ?></a>
-                        </div>
-                        <?php endif; ?>
-                        <div class="d-flex flex-column gap-2 mt-auto">
-                            <?php if ($mapLat && $mapLng): ?>
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($mapLat) ?>,<?= urlencode($mapLng) ?>" target="_blank" rel="noopener" class="btn btn-primary rounded-pill px-4">
-                                <i class="bi bi-cursor-fill me-2"></i>Get Directions
-                            </a>
-                            <a href="https://www.google.com/maps?q=<?= urlencode($mapLat) ?>,<?= urlencode($mapLng) ?>" target="_blank" rel="noopener" class="btn btn-outline-primary rounded-pill px-4">
-                                <i class="bi bi-box-arrow-up-right me-2"></i>Open in Google Maps
-                            </a>
-                            <?php endif; ?>
-                            <?php if ($schoolAddress): ?>
-                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" onclick="copyAddress()" id="copy-addr-btn">
-                                <i class="bi bi-clipboard me-2"></i>Copy Address
-                            </button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="map-card-hover" style="border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.1);transition:transform .3s ease,box-shadow .3s ease;">
+            <iframe src="<?= e($mapEmbedUrl) ?>" width="100%" height="450" style="border:0;display:block;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
     </div>
 </section>
 <style>
 .map-card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.15) !important; }
 </style>
-<script>
-function copyAddress() {
-    const addr = document.getElementById('school-address-text');
-    if (addr) {
-        navigator.clipboard.writeText(addr.textContent).then(() => {
-            const btn = document.getElementById('copy-addr-btn');
-            btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Copied!';
-            setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard me-2"></i>Copy Address'; }, 2000);
-        });
-    }
-}
-</script>
 <?php
     endif;
 endif;
