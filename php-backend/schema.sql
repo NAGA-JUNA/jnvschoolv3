@@ -1,5 +1,5 @@
 -- ============================================
--- JNV School Management System — Full Database Schema v3.2
+-- JNV School Management System — Full Database Schema v3.3
 -- Domain: jnvschool.awayindia.com
 -- Run this in phpMyAdmin after creating database
 -- ============================================
@@ -15,22 +15,31 @@
 -- ⚠️ WARNING: This uses DROP TABLE IF EXISTS — it will DELETE
 --    all existing data if tables already exist. BACK UP FIRST!
 --
--- TOTAL TABLES: 15
---   1. users           — Admin/teacher/office accounts
---   2. students        — Student records with photos
---   3. teachers        — Teacher records linked to user accounts
---   4. admissions      — Online admission applications
---   5. notifications   — Notifications with approval workflow + targeting
---   6. notification_reads — Per-user read tracking
---   7. gallery_items   — Gallery uploads with approval
---   8. events          — School events/calendar
---   9. attendance      — Daily attendance by class
---  10. exam_results    — Exam marks with auto-grading
---  11. audit_logs      — System action logs
---  12. settings        — Key-value school settings
---  13. leadership_profiles — Leadership profiles for About page
---  14. home_slider     — Homepage slider with animations & overlays
---  15. site_quotes     — Inspirational quotes for About page
+-- TOTAL TABLES: 24
+--   1. users                — Admin/teacher/office accounts
+--   2. students             — Student records with photos
+--   3. teachers             — Teacher records linked to user accounts
+--   4. admissions           — Online admission applications
+--   5. notifications        — Notifications with approval workflow + targeting
+--   6. notification_reads   — Per-user read tracking
+--   7. notification_versions — Edit history with restore
+--   8. notification_attachments — Multi-file attachments
+--   9. gallery_items        — Gallery uploads with approval
+--  10. gallery_categories   — Gallery categories
+--  11. gallery_albums       — Albums within categories
+--  12. events               — School events/calendar
+--  13. attendance           — Daily attendance by class
+--  14. exam_results         — Exam marks with auto-grading
+--  15. audit_logs           — System action logs
+--  16. settings             — Key-value school settings (~80+ keys)
+--  17. home_slider          — Homepage slider with animations & overlays
+--  18. site_quotes          — Inspirational quotes for About page
+--  19. leadership_profiles  — Leadership profiles for About page
+--  20. nav_menu_items       — Admin-managed navbar menu
+--  21. certificates         — School certificates & accreditations
+--  22. feature_cards        — Homepage quick-link cards
+--  23. fee_structures       — Class-wise fee structures
+--  24. fee_components       — Fee line items
 -- ============================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -475,7 +484,9 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('footer_social_twitter', ''),
 ('footer_social_instagram', ''),
 ('footer_social_youtube', ''),
-('footer_social_linkedin', '');
+('footer_social_linkedin', ''),
+-- Maintenance mode
+('maintenance_mode', '0');
 
 -- --------------------------------------------------------
 -- 13. Leadership Profiles (About Us page)
