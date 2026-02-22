@@ -1,33 +1,65 @@
 
 
-## Fix HTTP 500 Error — Update Old Column References
+## Admin Dashboard UI Enhancement
 
-### Root Cause
-The homepage (`index.php`) and admin dashboard (`dashboard.php`) still reference the **old column name** `event_date` from the events table, which was renamed to `start_date` in the events system overhaul. This causes a fatal MySQL error and HTTP 500.
+### What Changes
+
+Update the **Top Header Highlight Pill** to display the School Name and Tagline alongside the greeting, matching the visual style of the Sidebar Brand Card. Add minor UI polish for consistency.
 
 ---
 
-### Files to Fix
+### 1. Top Header Highlight Pill Redesign
 
-**1. `php-backend/index.php`** — 6 references to `event_date` on the `events` table:
-- Line 34: `SELECT title, event_date, location FROM events` → change to `start_date`
-- Line 353: `SELECT title, event_date FROM events WHERE ... event_date >= CURDATE() ORDER BY event_date` → change all to `start_date`
-- Line 361: `strtotime($nextEvent['event_date'])` → `strtotime($nextEvent['start_date'])`
-- Line 520: `strtotime($nextEvent['event_date'])` → `strtotime($nextEvent['start_date'])`
-- Line 599: `strtotime($ev['event_date'])` → `strtotime($ev['start_date'])`
-- Line 600: `strtotime($ev['event_date'])` → `strtotime($ev['start_date'])`
+**Current**: Shows logo + greeting text + breadcrumb only.
 
-**2. `php-backend/admin/dashboard.php`** — 2 references:
-- Line 14: `WHERE event_date >= CURDATE()` → `WHERE start_date >= CURDATE()`
-- Line 27: `WHERE event_date >= CURDATE() ORDER BY event_date` → `WHERE start_date >= CURDATE() ORDER BY start_date`
+**New design**: A rounded pill card containing:
+- **Left side**: School Logo (28px, circular, white background)
+- **Middle**: School Name (bold, 0.85rem) on first line, School Tagline (muted, 0.68rem) on second line
+- **Right side (separated by subtle divider)**: Greeting ("Good Evening, Super") with wave emoji, breadcrumb below
 
-### Not Affected
-The `event_date` references in gallery files (`gallery.php`, `gallery-actions.php`, `upload-gallery.php`, `page-content-manager.php`) are for the `gallery_items` and `gallery_albums` tables, which have their own `event_date` column — these are **not** related to the events table and should NOT be changed.
+This creates visual consistency with the Sidebar Brand Card while keeping the greeting.
+
+**File**: `php-backend/includes/header.php`
+
+**CSS changes** (around line 484-520):
+- Widen `.topbar-highlight-pill` to accommodate school info
+- Add `.topbar-pill-brand` section for school name/tagline
+- Add a subtle vertical divider between brand info and greeting
+- Responsive: on mobile (<768px), hide school name/tagline, show only logo + greeting
+
+**HTML changes** (around line 1188-1200):
+- After the logo image, add a `<div class="topbar-pill-brand">` with school name (bold) and tagline (muted)
+- Add a `<div class="topbar-pill-divider">` vertical separator
+- Keep existing greeting and breadcrumb
+
+---
+
+### 2. Sidebar Brand Card Polish
+
+The sidebar brand card already matches the requested design (centered logo, bold name, muted tagline, rounded corners, shadow). Minor polish:
+
+- Add a subtle `box-shadow` to the brand card area for more depth
+- Ensure the gradient bottom border is slightly thicker for prominence
+
+---
+
+### 3. Sidebar Menu Hover Effects
+
+The current hover effects (left accent bar + background tint) are already implemented. Add:
+
+- Slight `translateX(2px)` on hover for a subtle slide effect on nav links
+- Smooth icon color transition on hover
 
 ---
 
 ### Technical Summary
-- **2 files** modified: `index.php`, `dashboard.php`
-- **8 total replacements**: `event_date` to `start_date` only where querying the `events` table
-- No schema or structural changes needed
+
+| Item | Detail |
+|------|--------|
+| **File modified** | `php-backend/includes/header.php` |
+| **CSS additions** | ~30 lines for topbar pill brand section, divider, responsive rules |
+| **HTML additions** | ~8 lines for school name/tagline in topbar pill |
+| **No new files** | All changes in existing header |
+| **No JS changes** | Pure CSS enhancements |
+| **Mobile responsive** | Brand info hidden on small screens, greeting remains |
 
