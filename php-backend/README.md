@@ -5,7 +5,7 @@
 A complete school management system built with **pure PHP 8+** and **MySQL**. No Node.js, no React, no terminal commands needed. Upload directly to cPanel shared hosting.
 
 **Domain:** `jnvschool.awayindia.com`  
-**Schema Version:** v3.4 (27 tables)
+**Schema Version:** v3.5 (28 tables)
 
 ---
 
@@ -25,7 +25,7 @@ A complete school management system built with **pure PHP 8+** and **MySQL**. No
 4. Click **Choose File** → select `schema.sql`
 5. Leave format as **SQL** (default)
 6. Click **Go** to import
-7. ✅ This creates all **27 tables** + default admin user + school settings + sample slider data + nav menu + demo gallery categories + feature cards + popup ads + enquiries
+7. ✅ This creates all **28 tables** + default admin user + school settings + sample slider data + nav menu + demo gallery categories + feature cards + popup ads + enquiries + core team
 
 > **⚠️ WARNING:** The schema uses `DROP TABLE IF EXISTS` — importing on an existing database will **DELETE all existing data**. Always **back up first** using phpMyAdmin → Export before re-importing!
 
@@ -60,6 +60,7 @@ A complete school management system built with **pure PHP 8+** and **MySQL**. No
 | 25 | `popup_ads` | Homepage popup advertisements with scheduling & targeting |
 | 26 | `popup_analytics` | Popup ad view/click tracking by date |
 | 27 | `enquiries` | Website enquiry submissions with status tracking (new/contacted/closed) |
+| 28 | `core_team` | Independent core team members with display order, visibility, featured flag |
 
 ### Step 3: Upload Files
 1. Go to **cPanel** → **File Manager** → `public_html`
@@ -299,6 +300,7 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 | **Home Slider** | `admin/slider.php` | Advanced management with animations (Fade/Slide/Zoom/Ken Burns), overlay styles (gradient-dark/gradient-primary/solid-dark/none), text positioning (left/center/right), overlay opacity, badge text, CTA buttons, live preview, duplicate slides, stats dashboard |
 | **Certificates** | `admin/certificates.php` | Upload/manage school certificates and accreditations. Supports images & PDFs, categories (recognition/academic/sports/cultural/infrastructure/other), featured flag, allow download toggle, drag-and-drop reordering, soft-delete |
 | **Feature Cards** | `admin/feature-cards.php` | Manage homepage quick-link cards. Each card has: icon (Bootstrap Icons), accent color, button text/link, badge (text + color), visibility toggle, featured flag, click analytics. Drag-and-drop reordering |
+| **Core Team** | `admin/core-team.php` | Independent core team member management (separate from Teachers). Full CRUD with photo upload, display order control (1st, 2nd, 3rd...), visibility/featured toggles, drag-and-drop reordering. Homepage shows centered flip-card grid |
 | **Fee Structure** | `admin/fee-structure.php` | Class-wise fee management by academic year. Each class has multiple fee components with name, amount, frequency (one-time/monthly/quarterly/yearly), optional flag. Visibility toggle per class. Auto-totals |
 | **Popup Ad** | `admin/popup-ad.php` | Popup advertisement management with image upload, scheduling (start/end date), redirect URL, button text, targeting (home only, once per day, disable on mobile), view/click analytics |
 | **Footer Manager** | `admin/footer-manager.php` | Edit footer description, quick links (JSON array of label/url pairs), programs list, contact info (address/phone/email/hours), social media links (Facebook/Twitter/Instagram/YouTube/LinkedIn) |
