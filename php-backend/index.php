@@ -46,9 +46,19 @@ $notifCount = $db->query("SELECT COUNT(*) FROM notifications WHERE status='appro
 $totalStudents = $db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
 $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'")->fetchColumn();
 
-// Ad popup
-$popupAdActive = getSetting('popup_ad_active', '0');
-$popupAdImage = getSetting('popup_ad_image', '');
+// Ad popup from popup_ads table
+$popupAd = null;
+try {
+    $popupAd = $db->query("SELECT * FROM popup_ads WHERE id=1 AND is_enabled=1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())")->fetch();
+    if ($popupAd && !$popupAd['image_path']) $popupAd = null;
+} catch (Exception $e) {
+    // Fallback to old settings if table doesn't exist yet
+    $popupAdActive = getSetting('popup_ad_active', '0');
+    $popupAdImage = getSetting('popup_ad_image', '');
+    if ($popupAdActive === '1' && $popupAdImage) {
+        $popupAd = ['image_path' => 'uploads/ads/' . $popupAdImage, 'redirect_url' => '', 'button_text' => '', 'show_once_per_day' => 1, 'disable_on_mobile' => 0, 'show_on_home' => 1];
+    }
+}
 
 // Nav logo with cache-busting
 $navLogo = getSetting('school_logo', '');
@@ -239,22 +249,57 @@ if ($navLogo) {
 <?php $currentPage = 'home'; include __DIR__ . '/includes/public-navbar.php'; ?>
 
 <!-- Ad Popup -->
-<?php if ($popupAdActive === '1' && $popupAdImage): ?>
+<?php if ($popupAd): ?>
 <div class="ad-popup-overlay" id="adPopup" style="display:none;">
     <div class="ad-popup-content">
-        <button class="ad-popup-close" onclick="closeAdPopup()"><i class="bi bi-x"></i></button>
-        <img src="/uploads/ads/<?= e($popupAdImage) ?>" alt="Advertisement">
+        <button class="ad-popup-close" onclick="closeAdPopup()"><i class="bi bi-x-lg"></i></button>
+        <?php if ($popupAd['redirect_url']): ?>
+        <a href="<?= e($popupAd['redirect_url']) ?>" target="_blank" rel="noopener" id="adPopupLink" onclick="trackPopupClick()">
+            <img src="/<?= e($popupAd['image_path']) ?>" alt="Advertisement">
+        </a>
+        <?php else: ?>
+        <img src="/<?= e($popupAd['image_path']) ?>" alt="Advertisement">
+        <?php endif; ?>
+        <?php if ($popupAd['button_text'] && $popupAd['redirect_url']): ?>
+        <div style="text-align:center;margin-top:10px">
+            <a href="<?= e($popupAd['redirect_url']) ?>" target="_blank" rel="noopener" class="btn btn-light btn-sm rounded-pill px-4 fw-semibold" onclick="trackPopupClick()" style="box-shadow:0 2px 10px rgba(0,0,0,0.2)"><?= e($popupAd['button_text']) ?></a>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 <script>
 (function(){
+    var oncePerDay = <?= $popupAd['show_once_per_day'] ? 'true' : 'false' ?>;
+    var disableMobile = <?= $popupAd['disable_on_mobile'] ? 'true' : 'false' ?>;
     var key = 'popup_ad_dismissed_' + new Date().toISOString().slice(0,10);
-    if (!localStorage.getItem(key)) {
-        setTimeout(function(){ document.getElementById('adPopup').style.display = 'flex'; }, 1000);
-    }
+
+    // Mobile check
+    if (disableMobile && window.innerWidth <= 768) return;
+
+    // Once per day check
+    if (oncePerDay && localStorage.getItem(key)) return;
+
+    setTimeout(function(){
+        document.getElementById('adPopup').style.display = 'flex';
+        // Track view
+        fetch('/admin/ajax/popup-analytics.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: 'action=view&popup_id=1'
+        }).catch(function(){});
+    }, 1000);
+
     window.closeAdPopup = function(){
         document.getElementById('adPopup').style.display = 'none';
-        localStorage.setItem(key, '1');
+        if (oncePerDay) localStorage.setItem(key, '1');
+    };
+
+    window.trackPopupClick = function(){
+        fetch('/admin/ajax/popup-analytics.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: 'action=click&popup_id=1'
+        }).catch(function(){});
     };
 })();
 </script>

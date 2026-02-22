@@ -187,19 +187,6 @@ if($action==='sms_whatsapp'){
   }auditLog('update_sms_config','settings');setFlash('success','SMS/WhatsApp config updated.');
 }
 
-if($action==='popup_ad'){
-  $adActive=isset($_POST['popup_ad_active'])?'1':'0';
-  $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('popup_ad_active',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$adActive,$adActive]);
-  if(!empty($_FILES['popup_ad_image']['name'])&&$_FILES['popup_ad_image']['error']===UPLOAD_ERR_OK){
-    $ext=strtolower(pathinfo($_FILES['popup_ad_image']['name'],PATHINFO_EXTENSION));
-    if(in_array($ext,['jpg','jpeg','png','webp','gif'])){
-      FileHandler::ensureDir(__DIR__.'/../uploads/ads');
-      $fname='popup_ad.'.$ext;FileHandler::saveUploadedFile($_FILES['popup_ad_image']['tmp_name'],__DIR__.'/../uploads/ads/'.$fname);
-      $db->prepare("INSERT INTO settings (setting_key,setting_value) VALUES ('popup_ad_image',?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$fname,$fname]);
-    }else setFlash('error','Ad image must be JPG, PNG, WebP or GIF.');
-  }
-  auditLog('update_popup_ad','settings');setFlash('success','Popup ad settings updated.');
-}
 
 if($action==='smtp_settings'&&isSuperAdmin()){
   foreach(['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_encryption'] as $k){
@@ -295,11 +282,6 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
   <li class="nav-item" role="presentation">
     <button class="nav-link d-flex align-items-center gap-2 rounded-pill px-3 py-2" id="social-tab" data-bs-toggle="pill" data-bs-target="#tab-social" type="button" role="tab">
       <i class="bi bi-share"></i><span class="d-none d-md-inline">Social & SMS</span>
-    </button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link d-flex align-items-center gap-2 rounded-pill px-3 py-2" id="popup-tab" data-bs-toggle="pill" data-bs-target="#tab-popup" type="button" role="tab">
-      <i class="bi bi-megaphone"></i><span class="d-none d-md-inline">Popup Ad</span>
     </button>
   </li>
   <?php if(isSuperAdmin()):?>
@@ -853,34 +835,6 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
   </div>
 </div>
 
-<!-- ========== POPUP AD TAB ========== -->
-<div class="tab-pane fade" id="tab-popup" role="tabpanel">
-  <div class="row g-3">
-    <div class="col-lg-6">
-      <div class="card border-0 rounded-3"><div class="card-header bg-white border-0"><h6 class="fw-semibold mb-0"><i class="bi bi-megaphone me-2"></i>Popup Advertisement</h6></div><div class="card-body">
-        <p class="text-muted mb-3" style="font-size:.8rem">Upload a single advertisement image that will appear as a popup when visitors first open the homepage. The popup appears once per day per visitor.</p>
-        <form method="POST" enctype="multipart/form-data"><?=csrfField()?><input type="hidden" name="form_action" value="popup_ad">
-        <?php if(!empty($s['popup_ad_image'])):?><div class="mb-3 text-center"><img src="/uploads/ads/<?=e($s['popup_ad_image'])?>" alt="Ad Preview" style="max-height:150px;border-radius:8px" class="border"></div><?php endif;?>
-        <div class="mb-3">
-          <label class="form-label">Ad Image</label>
-          <input type="file" name="popup_ad_image" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.webp,.gif">
-          <small class="text-muted">Recommended: 600×800px or similar. JPG, PNG, WebP, GIF.</small>
-        </div>
-        <div class="mb-3 d-flex align-items-center justify-content-between bg-light rounded-3 p-3">
-          <div>
-            <div class="fw-semibold" style="font-size:.85rem">Enable Popup</div>
-            <small class="text-muted" style="font-size:.7rem">Show ad popup on homepage</small>
-          </div>
-          <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" name="popup_ad_active" <?=($s['popup_ad_active']??'0')==='1'?'checked':''?> style="width:2.5em;height:1.25em;">
-          </div>
-        </div>
-        <button class="btn btn-primary btn-sm w-100"><i class="bi bi-check-lg me-1"></i>Save Ad Settings</button>
-        </form>
-      </div></div>
-    </div>
-  </div>
-</div>
 
 <!-- ========== EMAIL / SMTP TAB ========== -->
 <?php if(isSuperAdmin()):?>
