@@ -1,80 +1,111 @@
 
 
-## Maintenance Mode Toggle
+## Update README.md and schema.sql — Complete v3.3 Documentation
 
 ### Overview
-Add a Maintenance Mode on/off toggle in the admin Settings page. When enabled, all public visitors will see a professional "Site Under Maintenance" page. Admins and teachers who are logged in can still access the backend normally.
-
-### How It Works
-- A new toggle switch in the **General** tab of Settings lets you turn Maintenance Mode on or off
-- When ON, any visitor who is **not logged in** will see a full-screen maintenance page instead of the website
-- Logged-in admins and teachers can browse the site normally (so you never lock yourself out)
-- The maintenance page will show the school name, logo, and a friendly message
+Rewrite the README.md with full documentation of every admin/teacher/public feature, complete setup guide, and accurate file structure. Update schema.sql to v3.3 with the missing `maintenance_mode` setting and correct table count.
 
 ---
 
-### Changes
+### 1. README.md — Full Rewrite
 
-**1. Settings Page -- Add toggle (General tab)**
-File: `php-backend/admin/settings.php`
+**Version bump:** v3.2 to v3.3, table count 13 to 24
 
-- Add a "Maintenance Mode" on/off toggle switch in the General tab (near the top, after School Name or before the Save button)
-- The toggle saves a setting key called `maintenance_mode` with value `1` (on) or `0` (off)
-- Add a small warning text: "When enabled, public visitors will see a maintenance page. Admins remain unaffected."
+**New/updated sections:**
 
-**2. Save handler -- Handle the new toggle**
-File: `php-backend/admin/settings.php`
+- **Overview** — v3.3, 24 tables
+- **Deployment Guide** — Same 9 steps but with corrected table count (24), updated directory tree including all new files:
+  - `admin/certificates.php`
+  - `admin/feature-cards.php`
+  - `admin/fee-structure.php`
+  - `admin/footer-manager.php`
+  - `admin/navigation-settings.php`
+  - `admin/page-content-manager.php`
+  - `admin/quote-highlight.php`
+  - `admin/upload-gallery.php`
+  - `admin/ajax/` folder (7 AJAX handlers)
+  - `public/certificates.php`
+  - `public/fee-structure.php`
+  - `uploads/branding/` subfolder
+  - `uploads/certificates/` subfolder
+  - `uploads/feature-cards/` subfolder
+- **Full table listing** — All 24 tables with descriptions:
+  1. users
+  2. students
+  3. teachers
+  4. admissions
+  5. notifications
+  6. notification_reads
+  7. notification_versions
+  8. notification_attachments
+  9. gallery_items
+  10. gallery_categories
+  11. gallery_albums
+  12. events
+  13. attendance
+  14. exam_results
+  15. audit_logs
+  16. settings
+  17. home_slider
+  18. site_quotes
+  19. leadership_profiles
+  20. nav_menu_items
+  21. certificates
+  22. feature_cards
+  23. fee_structures
+  24. fee_components
 
-- Add `maintenance_mode` to the list of keys saved in the `settings` action handler (the `$keys` array on line 91)
-- Use checkbox logic: `isset($_POST['maintenance_mode']) ? '1' : '0'`
+- **Admin Panel features** — Document every admin page:
+  - Dashboard, Students, Teachers, Admissions, Notifications, Gallery, Events, Slider
+  - **Certificates** — Upload/manage school certificates and accreditations
+  - **Feature Cards** — Manage homepage quick-link cards with icons, colors, badges, analytics
+  - **Fee Structure** — Class-wise fee management with components and frequencies
+  - **Footer Manager** — Edit footer description, quick links, programs, contact info, social links
+  - **Navigation Settings** — Drag-and-drop navbar menu editor with visibility, CTA, icons
+  - **Page Content Manager** — Per-page hero text, section toggles, inline quote editing
+  - **Quote Highlight** — Standalone inspirational quote editor (also available inline in Page Content Manager)
+  - **Settings** — General (school info, logo, favicon, maintenance mode), Theme Color (with brand extraction), User Management, SMTP/Email, Danger Zone
+  - **Reports** — CSV exports
+  - **Audit Logs** — Searchable log viewer
+  - **Support** — Help/support page
 
-**3. Auth include -- Add maintenance check**
-File: `php-backend/includes/auth.php`
+- **Teacher Panel** — Same as before
 
-- At the bottom of the file, add a new function `checkMaintenance()` that:
-  - Reads `getSetting('maintenance_mode', '0')`
-  - If `1` AND the user is NOT logged in, display a full-screen maintenance HTML page and `exit`
-  - Logged-in users pass through without interruption
+- **Public Website** — Add new public pages:
+  - **Certificates** — Public certificates showcase
+  - **Fee Structure** — Public fee information
 
-**4. Public pages -- Call the check**
-Files: `php-backend/index.php` and all files in `php-backend/public/` (about.php, teachers.php, gallery.php, events.php, notifications.php, fee-structure.php, admission-form.php, certificates.php)
+- **Maintenance Mode** — New section explaining:
+  - Toggle in Settings > General tab
+  - Shows branded maintenance page to non-logged-in visitors
+  - Admins/teachers can still access the site
+  - Login page always accessible
 
-- Add `checkMaintenance();` near the top of each file (right after the `require_once` for auth.php)
-- This single line activates the gate on every public page
+- **Settings Keys Reference** — Complete list of all ~80+ settings keys with descriptions
 
-**5. Login page -- Allow access**
-File: `php-backend/login.php`
+- **Upgrade section** — Add v3.2 to v3.3 migration (maintenance_mode setting + any new tables)
 
-- No maintenance check here -- admins must still be able to log in
+- **Troubleshooting** — Keep existing + add maintenance mode troubleshooting
 
 ---
 
-### Maintenance Page Design
-The maintenance page will be a self-contained HTML page (no external dependencies needed) showing:
-- School logo (if available)
-- School name
-- "We'll be back soon!" heading
-- A short message: "Our website is currently undergoing scheduled maintenance."
-- A subtle animation or icon for visual appeal
+### 2. schema.sql — Update to v3.3
+
+**Changes:**
+- Update header comment from v3.2 to v3.3 with 24 tables
+- Add missing `maintenance_mode` setting:
+  ```sql
+  ('maintenance_mode', '0'),
+  ```
+- Ensure all settings keys used by the codebase are present in the INSERT statements
 
 ---
 
 ### Technical Details
 
-**New setting key:** `maintenance_mode` (values: `0` or `1`, default: `0`)
+**Files modified:**
+- `php-backend/README.md` — Full rewrite with comprehensive documentation
+- `php-backend/schema.sql` — Version bump + add `maintenance_mode` setting
 
-**`checkMaintenance()` function logic:**
-```text
-if maintenance_mode == '1' AND user is NOT logged in:
-    show maintenance HTML page
-    exit
-```
-
-**Files modified:** 
-- `php-backend/includes/auth.php` (add function)
-- `php-backend/admin/settings.php` (add toggle + save logic)
-- `php-backend/index.php` (add one-line call)
-- 8 public page files (add one-line call each)
-
-**No database schema changes needed** -- uses the existing `settings` table.
+**No structural or logic changes** — documentation and schema defaults only.
 
