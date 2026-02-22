@@ -11,6 +11,31 @@ $admissionOpen = getSetting('admission_open', '0');
 $whatsappNumber = getSetting('whatsapp_api_number', '');
 $primaryColor = getSetting('primary_color', '#1e40af');
 
+// Handle enquiry form submission
+$enquirySuccess = false;
+$enquiryError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enquiry_submit'])) {
+    if (!verifyCsrf($_POST['csrf_token'] ?? '')) {
+        $enquiryError = 'Security verification failed. Please try again.';
+    } else {
+        $enqName = trim($_POST['enq_name'] ?? '');
+        $enqPhone = trim($_POST['enq_phone'] ?? '');
+        $enqEmail = trim($_POST['enq_email'] ?? '');
+        $enqMsg = trim($_POST['enq_message'] ?? '');
+        if ($enqName === '' || $enqPhone === '') {
+            $enquiryError = 'Name and Phone are required.';
+        } elseif (strlen($enqName) > 100 || strlen($enqPhone) > 20 || strlen($enqEmail) > 255) {
+            $enquiryError = 'Input too long.';
+        } elseif ($enqEmail !== '' && !filter_var($enqEmail, FILTER_VALIDATE_EMAIL)) {
+            $enquiryError = 'Invalid email address.';
+        } else {
+            $db->prepare("INSERT INTO enquiries (name, phone, email, message) VALUES (?, ?, ?, ?)")
+               ->execute([$enqName, $enqPhone, $enqEmail ?: null, $enqMsg ?: null]);
+            $enquirySuccess = true;
+        }
+    }
+}
+
 // Social links
 $socialFacebook = getSetting('social_facebook', '');
 $socialTwitter = getSetting('social_twitter', '');
@@ -837,13 +862,56 @@ window.certLightbox = function(src, type) {
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="card border-0 shadow-sm" style="border-radius:16px;">
-                    <div class="card-body p-4 text-center">
-                        <i class="bi bi-mortarboard-fill text-primary" style="font-size:3rem;"></i>
-                        <h5 class="fw-bold mt-3"><?= e($schoolName) ?></h5>
-                        <p class="text-muted"><?= e($schoolTagline) ?></p>
-                        <?php if ($admissionOpen === '1'): ?>
-                            <a href="/public/admission-form.php" class="btn btn-primary rounded-pill px-4">Apply for Admission</a>
+                <div class="card border-0 shadow-lg" style="border-radius:20px;background:linear-gradient(135deg,#ffffff 0%,#f8faff 100%);">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="feature-icon bg-primary-subtle text-primary flex-shrink-0" style="width:40px;height:40px;border-radius:12px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">
+                                <i class="bi bi-chat-dots-fill"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Send an Enquiry</h5>
+                        </div>
+
+                        <?php if ($enquirySuccess): ?>
+                        <div class="text-center py-3">
+                            <div style="width:60px;height:60px;border-radius:50%;background:#d1fae5;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+                                <i class="bi bi-check-lg text-success" style="font-size:1.8rem;"></i>
+                            </div>
+                            <h6 class="fw-bold text-success">Enquiry Sent!</h6>
+                            <p class="text-muted small mb-0">We'll get back to you shortly.</p>
+                        </div>
+                        <?php else: ?>
+
+                        <?php if ($enquiryError): ?>
+                        <div class="alert alert-danger py-2 small mb-3"><?= e($enquiryError) ?></div>
+                        <?php endif; ?>
+
+                        <form method="POST" action="#contact-section">
+                            <input type="hidden" name="enquiry_submit" value="1">
+                            <?= csrfField() ?>
+                            <div class="mb-2">
+                                <input type="text" name="enq_name" class="form-control form-control-sm" placeholder="Parent Name *" required maxlength="100" value="<?= e($_POST['enq_name'] ?? '') ?>" style="border-radius:10px;">
+                            </div>
+                            <div class="mb-2">
+                                <input type="tel" name="enq_phone" class="form-control form-control-sm" placeholder="Phone Number *" required maxlength="20" value="<?= e($_POST['enq_phone'] ?? '') ?>" style="border-radius:10px;">
+                            </div>
+                            <div class="mb-2">
+                                <input type="email" name="enq_email" class="form-control form-control-sm" placeholder="Email (optional)" maxlength="255" value="<?= e($_POST['enq_email'] ?? '') ?>" style="border-radius:10px;">
+                            </div>
+                            <div class="mb-3">
+                                <textarea name="enq_message" class="form-control form-control-sm" placeholder="Message / Feedback (optional)" rows="2" maxlength="1000" style="border-radius:10px;"><?= e($_POST['enq_message'] ?? '') ?></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4 flex-grow-1">
+                                    <i class="bi bi-send-fill me-1"></i>Send Enquiry
+                                </button>
+                                <?php if ($whatsappNumber): ?>
+                                <a href="https://wa.me/<?= e($whatsappNumber) ?>?text=<?= urlencode('Hi, I have an enquiry about ' . $schoolName) ?>" target="_blank" rel="noopener" class="btn btn-success rounded-pill px-3" title="Chat on WhatsApp">
+                                    <i class="bi bi-whatsapp"></i>
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+                        <p class="text-muted text-center mt-2 mb-0" style="font-size:.7rem;"><i class="bi bi-shield-check me-1"></i>We respect your privacy. No spam.</p>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -871,18 +939,18 @@ if ($mapEnabled === '1'):
         </div>
         <div class="row g-4 align-items-stretch">
             <div class="col-lg-7">
-                <div style="border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.1);height:100%;min-height:320px;">
+                <div class="map-card-hover" style="border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.1);height:100%;min-height:320px;transition:transform .3s ease,box-shadow .3s ease;">
                     <iframe src="<?= e($mapEmbedUrl) ?>" width="100%" height="100%" style="border:0;min-height:320px;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
             </div>
             <div class="col-lg-5 d-flex">
-                <div class="card border-0 shadow-sm rounded-3 w-100">
+                <div class="card border-0 shadow-sm w-100 map-card-hover" style="border-radius:20px;transition:transform .3s ease,box-shadow .3s ease;">
                     <div class="card-body p-4 d-flex flex-column justify-content-center">
                         <h5 class="fw-bold mb-3"><?= e($schoolName) ?></h5>
                         <?php if ($schoolAddress): ?>
                         <div class="d-flex gap-2 mb-2">
                             <i class="bi bi-geo-alt-fill text-primary mt-1"></i>
-                            <span class="text-muted"><?= e($schoolAddress) ?></span>
+                            <span class="text-muted" id="school-address-text"><?= e($schoolAddress) ?></span>
                         </div>
                         <?php endif; ?>
                         <?php if ($mapLandmark): ?>
@@ -897,17 +965,42 @@ if ($mapEnabled === '1'):
                             <a href="tel:<?= e($schoolPhone) ?>" class="text-muted text-decoration-none"><?= e($schoolPhone) ?></a>
                         </div>
                         <?php endif; ?>
-                        <?php if ($mapLat && $mapLng): ?>
-                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($mapLat) ?>,<?= urlencode($mapLng) ?>" target="_blank" rel="noopener" class="btn btn-primary rounded-pill px-4 mt-auto">
-                            <i class="bi bi-cursor-fill me-2"></i>Get Directions
-                        </a>
-                        <?php endif; ?>
+                        <div class="d-flex flex-column gap-2 mt-auto">
+                            <?php if ($mapLat && $mapLng): ?>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($mapLat) ?>,<?= urlencode($mapLng) ?>" target="_blank" rel="noopener" class="btn btn-primary rounded-pill px-4">
+                                <i class="bi bi-cursor-fill me-2"></i>Get Directions
+                            </a>
+                            <a href="https://www.google.com/maps?q=<?= urlencode($mapLat) ?>,<?= urlencode($mapLng) ?>" target="_blank" rel="noopener" class="btn btn-outline-primary rounded-pill px-4">
+                                <i class="bi bi-box-arrow-up-right me-2"></i>Open in Google Maps
+                            </a>
+                            <?php endif; ?>
+                            <?php if ($schoolAddress): ?>
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" onclick="copyAddress()" id="copy-addr-btn">
+                                <i class="bi bi-clipboard me-2"></i>Copy Address
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+<style>
+.map-card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.15) !important; }
+</style>
+<script>
+function copyAddress() {
+    const addr = document.getElementById('school-address-text');
+    if (addr) {
+        navigator.clipboard.writeText(addr.textContent).then(() => {
+            const btn = document.getElementById('copy-addr-btn');
+            btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Copied!';
+            setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard me-2"></i>Copy Address'; }, 2000);
+        });
+    }
+}
+</script>
 <?php
     endif;
 endif;

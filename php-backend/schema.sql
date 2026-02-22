@@ -856,4 +856,20 @@ CREATE TABLE `popup_analytics` (
     REFERENCES `popup_ads`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --------------------------------------------------------
+-- 27. Enquiries
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `enquiries` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `email` VARCHAR(255) DEFAULT NULL,
+  `message` TEXT DEFAULT NULL,
+  `status` ENUM('new','contacted','closed') NOT NULL DEFAULT 'new',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 COMMIT;

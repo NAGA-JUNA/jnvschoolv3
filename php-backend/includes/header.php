@@ -1152,6 +1152,9 @@ try {
         <div class="nav-group">
             <div class="nav-group-label">Settings</div>
             <div class="nav-item">
+                <a href="/admin/enquiries.php" class="nav-link <?= navActive('/admin/enquiries') ?>" data-bs-title="Enquiries"><i class="bi bi-chat-dots"></i> <span>Enquiries</span></a>
+            </div>
+            <div class="nav-item">
                 <a href="/admin/settings.php" class="nav-link <?= navActive('/admin/settings') ?>" data-bs-title="Settings"><i class="bi bi-gear"></i> <span>Settings</span></a>
             </div>
             <div class="nav-item">
