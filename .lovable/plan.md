@@ -1,114 +1,89 @@
 
 
-## Separate Core Team Module with Admin CRUD and Flip-Card Display
+## Update Manage Teachers to Match Core Team Manager Style
 
 ### Overview
 
-Create an independent "Core Team" admin module (separate from Teachers), with its own database table, full CRUD (add/edit/delete), drag-and-drop reordering, visibility/featured toggles, and display order control. On the homepage, replace the current horizontal-scroll cards with a centered flip-card grid matching the "Meet Our Faculty" style.
+Redesign the "Manage Teachers" admin page (`teachers.php`) to use the same card-based grid layout as the Core Team Manager, with drag-and-drop reordering, visibility/featured toggles, and inline modals for add/edit. Also fully decouple the two modules by removing the `is_core_team` references from the Teachers module.
+
+### What Changes
 
 ---
 
-### 1. New Database Table: `core_team`
+### 1. Redesign `php-backend/admin/teachers.php` -- Card Grid Layout
 
-Add table #28 to `schema.sql`:
+Replace the current table-based layout with a card grid matching Core Team Manager:
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | INT UNSIGNED AUTO_INCREMENT | Primary key |
-| name | VARCHAR(100) NOT NULL | Member name |
-| designation | VARCHAR(100) | Role (Principal, Director, etc.) |
-| qualification | VARCHAR(255) | Degrees |
-| subject | VARCHAR(100) | Subject area |
-| experience_years | INT DEFAULT 0 | Years of experience |
-| email | VARCHAR(255) | Contact email |
-| phone | VARCHAR(50) | Phone |
-| photo | VARCHAR(500) | Photo path |
-| bio | TEXT | Short bio |
-| display_order | INT DEFAULT 0 | Controls 1st, 2nd, 3rd position |
-| is_visible | TINYINT(1) DEFAULT 1 | Show/hide toggle |
-| is_featured | TINYINT(1) DEFAULT 0 | Featured highlight |
-| created_at | DATETIME DEFAULT CURRENT_TIMESTAMP | Created date |
-
----
-
-### 2. New File: `php-backend/admin/core-team.php`
-
-Full admin page (modeled after Feature Cards) with:
-
-- **Add New Member** button opening a modal form (name, designation, qualification, subject, experience, email, phone, photo upload, bio, display order number, visibility, featured toggles)
-- **Card grid** showing each member: photo thumbnail, name, designation, display order number, visibility/featured badges
-- **Edit** button per card opening the same modal pre-filled
-- **Delete** with confirmation
-- **Drag-and-drop reorder** (same pattern as feature-cards.php)
-- **Toggle visibility** (eye icon, AJAX)
-- **Toggle featured** (star icon, AJAX)
-- **Display Order field**: Admin can set explicit position (1, 2, 3, 4...) so they control who appears first, second, third, etc.
+- **Header**: Same style -- title "Manage Teachers", subtitle, member count badge, "Add Teacher" button
+- **Search/Filter bar**: Keep existing search + status filter (Core Team doesn't have this, but Teachers needs it due to volume)
+- **Card grid** (`row g-3`): Each teacher shown as a card with:
+  - Toggle buttons for visibility (eye icon) and featured (star icon) at top
+  - Display order badge
+  - Circular photo (or placeholder icon)
+  - Name, designation, subject
+  - Edit button (opens modal) and Delete button
+  - "Drag to reorder" footer
+  - Draggable attribute for drag-and-drop reordering
+- **Edit Modal**: Per-teacher modal with all fields (employee_id, name, designation, gender, email, phone, subject, qualification, experience, DOB, joining date, status, photo upload, address, bio, visibility, featured toggles)
+- **Add Modal**: Same form but empty, opens from the header button
+- **Import button**: Keep CSV import functionality (modal unchanged)
+- **View Modal**: Keep the existing teacher profile view modal
+- **Drag-and-drop JS**: Same pattern as Core Team Manager -- reorder via AJAX to `/admin/ajax/teacher-actions.php?action=reorder`
+- **Toggle JS**: AJAX calls for `toggle_visibility` and `toggle_featured` (already exist in teacher-actions.php)
+- **Delete JS**: AJAX call for `delete_teacher` with confirmation
+- **Pagination**: Keep pagination for large teacher lists (Core Team doesn't need it but Teachers might)
+- Remove the `is_core_team` badge display from teacher cards
 
 ---
 
-### 3. New File: `php-backend/admin/ajax/core-team-actions.php`
+### 2. Update `php-backend/admin/teacher-form.php` -- Remove Core Team Toggle
 
-AJAX handler for:
-- `reorder` -- update display_order from drag-and-drop
-- `toggle_visibility` -- flip is_visible
-- `toggle_featured` -- flip is_featured
-- `delete` -- remove member (with photo cleanup)
-
----
-
-### 4. Modified File: `php-backend/includes/header.php`
-
-Add sidebar link right after "Feature Cards" (line ~1134):
-
-```
-<div class="nav-item">
-    <a href="/admin/core-team.php" class="nav-link" ...>
-        <i class="bi bi-people-fill"></i> <span>Core Team</span>
-    </a>
-</div>
-```
+- Remove the "Core Team Member" checkbox toggle (lines 46-52) since Core Team is now managed independently
+- Remove `is_core_team` from the `$d` data array (line 6)
+- Update the SQL INSERT/UPDATE statements to remove the `is_core_team` column
+- Keep all other fields (employee_id, name, designation, email, phone, subject, qualification, experience, dob, gender, address, joining_date, status, bio, photo)
+- This form may still be used as a fallback for direct navigation
 
 ---
 
-### 5. Modified File: `php-backend/index.php`
+### 3. Update `php-backend/public/teachers.php` -- Remove Core Team Sorting
 
-**Lines 56**: Change query from `teachers WHERE is_core_team=1` to:
-
-```sql
-SELECT * FROM core_team WHERE is_visible=1 ORDER BY display_order ASC, name ASC
-```
-
-**Lines 686-735**: Replace the horizontal scroll carousel with a **centered flip-card grid**:
-
-- Responsive grid: `col-lg-3 col-md-4 col-sm-6` (4 per row desktop, 3 tablet, 2 mobile)
-- Cards are **center-aligned** using `justify-content-center` on the row
-- Each card uses the flip-card CSS from `public/teachers.php`:
-  - **Front**: Photo (260px height), name, designation overlay at bottom
-  - **Back**: Gradient background using `--theme-primary`, centered details (qualification, subject, experience badge, bio excerpt)
-  - Hover triggers `rotateY(180deg)` with 0.6s cubic-bezier transition
-  - `backface-visibility: hidden` on both faces
-  - Tap-to-flip JS for mobile/touch devices
-- Remove the `scrollTeam()` JS function and scroll arrows
-- Keep the section header with admin-controlled title/subtitle
-- Keep the "View Our Teachers" button
+- Line 31: Remove `is_core_team DESC` from the ORDER BY clause
+- Change query to: `SELECT * FROM teachers WHERE status='active' AND is_visible=1 ORDER BY display_order ASC, name ASC`
+- This ensures the public Teachers page shows only teachers ordered by their display order, completely independent of core team
 
 ---
 
-### 6. Modified Files: `schema.sql` and `README.md`
+### 4. Keep `php-backend/admin/ajax/teacher-actions.php` As-Is
 
-- Add `core_team` table definition to schema.sql, update count to 28
-- Add core_team to README.md table listing and upgrade SQL section
+- The AJAX handler already supports: `reorder`, `toggle_visibility`, `toggle_featured`, `delete_teacher`, `save_teacher`, `save_principal`, `list_teachers`
+- No changes needed -- it already has all the endpoints the new card-based UI will use
+
+---
+
+### 5. Keep Principal Profile Editor Unchanged
+
+- The Principal Profile Editor functionality in `teacher-actions.php` (`get_principal`, `save_principal`) remains untouched
+- No changes to the Principal section on homepage or teachers page
 
 ---
 
 ### Files Summary
 
-| Action | File |
-|--------|------|
-| Create | `php-backend/admin/core-team.php` |
-| Create | `php-backend/admin/ajax/core-team-actions.php` |
-| Modify | `php-backend/index.php` (new query + flip-card grid, centered) |
-| Modify | `php-backend/includes/header.php` (sidebar link) |
-| Modify | `php-backend/schema.sql` (add table, update count to 28) |
-| Modify | `php-backend/README.md` (docs update) |
+| Action | File | Change |
+|--------|------|--------|
+| Rewrite | `php-backend/admin/teachers.php` | Table layout to card grid with modals, toggles, drag-and-drop (matching Core Team Manager style) |
+| Modify | `php-backend/admin/teacher-form.php` | Remove `is_core_team` toggle and field from form/SQL |
+| Modify | `php-backend/public/teachers.php` | Remove `is_core_team` from ORDER BY query |
+| No change | `php-backend/admin/ajax/teacher-actions.php` | Already has all needed endpoints |
+| No change | Principal Profile Editor | Kept as-is |
+
+---
+
+### Key Design Decisions
+
+- **Teachers keeps search/filter and pagination** because teacher count can be large (unlike Core Team which is typically small)
+- **Import CSV button** stays available in the header alongside "Add Teacher"
+- **The two modules are fully independent**: adding a teacher does NOT affect Core Team, and vice versa
+- **`is_core_team` column stays in database** for backward compatibility but is no longer used or displayed in the admin UI
 
