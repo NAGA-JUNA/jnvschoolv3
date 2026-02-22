@@ -1133,6 +1133,9 @@ try {
             <div class="nav-item">
                 <a href="/admin/feature-cards.php" class="nav-link <?= navActive('/admin/feature-cards') ?>" data-bs-title="Feature Cards"><i class="bi bi-grid-1x2-fill"></i> <span>Feature Cards</span></a>
             </div>
+            <div class="nav-item">
+                <a href="/admin/core-team.php" class="nav-link <?= navActive('/admin/core-team') ?>" data-bs-title="Core Team"><i class="bi bi-people-fill"></i> <span>Core Team</span></a>
+            </div>
         </div>
 
         <div class="nav-group">

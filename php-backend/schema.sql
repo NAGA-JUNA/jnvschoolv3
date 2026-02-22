@@ -15,7 +15,7 @@
 -- ⚠️ WARNING: This uses DROP TABLE IF EXISTS — it will DELETE
 --    all existing data if tables already exist. BACK UP FIRST!
 --
--- TOTAL TABLES: 27
+-- TOTAL TABLES: 28
 --   1. users                — Admin/teacher/office accounts
 --   2. students             — Student records with photos
 --   3. teachers             — Teacher records linked to user accounts
@@ -43,6 +43,7 @@
 --  25. popup_ads            — Homepage popup advertisements
 --  26. popup_analytics      — Popup view/click tracking
 --  27. enquiries            — Website enquiry submissions
+--  28. core_team            — Independent core team members
 -- ============================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -873,6 +874,29 @@ CREATE TABLE IF NOT EXISTS `enquiries` (
   PRIMARY KEY (`id`),
   KEY `idx_status` (`status`),
   KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 28. Core Team (independent from teachers)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `core_team` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `designation` VARCHAR(100) DEFAULT NULL,
+  `qualification` VARCHAR(255) DEFAULT NULL,
+  `subject` VARCHAR(100) DEFAULT NULL,
+  `experience_years` INT DEFAULT 0,
+  `email` VARCHAR(255) DEFAULT NULL,
+  `phone` VARCHAR(50) DEFAULT NULL,
+  `photo` VARCHAR(500) DEFAULT NULL,
+  `bio` TEXT DEFAULT NULL,
+  `display_order` INT DEFAULT 0,
+  `is_visible` TINYINT(1) DEFAULT 1,
+  `is_featured` TINYINT(1) DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_display_order` (`display_order`),
+  KEY `idx_visible` (`is_visible`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 COMMIT;

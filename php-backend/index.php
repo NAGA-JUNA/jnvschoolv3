@@ -52,8 +52,14 @@ if (isLoggedIn()) {
 // Get active slides
 $slides = $db->query("SELECT * FROM home_slider WHERE is_active=1 ORDER BY sort_order ASC, id ASC")->fetchAll();
 
-// Get core team members
-$coreTeam = $db->query("SELECT * FROM teachers WHERE status='active' AND is_core_team=1 ORDER BY FIELD(designation,'Principal','Director','Correspondent','Vice Principal','Teacher'), name ASC")->fetchAll();
+// Get core team members (from independent core_team table)
+$coreTeam = [];
+try {
+    $coreTeam = $db->query("SELECT * FROM core_team WHERE is_visible=1 ORDER BY display_order ASC, name ASC")->fetchAll();
+} catch (Exception $e) {
+    // Fallback to teachers table if core_team table doesn't exist yet
+    $coreTeam = $db->query("SELECT * FROM teachers WHERE status='active' AND is_core_team=1 ORDER BY FIELD(designation,'Principal','Director','Correspondent','Vice Principal','Teacher'), name ASC")->fetchAll();
+}
 
 // Get upcoming events (next 3)
 $events = $db->query("SELECT title, start_date, location FROM events WHERE is_public=1 AND start_date >= CURDATE() ORDER BY start_date ASC LIMIT 3")->fetchAll();
@@ -683,7 +689,7 @@ function trackCardClick(slug) {
     </div>
 </section>
 
-<!-- Our Core Team -->
+<!-- Our Core Team — Centered Flip-Card Grid -->
 <?php if (!empty($coreTeam) && getSetting('home_core_team_show', '1') === '1'): ?>
 <section class="py-5" style="background:#f8fafc;">
     <div class="container">
@@ -691,47 +697,63 @@ function trackCardClick(slug) {
             <h4 style="font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;font-weight:700;color:#1a1a2e;"><?= e(getSetting('home_core_team_title', 'Our Core Team')) ?></h4>
             <p class="text-muted mt-2"><?= e(getSetting('home_core_team_subtitle', 'Meet the dedicated leaders guiding our school\'s vision and mission.')) ?></p>
         </div>
-        <div class="position-relative">
-            <?php if (count($coreTeam) > 3): ?>
-            <button class="btn btn-light shadow-sm rounded-circle position-absolute start-0 top-50 translate-middle-y" style="z-index:10;width:44px;height:44px;" onclick="scrollTeam(-1)"><i class="bi bi-chevron-left"></i></button>
-            <button class="btn btn-light shadow-sm rounded-circle position-absolute end-0 top-50 translate-middle-y" style="z-index:10;width:44px;height:44px;" onclick="scrollTeam(1)"><i class="bi bi-chevron-right"></i></button>
-            <?php endif; ?>
-            <div class="d-flex gap-4 overflow-auto pb-3 px-4" id="coreTeamScroll" style="scroll-behavior:smooth;scroll-snap-type:x mandatory;-ms-overflow-style:none;scrollbar-width:none;">
-                <?php foreach ($coreTeam as $ct):
-                    $ctPhoto = $ct['photo'] ? (str_starts_with($ct['photo'], '/uploads/') ? $ct['photo'] : '/uploads/photos/'.$ct['photo']) : '';
-                ?>
-                <div class="flex-shrink-0" style="width:300px;scroll-snap-align:start;">
-                    <div class="card border-0 shadow-sm text-center h-100" style="border-radius:16px;overflow:hidden;">
-                        <?php if ($ctPhoto): ?>
-                            <img src="<?= e($ctPhoto) ?>" alt="<?= e($ct['name']) ?>" style="width:100%;height:300px;object-fit:cover;">
-                        <?php else: ?>
-                            <div class="d-flex align-items-center justify-content-center" style="width:100%;height:300px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);">
-                                <i class="bi bi-person-fill" style="font-size:5rem;color:#94a3b8;"></i>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($coreTeam as $ct):
+                $ctPhoto = $ct['photo'] ? (str_starts_with($ct['photo'], '/uploads/') ? $ct['photo'] : '/uploads/photos/'.$ct['photo']) : '';
+            ?>
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="core-flip-card" onclick="this.classList.toggle('flipped')">
+                    <div class="core-flip-inner">
+                        <div class="core-flip-front">
+                            <?php if ($ctPhoto): ?>
+                                <img src="<?= e($ctPhoto) ?>" alt="<?= e($ct['name']) ?>" class="core-flip-img">
+                            <?php else: ?>
+                                <div class="core-flip-img d-flex align-items-center justify-content-center" style="background:linear-gradient(135deg,#e2e8f0,#cbd5e1);">
+                                    <i class="bi bi-person-fill" style="font-size:4rem;color:#94a3b8;"></i>
+                                </div>
+                            <?php endif; ?>
+                            <div class="core-flip-overlay">
+                                <h6 class="mb-0 fw-bold text-white"><?= e($ct['name']) ?></h6>
+                                <small class="text-white-50"><?= e($ct['designation'] ?? 'Team Member') ?></small>
                             </div>
-                        <?php endif; ?>
-                        <div class="card-body p-3">
-                            <h6 class="fw-bold mb-1"><?= e($ct['name']) ?></h6>
-                            <small class="d-block mb-2" style="color:var(--theme-primary);font-weight:600;"><?= e($ct['designation'] ?? 'Teacher') ?></small>
-                            <?php if ($ct['email']): ?>
-                                <small class="text-muted"><i class="bi bi-envelope me-1"></i><?= e($ct['email']) ?></small>
+                        </div>
+                        <div class="core-flip-back">
+                            <h6 class="fw-bold mb-2"><?= e($ct['name']) ?></h6>
+                            <small class="d-block mb-2" style="opacity:.85;"><?= e($ct['designation'] ?? 'Team Member') ?></small>
+                            <?php if (!empty($ct['qualification'])): ?>
+                                <div class="mb-1"><i class="bi bi-mortarboard me-1"></i><small><?= e($ct['qualification']) ?></small></div>
+                            <?php endif; ?>
+                            <?php if (!empty($ct['subject'])): ?>
+                                <div class="mb-1"><i class="bi bi-book me-1"></i><small><?= e($ct['subject']) ?></small></div>
+                            <?php endif; ?>
+                            <?php if (!empty($ct['experience_years']) && $ct['experience_years'] > 0): ?>
+                                <span class="badge bg-white bg-opacity-25 mt-1 mb-2"><?= (int)$ct['experience_years'] ?> Yrs Experience</span>
+                            <?php endif; ?>
+                            <?php if (!empty($ct['bio'])): ?>
+                                <p class="small mt-2 mb-0" style="opacity:.9;line-height:1.4;"><?= e(mb_strimwidth($ct['bio'], 0, 120, '...')) ?></p>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
-                <?php endforeach; ?>
             </div>
+            <?php endforeach; ?>
         </div>
         <div class="text-center mt-4">
             <a href="/public/teachers.php" class="btn fw-bold px-4 rounded-1 text-uppercase" style="font-size:0.8rem;letter-spacing:1px;background:var(--theme-primary);color:#fff;">View Our Teachers</a>
         </div>
     </div>
 </section>
-<script>
-function scrollTeam(dir) {
-    const c = document.getElementById('coreTeamScroll');
-    c.scrollBy({ left: dir * 320, behavior: 'smooth' });
-}
-</script>
+<style>
+.core-flip-card{perspective:1000px;height:320px;cursor:pointer}
+.core-flip-inner{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d}
+.core-flip-card:hover .core-flip-inner,.core-flip-card.flipped .core-flip-inner{transform:rotateY(180deg)}
+.core-flip-front,.core-flip-back{position:absolute;width:100%;height:100%;backface-visibility:hidden;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.core-flip-front{background:#fff}
+.core-flip-img{width:100%;height:100%;object-fit:cover}
+.core-flip-overlay{position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.core-flip-back{background:linear-gradient(135deg,var(--theme-primary,#1e40af),#3b82f6);color:#fff;transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+@media(hover:none){.core-flip-card:hover .core-flip-inner{transform:none}.core-flip-card.flipped .core-flip-inner{transform:rotateY(180deg)}}
+</style>
 <?php endif; ?>
 
 <?php
