@@ -28,7 +28,7 @@ if (isLoggedIn()) {
 }
 
 // Get all active teachers
-$teachers = $db->query("SELECT * FROM teachers WHERE status='active' AND is_visible=1 ORDER BY display_order ASC, is_core_team DESC, name ASC")->fetchAll();
+$teachers = $db->query("SELECT * FROM teachers WHERE status='active' AND is_visible=1 ORDER BY display_order ASC, name ASC")->fetchAll();
 $totalTeachers = count($teachers);
 
 // Get principal for message section
