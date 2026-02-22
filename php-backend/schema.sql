@@ -1,5 +1,5 @@
 -- ============================================
--- JNV School Management System — Full Database Schema v3.3
+-- JNV School Management System — Full Database Schema v3.4
 -- Domain: jnvschool.awayindia.com
 -- Run this in phpMyAdmin after creating database
 -- ============================================
@@ -15,7 +15,7 @@
 -- ⚠️ WARNING: This uses DROP TABLE IF EXISTS — it will DELETE
 --    all existing data if tables already exist. BACK UP FIRST!
 --
--- TOTAL TABLES: 24
+-- TOTAL TABLES: 27
 --   1. users                — Admin/teacher/office accounts
 --   2. students             — Student records with photos
 --   3. teachers             — Teacher records linked to user accounts
@@ -40,6 +40,9 @@
 --  22. feature_cards        — Homepage quick-link cards
 --  23. fee_structures       — Class-wise fee structures
 --  24. fee_components       — Fee line items
+--  25. popup_ads            — Homepage popup advertisements
+--  26. popup_analytics      — Popup view/click tracking
+--  27. enquiries            — Website enquiry submissions
 -- ============================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";

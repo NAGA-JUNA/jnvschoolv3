@@ -5,7 +5,7 @@
 A complete school management system built with **pure PHP 8+** and **MySQL**. No Node.js, no React, no terminal commands needed. Upload directly to cPanel shared hosting.
 
 **Domain:** `jnvschool.awayindia.com`  
-**Schema Version:** v3.3 (24 tables)
+**Schema Version:** v3.4 (27 tables)
 
 ---
 
@@ -25,7 +25,7 @@ A complete school management system built with **pure PHP 8+** and **MySQL**. No
 4. Click **Choose File** → select `schema.sql`
 5. Leave format as **SQL** (default)
 6. Click **Go** to import
-7. ✅ This creates all **24 tables** + default admin user + school settings + sample slider data + nav menu + demo gallery categories + feature cards
+7. ✅ This creates all **27 tables** + default admin user + school settings + sample slider data + nav menu + demo gallery categories + feature cards + popup ads + enquiries
 
 > **⚠️ WARNING:** The schema uses `DROP TABLE IF EXISTS` — importing on an existing database will **DELETE all existing data**. Always **back up first** using phpMyAdmin → Export before re-importing!
 
@@ -57,6 +57,9 @@ A complete school management system built with **pure PHP 8+** and **MySQL**. No
 | 22 | `feature_cards` | Homepage quick-link cards with icons, colors, badges, analytics |
 | 23 | `fee_structures` | Class-wise fee structures by academic year |
 | 24 | `fee_components` | Individual fee line items with frequency & optional flag |
+| 25 | `popup_ads` | Homepage popup advertisements with scheduling & targeting |
+| 26 | `popup_analytics` | Popup ad view/click tracking by date |
+| 27 | `enquiries` | Website enquiry submissions with status tracking (new/contacted/closed) |
 
 ### Step 3: Upload Files
 1. Go to **cPanel** → **File Manager** → `public_html`
@@ -102,13 +105,16 @@ public_html/
 │   ├── gallery.php            ← Approve/reject gallery uploads, category/album management
 │   ├── upload-gallery.php     ← Direct gallery upload from admin
 │   ├── events.php             ← CRUD events with type, date, location
+│   ├── enquiries.php          ← Enquiry management (list, filter, search, status, CSV export)
 │   ├── slider.php             ← Advanced home slider management
 │   ├── certificates.php       ← Upload/manage school certificates & accreditations
 │   ├── feature-cards.php      ← Manage homepage quick-link cards
 │   ├── fee-structure.php      ← Class-wise fee management with components
+│   ├── popup-ad.php           ← Popup advertisement management with scheduling
 │   ├── footer-manager.php     ← Edit footer description, links, programs, contact, socials
 │   ├── navigation-settings.php ← Drag-and-drop navbar menu editor
 │   ├── page-content-manager.php ← Per-page hero text, section toggles, quote editing
+│   ├── school-location.php    ← Google Maps embed URL, coordinates, address management
 │   ├── quote-highlight.php    ← Standalone inspirational quote editor
 │   ├── reports.php            ← CSV exports (students, teachers, admissions, attendance)
 │   ├── audit-logs.php         ← Searchable, filterable audit log viewer
@@ -116,11 +122,14 @@ public_html/
 │   ├── support.php            ← Support/help page
 │   └── ajax/                  ← AJAX action handlers (JSON responses)
 │       ├── certificate-actions.php  ← Certificate CRUD actions
+│       ├── enquiry-actions.php      ← Enquiry status updates & deletion
+│       ├── event-actions.php        ← Event CRUD actions
 │       ├── feature-card-actions.php ← Feature card CRUD + reorder + analytics
 │       ├── gallery-actions.php      ← Gallery category/album/item actions
 │       ├── leadership-actions.php   ← Leadership profile CRUD + reorder
 │       ├── nav-actions.php          ← Navigation menu CRUD + reorder
 │       ├── notification-actions.php ← Notification version/attachment actions
+│       ├── popup-analytics.php      ← Popup ad view/click tracking
 │       └── teacher-actions.php      ← Teacher reorder/visibility/feature actions
 ├── teacher/
 │   ├── dashboard.php          ← Teacher overview with stats & quick actions
@@ -286,12 +295,15 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 | **Gallery** | `admin/gallery.php` | Approve/reject uploads, image preview, category/album management, batch operations, delete |
 | **Upload Gallery** | `admin/upload-gallery.php` | Direct gallery upload from admin panel with category/album selection |
 | **Events** | `admin/events.php` | Add/edit/delete events with date, end date, time, location, type (academic/cultural/sports/holiday/exam/meeting/other), image |
+| **Enquiries** | `admin/enquiries.php` | Website enquiry management. Status tabs (All/New/Contacted/Closed), search by name or phone, status update actions, delete, CSV export, pagination |
 | **Home Slider** | `admin/slider.php` | Advanced management with animations (Fade/Slide/Zoom/Ken Burns), overlay styles (gradient-dark/gradient-primary/solid-dark/none), text positioning (left/center/right), overlay opacity, badge text, CTA buttons, live preview, duplicate slides, stats dashboard |
 | **Certificates** | `admin/certificates.php` | Upload/manage school certificates and accreditations. Supports images & PDFs, categories (recognition/academic/sports/cultural/infrastructure/other), featured flag, allow download toggle, drag-and-drop reordering, soft-delete |
 | **Feature Cards** | `admin/feature-cards.php` | Manage homepage quick-link cards. Each card has: icon (Bootstrap Icons), accent color, button text/link, badge (text + color), visibility toggle, featured flag, click analytics. Drag-and-drop reordering |
 | **Fee Structure** | `admin/fee-structure.php` | Class-wise fee management by academic year. Each class has multiple fee components with name, amount, frequency (one-time/monthly/quarterly/yearly), optional flag. Visibility toggle per class. Auto-totals |
+| **Popup Ad** | `admin/popup-ad.php` | Popup advertisement management with image upload, scheduling (start/end date), redirect URL, button text, targeting (home only, once per day, disable on mobile), view/click analytics |
 | **Footer Manager** | `admin/footer-manager.php` | Edit footer description, quick links (JSON array of label/url pairs), programs list, contact info (address/phone/email/hours), social media links (Facebook/Twitter/Instagram/YouTube/LinkedIn) |
 | **Navigation Settings** | `admin/navigation-settings.php` | Drag-and-drop navbar menu editor. Each item has: label, URL, icon (Bootstrap Icons), link type (internal/external), visibility toggle, CTA flag (highlighted button style). Add/edit/delete/reorder |
+| **School Location** | `admin/school-location.php` | Google Maps embed URL, latitude/longitude, school address, nearby landmark. Toggle map visibility on homepage (`school_map_enabled`) |
 | **Page Content Manager** | `admin/page-content-manager.php` | Per-page hero text editing (title, subtitle, badge, icon), section show/hide toggles, inline quote editing. Supports pages: Home, About, Teachers, Gallery, Events, Notifications, Admission. Global settings for navbar (top bar, login button, notification bell) and footer CTA |
 | **Quote Highlight** | `admin/quote-highlight.php` | Standalone inspirational quote editor. Edit quote text and author name. Also available inline in Page Content Manager under About page |
 | **Reports** | `admin/reports.php` | CSV exports for students, teachers, admissions, attendance records |
@@ -326,7 +338,7 @@ The schema includes 5 sample slider entries. Upload corresponding images:
 
 | Page | File | Description |
 |------|------|-------------|
-| **Homepage** | `index.php` | Two-tier navbar (top bar with marquee, hidden on mobile), logo-only brand, dynamic hero slider with animations, feature cards section (quick links), "Our Core Team" horizontal carousel, notification bell popup, ad popup, stats bar, contact info, WhatsApp floating button |
+| **Homepage** | `index.php` | Two-tier navbar (top bar with marquee, hidden on mobile), logo-only brand, dynamic hero slider with animations, feature cards section (quick links), "Our Core Team" horizontal carousel, notification bell popup, ad popup, stats bar, enquiry form (name/phone/email/message with WhatsApp button), full-width Google Maps embed, WhatsApp floating button |
 | **About Us** | `public/about.php` | Content-managed sections: School History, Vision, Mission, Core Values (4 cards), Inspirational Quote, Leadership Profiles. All editable from admin |
 | **Our Teachers** | `public/teachers.php` | Hero section with Playfair Display headings, "Principal's Message" badge, 2 stat cards (Expert Teachers + Years Experience), teacher flip-cards with tap-to-flip on mobile |
 | **Notifications** | `public/notifications.php` | Public notification board with type badges, priority indicators, attachment downloads |
@@ -746,6 +758,56 @@ ALTER TABLE `events`
 
 No existing table structures are changed — only new tables, columns, and settings are added.
 
+### From Schema v3.3 to v3.4
+
+```sql
+-- 1. Create popup_ads table
+CREATE TABLE IF NOT EXISTS `popup_ads` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `image_path` VARCHAR(255) DEFAULT NULL,
+  `is_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+  `start_date` DATE DEFAULT NULL,
+  `end_date` DATE DEFAULT NULL,
+  `redirect_url` VARCHAR(500) DEFAULT NULL,
+  `button_text` VARCHAR(100) DEFAULT NULL,
+  `show_on_home` TINYINT(1) NOT NULL DEFAULT 1,
+  `show_once_per_day` TINYINT(1) NOT NULL DEFAULT 1,
+  `disable_on_mobile` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO `popup_ads` (`id`, `is_enabled`) VALUES (1, 0);
+
+-- 2. Create popup_analytics table
+CREATE TABLE IF NOT EXISTS `popup_analytics` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `popup_id` INT UNSIGNED NOT NULL,
+  `view_date` DATE NOT NULL,
+  `views_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `clicks_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_popup_date` (`popup_id`, `view_date`),
+  CONSTRAINT `fk_analytics_popup` FOREIGN KEY (`popup_id`)
+    REFERENCES `popup_ads`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. Create enquiries table
+CREATE TABLE IF NOT EXISTS `enquiries` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `email` VARCHAR(255) DEFAULT NULL,
+  `message` TEXT DEFAULT NULL,
+  `status` ENUM('new','contacted','closed') NOT NULL DEFAULT 'new',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
 ---
 
 ## 🔧 Troubleshooting
@@ -817,9 +879,9 @@ No existing table structures are changed — only new tables, columns, and setti
 
 ---
 
-## 🗄️ Database Schema (v3.3)
+## 🗄️ Database Schema (v3.4)
 
-24 tables total:
+27 tables total:
 
 1. `users` — Admin/teacher/office accounts (bcrypt passwords, roles)
 2. `students` — Student records with photos, class/section, admission details
@@ -845,7 +907,10 @@ No existing table structures are changed — only new tables, columns, and setti
 22. `feature_cards` — Homepage quick-link cards with icons, colors, analytics
 23. `fee_structures` — Class-wise fee structures by academic year
 24. `fee_components` — Individual fee line items with frequency
+25. `popup_ads` — Homepage popup advertisements with scheduling & targeting
+26. `popup_analytics` — Popup ad view/click tracking by date
+27. `enquiries` — Website enquiry submissions with status tracking
 
 ---
 
-*Built for JNV School — jnvschool.awayindia.com — v3.3*
+*Built for JNV School — jnvschool.awayindia.com — v3.4*
