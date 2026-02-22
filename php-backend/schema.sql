@@ -816,4 +816,44 @@ CREATE TABLE `fee_components` (
   CONSTRAINT `fk_comp_structure` FOREIGN KEY (`fee_structure_id`) REFERENCES `fee_structures`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --------------------------------------------------------
+-- 25. Popup Ads
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `popup_analytics`;
+DROP TABLE IF EXISTS `popup_ads`;
+
+CREATE TABLE `popup_ads` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `image_path` VARCHAR(255) DEFAULT NULL,
+  `is_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+  `start_date` DATE DEFAULT NULL,
+  `end_date` DATE DEFAULT NULL,
+  `redirect_url` VARCHAR(500) DEFAULT NULL,
+  `button_text` VARCHAR(100) DEFAULT NULL,
+  `show_on_home` TINYINT(1) NOT NULL DEFAULT 1,
+  `show_once_per_day` TINYINT(1) NOT NULL DEFAULT 1,
+  `disable_on_mobile` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `popup_ads` (`id`, `is_enabled`) VALUES (1, 0);
+
+-- --------------------------------------------------------
+-- 26. Popup Analytics
+-- --------------------------------------------------------
+CREATE TABLE `popup_analytics` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `popup_id` INT UNSIGNED NOT NULL,
+  `view_date` DATE NOT NULL,
+  `views_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `clicks_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_popup_date` (`popup_id`, `view_date`),
+  CONSTRAINT `fk_analytics_popup` FOREIGN KEY (`popup_id`)
+    REFERENCES `popup_ads`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 COMMIT;

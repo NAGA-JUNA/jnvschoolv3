@@ -1167,6 +1167,9 @@ try {
                 <a href="/admin/quote-highlight.php" class="nav-link <?= navActive('/admin/quote-highlight') ?>" data-bs-title="Quote"><i class="bi bi-quote"></i> <span>Quote Highlight</span></a>
             </div>
             <div class="nav-item">
+                <a href="/admin/popup-ad.php" class="nav-link <?= navActive('/admin/popup-ad') ?>" data-bs-title="Popup Ad"><i class="bi bi-megaphone"></i> <span>Popup Ad</span></a>
+            </div>
+            <div class="nav-item">
                 <a href="/admin/support.php" class="nav-link <?= navActive('/admin/support') ?>" data-bs-title="Support"><i class="bi bi-headset"></i> <span>Support</span></a>
             </div>
         </div>
