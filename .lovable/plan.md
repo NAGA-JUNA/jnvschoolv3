@@ -1,163 +1,89 @@
 
 
-## Popup Advertisement System — Complete Overhaul
+## School Location / Map Section
 
 ### Overview
 
-Replace the current basic popup ad (2 settings keys, no scheduling, no analytics) with a full-featured Popup Advertisement system including a dedicated admin page, date scheduling, redirect URLs, analytics tracking, and a polished frontend popup.
+Add an embedded Google Map section between the Contact section and Footer on the homepage, with a dedicated admin page to manage location settings. Uses the existing `settings` table (key-value pairs) -- no new database table needed, keeping it consistent with how school name, address, phone, etc. are already stored.
 
 ---
 
-### Database Changes
+### Settings Keys (stored in existing `settings` table)
 
-**New table: `popup_ads`**
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `school_map_enabled` | `0` | Show/hide map section |
+| `school_map_embed_url` | (empty) | Google Maps iframe embed URL |
+| `school_latitude` | (empty) | Latitude for "Get Directions" link |
+| `school_longitude` | (empty) | Longitude for "Get Directions" link |
+| `school_landmark` | (empty) | Nearby landmark text |
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INT UNSIGNED AUTO_INCREMENT | Primary key |
-| image_path | VARCHAR(255) | Path to uploaded image |
-| is_enabled | TINYINT(1) DEFAULT 0 | Master on/off toggle |
-| start_date | DATE | Schedule start |
-| end_date | DATE | Schedule end |
-| redirect_url | VARCHAR(500) DEFAULT NULL | Click destination URL |
-| button_text | VARCHAR(100) DEFAULT NULL | CTA button label |
-| show_on_home | TINYINT(1) DEFAULT 1 | Show only on homepage |
-| show_once_per_day | TINYINT(1) DEFAULT 1 | Cookie-based daily limit |
-| disable_on_mobile | TINYINT(1) DEFAULT 0 | Hide on mobile devices |
-| created_at | DATETIME | Auto timestamp |
-| updated_at | DATETIME | Auto timestamp on update |
-
-**New table: `popup_analytics`**
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INT UNSIGNED AUTO_INCREMENT | Primary key |
-| popup_id | INT UNSIGNED | FK to popup_ads |
-| view_date | DATE NOT NULL | Day of tracking |
-| views_count | INT UNSIGNED DEFAULT 0 | Daily view count |
-| clicks_count | INT UNSIGNED DEFAULT 0 | Daily click count |
-| UNIQUE KEY | (popup_id, view_date) | One row per day per popup |
-
-SQL will be provided in a standalone migration file and also added to `schema.sql`.
+School name, address, and phone are already stored as `school_name`, `school_address`, `school_phone`.
 
 ---
 
 ### New Files
 
-#### 1. `php-backend/admin/popup-ad.php` — Dedicated Admin Page
+#### 1. `php-backend/admin/school-location.php` -- Admin Page
 
-A standalone admin page (not inside settings tabs) with:
+A dedicated admin page with:
 
-- **Status badge** — Active (green) / Disabled (red) / Scheduled (amber) based on enable flag and date range
-- **Image upload** with live preview (JS FileReader, no framework)
+- **Card-based layout** matching existing admin pages
+- **Fields**: Google Maps Embed URL (textarea), Latitude, Longitude, Landmark
 - **Enable/Disable toggle** (form-switch)
-- **Schedule fields** — Start Date, End Date (HTML date inputs)
-- **Redirect URL** — text input with https:// placeholder
-- **Button Text** — text input (e.g., "Apply Now")
-- **Display Rules card** — checkboxes for: Show on Home only, Show once per day, Disable on mobile
-- **Analytics card** — Total Views, Total Clicks, CTR % displayed as stat badges; plus a simple daily stats table (last 14 days) showing date/views/clicks
-- **Admin preview** — A framed mock popup showing how the popup will look to visitors
-- CSRF-protected form, file upload via FileHandler utility
-
-Styling matches existing admin card-based layout (border-0, rounded-3, same typography).
-
-#### 2. `php-backend/admin/ajax/popup-analytics.php` — Analytics Endpoint
-
-A lightweight PHP endpoint that accepts POST requests to increment view or click counts:
-- `action=view` — Upserts `views_count` for today
-- `action=click` — Upserts `clicks_count` for today
-- Validates popup_id exists and is enabled
-- Returns JSON response
-
-#### 3. Migration SQL added to `schema.sql`
-
-Add the two new tables after existing table definitions.
+- **Live map preview** -- renders the embed URL in an iframe instantly on paste (vanilla JS)
+- **Helpful tip** for how to get Google Maps embed URL (right-click map -> Share -> Embed)
+- **Save button** with CSRF protection, success/error alerts
+- All values saved via existing `settings` table using `setSetting()` or direct upsert
 
 ---
 
 ### Modified Files
 
-#### 1. `php-backend/index.php` — Frontend Popup Overhaul
+#### 1. `php-backend/index.php` -- Map Section on Homepage
 
-Replace the current basic popup (lines 242-261) with an enhanced version:
+Insert a new section between the Contact section (ends at line 854) and the footer include (line 856):
 
-- Query `popup_ads` table instead of settings keys for popup data
-- Check `is_enabled`, date range (`start_date <= CURDATE() AND end_date >= CURDATE()`), `show_on_home`
-- **Popup UI**: Centered modal with rounded corners (16px), soft box-shadow, smooth fade+scale CSS animation (keyframes), close (X) button
-- Clickable image linking to `redirect_url` (opens in new tab)
-- Optional CTA button below image with `button_text`
-- **Cookie logic**: If `show_once_per_day` is on, use localStorage with date-based key
-- **Mobile check**: If `disable_on_mobile` is on, skip popup on screens <= 768px (JS `window.innerWidth` check)
-- **Analytics**: Fire fetch POST to `/admin/ajax/popup-analytics.php?action=view` when popup shown, `action=click` when clicked
-- Remove old `popup_ad_active` / `popup_ad_image` settings references from index.php
+- Conditionally rendered when `school_map_enabled` is `1`
+- **Left column**: Google Maps iframe embed (responsive, rounded corners, shadow)
+- **Right column**: Card with school name, address, landmark, phone, and a "Get Directions" button that opens `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}` in a new tab
+- Fully responsive: stacks vertically on mobile, map takes full width
+- Clean card design with subtle shadow and rounded corners
 
-#### 2. `php-backend/includes/header.php` — Add Sidebar Menu Item
+#### 2. `php-backend/includes/header.php` -- Sidebar Link
 
-Add "Popup Ad" link in the sidebar under the SETTINGS section, with a megaphone icon (`bi-megaphone`), linking to `/admin/popup-ad.php`.
-
-#### 3. `php-backend/admin/settings.php` — Remove Old Popup Tab
-
-Remove the "Popup Ad" tab from settings tabs and the associated form/handler code (lines 190-201 for handler, and the HTML around lines 860-877). The popup feature is now managed on its own dedicated page.
+Add "School Location" menu item in the Settings nav group (after "Quote Highlight", before "Popup Ad") with `bi-geo-alt` icon.
 
 ---
 
-### Technical Details
+### Frontend Map Section Design
 
 ```text
-Files Created:
-  - php-backend/admin/popup-ad.php         (~250 lines)
-  - php-backend/admin/ajax/popup-analytics.php (~40 lines)
-
-Files Modified:
-  - php-backend/schema.sql                 (add 2 tables)
-  - php-backend/index.php                  (replace popup section)
-  - php-backend/includes/header.php        (add sidebar link)
-  - php-backend/admin/settings.php         (remove old popup tab)
-
-No JS frameworks — vanilla JS only
-FileHandler used for image uploads
-CSRF protection on all forms
-cPanel shared hosting compatible
++------------------------------------------------------+
+|  [Google Maps Embed iframe]  |  School Name (bold)    |
+|  (responsive, rounded,      |  Address               |
+|   16:9 aspect ratio)        |  Landmark              |
+|                              |  Phone                 |
+|                              |  [Get Directions btn]  |
++------------------------------------------------------+
 ```
+
+- Background: light gradient (`#f8fafc` to `#f0f4ff`)
+- Map iframe: `border-radius: 16px`, `box-shadow`, `100%` width
+- Info card: `border-0`, `rounded-3`, `shadow-sm`
+- "Get Directions" button: primary color, rounded-pill, opens Google Maps
+- Mobile: map stacks on top, info card below, both full width
 
 ---
 
-### Migration SQL (for existing installations)
+### Technical Summary
 
-Users with an existing database need to run this before uploading new files:
-
-```sql
-CREATE TABLE IF NOT EXISTS `popup_ads` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `image_path` VARCHAR(255) DEFAULT NULL,
-  `is_enabled` TINYINT(1) NOT NULL DEFAULT 0,
-  `start_date` DATE DEFAULT NULL,
-  `end_date` DATE DEFAULT NULL,
-  `redirect_url` VARCHAR(500) DEFAULT NULL,
-  `button_text` VARCHAR(100) DEFAULT NULL,
-  `show_on_home` TINYINT(1) NOT NULL DEFAULT 1,
-  `show_once_per_day` TINYINT(1) NOT NULL DEFAULT 1,
-  `disable_on_mobile` TINYINT(1) NOT NULL DEFAULT 0,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Seed a default row
-INSERT INTO `popup_ads` (`id`, `is_enabled`) VALUES (1, 0)
-  ON DUPLICATE KEY UPDATE `id`=`id`;
-
-CREATE TABLE IF NOT EXISTS `popup_analytics` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `popup_id` INT UNSIGNED NOT NULL,
-  `view_date` DATE NOT NULL,
-  `views_count` INT UNSIGNED NOT NULL DEFAULT 0,
-  `clicks_count` INT UNSIGNED NOT NULL DEFAULT 0,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_popup_date` (`popup_id`, `view_date`),
-  CONSTRAINT `fk_analytics_popup` FOREIGN KEY (`popup_id`)
-    REFERENCES `popup_ads`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
+| Item | Detail |
+|------|--------|
+| Files created | `php-backend/admin/school-location.php` |
+| Files modified | `php-backend/index.php`, `php-backend/includes/header.php` |
+| Database | No new tables -- uses existing `settings` table (5 new keys) |
+| No JS frameworks | Vanilla JS for live map preview only |
+| CSRF protected | Admin form uses existing CSRF pattern |
+| Mobile responsive | Stacked layout on small screens |
 
