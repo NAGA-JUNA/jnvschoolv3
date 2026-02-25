@@ -74,6 +74,43 @@ function addDirToZip($zip,$dir,$base){
     }
 }
 
+/**
+ * Recursively add entire site directory to ZipArchive, with exclusions
+ */
+function addSiteToZip($zip,$siteRoot,$base){
+    // Directories and files to skip
+    $skipDirs=['.well-known','cgi-bin','.git','.lovable','node_modules'];
+    $skipExtensions=['zip','gz','tar'];
+    $skipFiles=['error_log','.DS_Store'];
+
+    $files=new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($siteRoot,RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+    foreach($files as $file){
+        if(!$file->isFile()) continue;
+        $filePath=$file->getRealPath();
+        $relativePath=substr($filePath,strlen($siteRoot)+1);
+
+        // Skip excluded directories
+        $skip=false;
+        foreach($skipDirs as $sd){
+            if(strpos($relativePath,$sd.'/')===0||strpos($relativePath,'/'.$sd.'/')!==false){$skip=true;break;}
+        }
+        if($skip) continue;
+
+        // Skip excluded file names
+        $fileName=basename($relativePath);
+        if(in_array($fileName,$skipFiles)) continue;
+
+        // Skip excluded extensions
+        $ext=strtolower(pathinfo($fileName,PATHINFO_EXTENSION));
+        if(in_array($ext,$skipExtensions)) continue;
+
+        $zip->addFile($filePath,$base.'/'.$relativePath);
+    }
+}
+
 try{
     if($type==='database'){
         // Database SQL dump
@@ -87,18 +124,18 @@ try{
         exit;
     }
     elseif($type==='files'){
-        // Uploads folder ZIP
-        $uploadsDir=realpath(__DIR__.'/../../uploads');
-        if(!$uploadsDir||!is_dir($uploadsDir)){die('Uploads directory not found.');}
+        // All site files ZIP (entire site root)
+        $siteRoot=realpath(__DIR__.'/../..');
+        if(!$siteRoot||!is_dir($siteRoot)){die('Site root not found.');}
 
         $tmpFile=tempnam(sys_get_temp_dir(),'backup_');
         $zip=new ZipArchive();
         if($zip->open($tmpFile,ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true){die('Cannot create ZIP.');}
-        addDirToZip($zip,$uploadsDir,'uploads');
+        addSiteToZip($zip,$siteRoot,'site');
         $zip->close();
 
         $filename="jnvschool_files_backup_{$date}.zip";
-        auditLog('backup_files','system',null,'Files backup downloaded');
+        auditLog('backup_files','system',null,'Full site files backup downloaded');
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="'.$filename.'"');
         header('Content-Length: '.filesize($tmpFile));
@@ -107,9 +144,9 @@ try{
         exit;
     }
     elseif($type==='full'){
-        // Full backup: SQL + uploads in one ZIP
-        $uploadsDir=realpath(__DIR__.'/../../uploads');
-        if(!$uploadsDir||!is_dir($uploadsDir)){die('Uploads directory not found.');}
+        // Full backup: SQL + all site files in one ZIP
+        $siteRoot=realpath(__DIR__.'/../..');
+        if(!$siteRoot||!is_dir($siteRoot)){die('Site root not found.');}
 
         $tmpFile=tempnam(sys_get_temp_dir(),'backup_full_');
         $zip=new ZipArchive();
@@ -119,12 +156,12 @@ try{
         $sql=generateSqlDump($db);
         $zip->addFromString("jnvschool_db_backup_{$date}.sql",$sql);
 
-        // Add uploads
-        addDirToZip($zip,$uploadsDir,'uploads');
+        // Add all site files
+        addSiteToZip($zip,$siteRoot,'site');
         $zip->close();
 
         $filename="jnvschool_full_backup_{$date}.zip";
-        auditLog('backup_full','system',null,'Full backup downloaded');
+        auditLog('backup_full','system',null,'Full backup (DB + all files) downloaded');
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="'.$filename.'"');
         header('Content-Length: '.filesize($tmpFile));

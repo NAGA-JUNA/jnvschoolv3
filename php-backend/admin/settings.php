@@ -1206,13 +1206,13 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
       <!-- Backup & Migration Card -->
       <?php
-      // Calculate uploads folder size
-      $uploadsPath=realpath(__DIR__.'/../uploads');
-      $uploadsSizeMB=0;
-      if($uploadsPath&&is_dir($uploadsPath)){
-        $iter=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadsPath,RecursiveDirectoryIterator::SKIP_DOTS));
+      // Calculate entire site folder size
+      $sitePath=realpath(__DIR__.'/..');
+      $siteSizeMB=0;
+      if($sitePath&&is_dir($sitePath)){
+        $iter=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($sitePath,RecursiveDirectoryIterator::SKIP_DOTS));
         $totalBytes=0;foreach($iter as $f){if($f->isFile())$totalBytes+=$f->getSize();}
-        $uploadsSizeMB=round($totalBytes/1024/1024,1);
+        $siteSizeMB=round($totalBytes/1024/1024,1);
       }
       // Count total rows across all tables
       $totalRows=0;
@@ -1247,7 +1247,7 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
           <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2" style="background:#f8fafc;border:1px solid #e2e8f0">
             <div>
               <div class="fw-semibold" style="font-size:.8rem"><i class="bi bi-folder-symlink me-1"></i>Files Backup</div>
-              <small class="text-muted" style="font-size:.7rem">All uploaded images, logos, documents (~<?=$uploadsSizeMB?> MB)</small>
+              <small class="text-muted" style="font-size:.7rem">All site files — PHP, config, uploads, everything (~<?=$siteSizeMB?> MB)</small>
             </div>
             <a href="/admin/ajax/backup-download.php?type=files&token=<?=urlencode($backupToken)?>" class="btn btn-sm btn-outline-success">
               <i class="bi bi-download me-1"></i>ZIP
@@ -1267,7 +1267,7 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
           <div class="alert alert-info py-2 mt-3 mb-0" style="font-size:.72rem">
             <i class="bi bi-info-circle me-1"></i>
-            <strong>Migration steps:</strong> Download full backup → Create new DB on new cPanel → Import .sql via phpMyAdmin → Upload uploads/ folder → Update db.php credentials → Done!
+            <strong>Migration steps:</strong> Download full backup → Create new DB on new cPanel → Import .sql via phpMyAdmin → Extract site files to public_html → Update db.php credentials → Done!
           </div>
         </div>
       </div>
