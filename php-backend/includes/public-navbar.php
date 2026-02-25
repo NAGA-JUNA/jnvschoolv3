@@ -85,7 +85,10 @@ function _navIsActive($url, $currentPage) {
     background: rgba(15,23,42,0.97);
     box-shadow: 0 4px 30px rgba(0,0,0,0.3);
 }
-.premium-navbar.nav-hidden { transform: translateY(-100%); }
+/* Only hide navbar on scroll for desktop */
+@media (min-width: 992px) {
+  .premium-navbar.nav-hidden { transform: translateY(-100%); }
+}
 
 /* Logo */
 .pn-logo-wrap { display: flex; align-items: center; text-decoration: none; transition: transform 0.3s; }
@@ -400,7 +403,7 @@ function _navIsActive($url, $currentPage) {
             window.requestAnimationFrame(function(){
                 const scroll = window.scrollY;
                 nav.classList.toggle('scrolled', scroll > 50);
-                if (scroll > lastScroll && scroll > 200) nav.classList.add('nav-hidden');
+                if (scroll > lastScroll && scroll > 200 && window.innerWidth >= 992) nav.classList.add('nav-hidden');
                 else nav.classList.remove('nav-hidden');
                 lastScroll = scroll;
                 ticking = false;
