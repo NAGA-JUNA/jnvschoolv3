@@ -523,11 +523,12 @@ if ($notifCount > 0) {
 @media (max-width: 575.98px) {
     .fcard-grid {
         display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 1rem;
-        -ms-overflow-style: none; scrollbar-width: none; padding-bottom: 0.5rem;
+        -ms-overflow-style: none; scrollbar-width: none; padding: 0 0 0.5rem 0;
+        margin: 0;
     }
     .fcard-grid::-webkit-scrollbar { display: none; }
     .fcard { min-width: 260px; scroll-snap-align: start; flex-shrink: 0; }
-    .fcard-section { padding: 2.5rem 0; }
+    .fcard-section { padding: 1.5rem 0; }
 }
 
 /* Skeleton */
@@ -697,7 +698,7 @@ function trackCardClick(slug) {
             <h4 style="font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;font-weight:700;color:#1a1a2e;"><?= e(getSetting('home_core_team_title', 'Our Core Team')) ?></h4>
             <p class="text-muted mt-2"><?= e(getSetting('home_core_team_subtitle', 'Meet the dedicated leaders guiding our school\'s vision and mission.')) ?></p>
         </div>
-        <div class="row g-4 justify-content-center">
+        <div class="row g-4 justify-content-center core-team-slider" id="coreTeamSlider">
             <?php foreach ($coreTeam as $ct):
                 $ctPhoto = $ct['photo'] ? (str_starts_with($ct['photo'], '/uploads/') ? $ct['photo'] : '/uploads/photos/'.$ct['photo']) : '';
             ?>
@@ -738,6 +739,28 @@ function trackCardClick(slug) {
             </div>
             <?php endforeach; ?>
         </div>
+        <div class="core-team-dots" id="coreTeamDots"></div>
+        <script>
+        (function(){
+            var slider = document.getElementById('coreTeamSlider');
+            var dotsC = document.getElementById('coreTeamDots');
+            if (!slider || window.innerWidth >= 576) return;
+            var cards = slider.querySelectorAll('.col-sm-6');
+            if (cards.length < 2) return;
+            cards.forEach(function(_, i) {
+                var d = document.createElement('button');
+                d.className = 'ct-dot' + (i === 0 ? ' active' : '');
+                d.onclick = function() { cards[i].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); };
+                dotsC.appendChild(d);
+            });
+            var dots = dotsC.querySelectorAll('.ct-dot');
+            slider.addEventListener('scroll', function() {
+                var sl = slider.scrollLeft, sw = slider.scrollWidth - slider.clientWidth;
+                var idx = Math.round((sl / sw) * (cards.length - 1));
+                dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+            });
+        })();
+        </script>
         <div class="text-center mt-4">
             <a href="/public/teachers.php" class="btn fw-bold px-4 rounded-1 text-uppercase" style="font-size:0.8rem;letter-spacing:1px;background:var(--theme-primary);color:#fff;">View Our Teachers</a>
         </div>
@@ -753,6 +776,45 @@ function trackCardClick(slug) {
 .core-flip-overlay{position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(transparent,rgba(0,0,0,.7))}
 .core-flip-back{background:linear-gradient(135deg,var(--theme-primary,#1e40af),#3b82f6);color:#fff;transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
 @media(hover:none){.core-flip-card:hover .core-flip-inner{transform:none}.core-flip-card.flipped .core-flip-inner{transform:rotateY(180deg)}}
+
+/* Core Team Mobile Swipe Slider */
+@media (max-width: 575.98px) {
+    .core-team-slider {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        gap: 1rem;
+        padding-bottom: 1rem;
+    }
+    .core-team-slider::-webkit-scrollbar { display: none; }
+    .core-team-slider > .col-sm-6 {
+        min-width: 270px;
+        max-width: 270px;
+        flex: 0 0 270px;
+        scroll-snap-align: center;
+    }
+    .core-team-dots {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .core-team-dots .ct-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: #cbd5e1; border: none; padding: 0; cursor: pointer;
+        transition: background 0.3s, transform 0.3s;
+    }
+    .core-team-dots .ct-dot.active {
+        background: var(--theme-primary, #1e40af);
+        transform: scale(1.3);
+    }
+}
+@media (min-width: 576px) {
+    .core-team-dots { display: none !important; }
+}
 </style>
 <?php endif; ?>
 
