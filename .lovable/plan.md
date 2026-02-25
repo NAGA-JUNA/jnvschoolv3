@@ -1,82 +1,34 @@
 
 
-## Add Backup & Download Feature to Super Admin
+## Update Backup to Include All Site Files (Not Just Uploads)
 
-### What This Does
+### What Changes
 
-Adds a **"Backup & Migration"** card in the Super Admin System tab that lets you download:
+Currently the **Files Backup** and **Full Backup** only zip the `uploads/` folder. You want it to include **everything** shown in cPanel -- all PHP files, config, admin, includes, etc. -- so you can fully migrate to a new hosting.
 
-1. **Database Backup** -- exports all 28 tables as a `.sql` file (complete with `CREATE TABLE` and `INSERT` statements)
-2. **Files Backup** -- zips the entire `uploads/` folder (logos, gallery images, slider images, etc.)
-3. **Full Backup** -- combines both into a single `.zip` file
+### Changes to `php-backend/admin/ajax/backup-download.php`
 
-This gives you everything needed to migrate your school system to a new cPanel hosting.
+1. **Files backup (`type=files`)**: Change from zipping only `uploads/` to zipping the **entire site root** (the `php-backend/` directory equivalent on the server). This includes:
+   - `admin/`, `config/`, `includes/`, `public/`, `teacher/`, `uploads/`
+   - `.htaccess`, `index.php`, `login.php`, `logout.php`, `forgot-password.php`, `reset-password.php`, `schema.sql`, `README.md`
 
-### How It Works
+2. **Exclusions** (for safety and size):
+   - Skip `error_log` files
+   - Skip `.well-known/` and `cgi-bin/` (cPanel system folders)
+   - Skip any `.zip` or temporary backup files to avoid recursion
 
-**New file: `php-backend/admin/ajax/backup-download.php`**
+3. **Full backup (`type=full`)**: Same update -- the ZIP will contain the SQL dump + all site files (not just uploads)
 
-A dedicated AJAX/download handler (Super Admin only) that:
+### Changes to `php-backend/admin/settings.php`
 
-- **Database export (`type=database`)**: Iterates all tables using `SHOW TABLES`, then for each table runs `SHOW CREATE TABLE` and `SELECT *` to generate a complete `.sql` dump file. Downloads as `jnvschool_db_backup_YYYY-MM-DD.sql`
-- **Files export (`type=files`)**: Uses PHP's `ZipArchive` class to recursively zip the `uploads/` directory. Downloads as `jnvschool_files_backup_YYYY-MM-DD.zip`
-- **Full export (`type=full`)**: Creates a `.zip` containing both the SQL dump and the uploads folder. Downloads as `jnvschool_full_backup_YYYY-MM-DD.zip`
+4. Update the "Files Backup" label/description from "All uploaded images, logos, documents" to **"All site files (PHP, config, uploads, everything)"** so it's clear what's included.
 
-Safety: Super Admin check, CSRF token, audit log entry for each backup.
-
-**Modified file: `php-backend/admin/settings.php`**
-
-Adds a "Backup & Migration" card in the System tab with:
-
-- Three download buttons (Database, Files, Full Backup)
-- Estimated sizes shown (DB row count, uploads folder size)
-- A note explaining what each backup contains
-- Visual layout matching the existing Database Setup card style
-
-### UI in the System Tab
-
-```text
-+------------------------------------------+
-| Backup & Migration                [SA]   |
-|------------------------------------------|
-| Download backups for migrating to a      |
-| new cPanel or for safekeeping.           |
-|                                          |
-| Database Backup          (~28 tables)    |
-| All tables with data as .sql file        |
-| [Download SQL]                           |
-|                                          |
-| Files Backup             (~XX MB)        |
-| All uploaded images, logos, documents     |
-| [Download ZIP]                           |
-|                                          |
-| Full Backup (DB + Files)                 |
-| Everything in one ZIP for migration      |
-| [Download Full ZIP]                      |
-+------------------------------------------+
-```
-
-### Migration Workflow
-
-Once downloaded, to set up on new cPanel:
-1. Create database + user on new cPanel (manual step)
-2. Import the `.sql` file via phpMyAdmin
-3. Upload the `uploads/` folder contents via File Manager
-4. Update `db.php` with new credentials
-5. Done -- same site on new hosting
-
-### Technical Details
-
-- Uses PHP's built-in `ZipArchive` (available on most cPanel hosts)
-- SQL export is done in PHP (not `mysqldump` which may not be available)
-- Large uploads folders are streamed to avoid memory issues
-- Temporary files are created in `/tmp` and cleaned up after download
-- Each table export includes `DROP TABLE IF EXISTS` for easy re-import
+5. Update the folder size calculation to measure the entire site root instead of just `uploads/`.
 
 ### Files Changed
 
 | Action | File | Change |
 |--------|------|--------|
-| Create | `php-backend/admin/ajax/backup-download.php` | New download handler for DB, files, and full backups |
-| Modify | `php-backend/admin/settings.php` | Add "Backup & Migration" card in System tab |
+| Modify | `php-backend/admin/ajax/backup-download.php` | Zip entire site directory instead of just uploads/ |
+| Modify | `php-backend/admin/settings.php` | Update labels and size calculation |
 
