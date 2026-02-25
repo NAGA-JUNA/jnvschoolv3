@@ -1204,6 +1204,74 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
         </div>
       </div>
 
+      <!-- Backup & Migration Card -->
+      <?php
+      // Calculate uploads folder size
+      $uploadsPath=realpath(__DIR__.'/../uploads');
+      $uploadsSizeMB=0;
+      if($uploadsPath&&is_dir($uploadsPath)){
+        $iter=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadsPath,RecursiveDirectoryIterator::SKIP_DOTS));
+        $totalBytes=0;foreach($iter as $f){if($f->isFile())$totalBytes+=$f->getSize();}
+        $uploadsSizeMB=round($totalBytes/1024/1024,1);
+      }
+      // Count total rows across all tables
+      $totalRows=0;
+      try{
+        $tbs=$db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+        foreach($tbs as $tb){try{$totalRows+=(int)$db->query("SELECT COUNT(*) FROM `$tb`")->fetchColumn();}catch(Exception $e){}}
+      }catch(Exception $e){}
+      $backupToken=$_SESSION['csrf_token']??'';
+      ?>
+      <div class="card border-0 rounded-3 mb-3" style="border:1px solid #6366f1!important">
+        <div class="card-header border-0" style="background:#eef2ff">
+          <h6 class="fw-semibold mb-0" style="color:#4f46e5">
+            <i class="bi bi-cloud-download me-2"></i>Backup & Migration
+            <span class="badge bg-warning text-dark ms-2" style="font-size:.6rem">Super Admin</span>
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-3" style="font-size:.8rem">Download backups for migrating to a new cPanel or for safekeeping.</p>
+
+          <!-- Database Backup -->
+          <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2" style="background:#f8fafc;border:1px solid #e2e8f0">
+            <div>
+              <div class="fw-semibold" style="font-size:.8rem"><i class="bi bi-database me-1"></i>Database Backup</div>
+              <small class="text-muted" style="font-size:.7rem">All <?=count($tbs??[])?> tables with <?=$totalRows?> rows as .sql file</small>
+            </div>
+            <a href="/admin/ajax/backup-download.php?type=database&token=<?=urlencode($backupToken)?>" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-download me-1"></i>SQL
+            </a>
+          </div>
+
+          <!-- Files Backup -->
+          <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2" style="background:#f8fafc;border:1px solid #e2e8f0">
+            <div>
+              <div class="fw-semibold" style="font-size:.8rem"><i class="bi bi-folder-symlink me-1"></i>Files Backup</div>
+              <small class="text-muted" style="font-size:.7rem">All uploaded images, logos, documents (~<?=$uploadsSizeMB?> MB)</small>
+            </div>
+            <a href="/admin/ajax/backup-download.php?type=files&token=<?=urlencode($backupToken)?>" class="btn btn-sm btn-outline-success">
+              <i class="bi bi-download me-1"></i>ZIP
+            </a>
+          </div>
+
+          <!-- Full Backup -->
+          <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2" style="background:#eef2ff;border:1px solid #c7d2fe">
+            <div>
+              <div class="fw-semibold" style="font-size:.8rem"><i class="bi bi-box-seam me-1"></i>Full Backup (DB + Files)</div>
+              <small class="text-muted" style="font-size:.7rem">Everything in one ZIP for complete migration</small>
+            </div>
+            <a href="/admin/ajax/backup-download.php?type=full&token=<?=urlencode($backupToken)?>" class="btn btn-sm btn-primary">
+              <i class="bi bi-download me-1"></i>Full
+            </a>
+          </div>
+
+          <div class="alert alert-info py-2 mt-3 mb-0" style="font-size:.72rem">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Migration steps:</strong> Download full backup → Create new DB on new cPanel → Import .sql via phpMyAdmin → Upload uploads/ folder → Update db.php credentials → Done!
+          </div>
+        </div>
+      </div>
+
       <!-- Danger Zone Card -->
       <div class="card border-0 rounded-3 border-danger" style="border:1px solid #dc3545!important">
         <div class="card-header bg-danger bg-opacity-10 border-0"><h6 class="fw-semibold mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Danger Zone</h6></div>
