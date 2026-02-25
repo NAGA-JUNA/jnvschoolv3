@@ -90,7 +90,7 @@ try {
 <div class="split-container">
     <div class="left-panel">
         <div class="left-content">
-            <div class="school-icon"><img src="/<?= htmlspecialchars($schoolLogo) ?>" alt="<?= htmlspecialchars($schoolName) ?> Logo"></div>
+            <div class="school-icon"><img src="/<?= htmlspecialchars(ltrim($schoolLogo, '/')) ?>" alt="<?= htmlspecialchars($schoolName) ?> Logo"></div>
             <h1><?= htmlspecialchars($schoolName) ?></h1>
             <p><?= htmlspecialchars($schoolTagline) ?></p>
             <ul class="feature-list">
