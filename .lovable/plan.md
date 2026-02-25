@@ -1,89 +1,69 @@
 
 
-## Update Manage Teachers to Match Core Team Manager Style
+## Add WhatsApp Floating Button and "Need Help?" Sidebar with Popup
 
 ### Overview
 
-Redesign the "Manage Teachers" admin page (`teachers.php`) to use the same card-based grid layout as the Core Team Manager, with drag-and-drop reordering, visibility/featured toggles, and inline modals for add/edit. Also fully decouple the two modules by removing the `is_core_team` references from the Teachers module.
+Add two fixed floating elements to the homepage (and all public pages via the public footer), matching the reference images:
 
-### What Changes
+1. **WhatsApp floating button** -- bottom-right corner, green pill/circle with WhatsApp icon and "Chat with us" text. Clicking opens `wa.me/{whatsapp_number}` in a new tab. Fully mobile-compatible.
+2. **"Need Help?" sidebar tab** -- fixed on the right edge (vertically oriented), red/crimson background. Clicking opens a modal/popup with a callback request form (parent name, mobile with +91 prefix, email, city select, branch select). Submits as an enquiry to the existing `enquiries` table.
 
----
-
-### 1. Redesign `php-backend/admin/teachers.php` -- Card Grid Layout
-
-Replace the current table-based layout with a card grid matching Core Team Manager:
-
-- **Header**: Same style -- title "Manage Teachers", subtitle, member count badge, "Add Teacher" button
-- **Search/Filter bar**: Keep existing search + status filter (Core Team doesn't have this, but Teachers needs it due to volume)
-- **Card grid** (`row g-3`): Each teacher shown as a card with:
-  - Toggle buttons for visibility (eye icon) and featured (star icon) at top
-  - Display order badge
-  - Circular photo (or placeholder icon)
-  - Name, designation, subject
-  - Edit button (opens modal) and Delete button
-  - "Drag to reorder" footer
-  - Draggable attribute for drag-and-drop reordering
-- **Edit Modal**: Per-teacher modal with all fields (employee_id, name, designation, gender, email, phone, subject, qualification, experience, DOB, joining date, status, photo upload, address, bio, visibility, featured toggles)
-- **Add Modal**: Same form but empty, opens from the header button
-- **Import button**: Keep CSV import functionality (modal unchanged)
-- **View Modal**: Keep the existing teacher profile view modal
-- **Drag-and-drop JS**: Same pattern as Core Team Manager -- reorder via AJAX to `/admin/ajax/teacher-actions.php?action=reorder`
-- **Toggle JS**: AJAX calls for `toggle_visibility` and `toggle_featured` (already exist in teacher-actions.php)
-- **Delete JS**: AJAX call for `delete_teacher` with confirmation
-- **Pagination**: Keep pagination for large teacher lists (Core Team doesn't need it but Teachers might)
-- Remove the `is_core_team` badge display from teacher cards
+Both elements use the existing `whatsapp_api_number` setting and are visible on all public pages.
 
 ---
 
-### 2. Update `php-backend/admin/teacher-form.php` -- Remove Core Team Toggle
+### File: `php-backend/includes/public-footer.php`
 
-- Remove the "Core Team Member" checkbox toggle (lines 46-52) since Core Team is now managed independently
-- Remove `is_core_team` from the `$d` data array (line 6)
-- Update the SQL INSERT/UPDATE statements to remove the `is_core_team` column
-- Keep all other fields (employee_id, name, designation, email, phone, subject, qualification, experience, dob, gender, address, joining_date, status, bio, photo)
-- This form may still be used as a fallback for direct navigation
+Add the following before the closing `</body>` tag (so it appears on ALL public pages, not just the homepage):
+
+#### A. WhatsApp Floating Button (bottom-right)
+- Fixed position: `bottom: 24px; right: 24px; z-index: 9999`
+- Green pill button (`#25D366` background) with WhatsApp Bootstrap icon and "Chat with us" text
+- Links to `https://wa.me/{whatsapp_number}?text=Hi, I need help regarding {school_name}`
+- On mobile: slightly smaller, text hidden (icon-only circle) below 576px for space
+- Pulse animation to draw attention
+- Only shown if `$whatsappNumber` is set
+
+#### B. "Need Help?" Sidebar Tab (right edge)
+- Fixed position: `right: 0; top: 50%; transform: translateY(-50%); z-index: 9998`
+- Rotated 90 degrees, red/crimson background (`#DC3545`), white text
+- Contains text "Need Help?" with a notepad icon
+- On click: opens a Bootstrap modal popup
+
+#### C. "Need Help?" Modal Popup
+- Header: Red left-border accent, "Need Help?" title, close (X) button
+- Subtitle: "Share your details below and our admissions experts will get in touch with you to guide you personally."
+- Form fields:
+  - Parent's full name (required, maxlength 100)
+  - Mobile number with "91" country code prefix (required, maxlength 15)
+  - Email address (optional, maxlength 255)
+  - Message/query (optional textarea)
+- Submit button: Full-width crimson "Request a Call Back"
+- Footer note: "Our admissions team will contact you shortly to assist you."
+- On submit: AJAX POST to a small inline handler or reuse the existing enquiry form logic -- saves to `enquiries` table
+- Success state: Show checkmark animation and "We'll contact you soon!" message
+- Validation: Client-side required fields + server-side via existing enquiry handler
 
 ---
 
-### 3. Update `php-backend/public/teachers.php` -- Remove Core Team Sorting
-
-- Line 31: Remove `is_core_team DESC` from the ORDER BY clause
-- Change query to: `SELECT * FROM teachers WHERE status='active' AND is_visible=1 ORDER BY display_order ASC, name ASC`
-- This ensures the public Teachers page shows only teachers ordered by their display order, completely independent of core team
-
----
-
-### 4. Keep `php-backend/admin/ajax/teacher-actions.php` As-Is
-
-- The AJAX handler already supports: `reorder`, `toggle_visibility`, `toggle_featured`, `delete_teacher`, `save_teacher`, `save_principal`, `list_teachers`
-- No changes needed -- it already has all the endpoints the new card-based UI will use
-
----
-
-### 5. Keep Principal Profile Editor Unchanged
-
-- The Principal Profile Editor functionality in `teacher-actions.php` (`get_principal`, `save_principal`) remains untouched
-- No changes to the Principal section on homepage or teachers page
-
----
-
-### Files Summary
+### Changes Summary
 
 | Action | File | Change |
 |--------|------|--------|
-| Rewrite | `php-backend/admin/teachers.php` | Table layout to card grid with modals, toggles, drag-and-drop (matching Core Team Manager style) |
-| Modify | `php-backend/admin/teacher-form.php` | Remove `is_core_team` toggle and field from form/SQL |
-| Modify | `php-backend/public/teachers.php` | Remove `is_core_team` from ORDER BY query |
-| No change | `php-backend/admin/ajax/teacher-actions.php` | Already has all needed endpoints |
-| No change | Principal Profile Editor | Kept as-is |
+| Modify | `php-backend/includes/public-footer.php` | Add WhatsApp button, Need Help tab, modal, CSS, and JS |
+
+No new files or database changes needed -- reuses existing `enquiries` table and `whatsapp_api_number` setting.
 
 ---
 
-### Key Design Decisions
+### Technical Details
 
-- **Teachers keeps search/filter and pagination** because teacher count can be large (unlike Core Team which is typically small)
-- **Import CSV button** stays available in the header alongside "Add Teacher"
-- **The two modules are fully independent**: adding a teacher does NOT affect Core Team, and vice versa
-- **`is_core_team` column stays in database** for backward compatibility but is no longer used or displayed in the admin UI
+- WhatsApp button uses `position:fixed` with responsive breakpoints (`@media (max-width:576px)` hides text, shrinks button)
+- "Need Help?" tab uses `writing-mode: vertical-rl` or CSS rotation for vertical text on the right edge
+- Modal uses Bootstrap 5 modal component (already loaded on all pages)
+- AJAX submission via `fetch()` POST to avoid page reload -- posts to existing enquiry endpoint or inline PHP handler
+- Pulse animation via `@keyframes pulse` on the WhatsApp button
+- Both elements have high `z-index` to stay above all content
+- Mobile: WhatsApp button stays as small circle, "Need Help?" tab stays but slightly narrower
 
