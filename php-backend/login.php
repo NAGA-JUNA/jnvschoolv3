@@ -36,12 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $schoolName = 'Jawahar Navodaya Vidyalaya';
 $schoolTagline = 'Nurturing Talent, Shaping Future';
+$schoolLogo = 'uploads/branding/school_logo.png';
 try {
     $db = getDB();
-    $s = $db->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('school_name','school_tagline')");
+    $s = $db->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('school_name','school_tagline','school_logo')");
     while ($r = $s->fetch()) {
         if ($r['setting_key'] === 'school_name') $schoolName = $r['setting_value'];
         if ($r['setting_key'] === 'school_tagline') $schoolTagline = $r['setting_value'];
+        if ($r['setting_key'] === 'school_logo' && $r['setting_value']) $schoolLogo = $r['setting_value'];
     }
 } catch (Exception $ex) {}
 ?>
@@ -62,7 +64,8 @@ try {
         .left-panel::after{content:'';position:absolute;bottom:-30%;left:-30%;width:80%;height:80%;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.3) 0%,transparent 70%);animation:float 20s ease-in-out infinite reverse}
         @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
         .left-content{position:relative;z-index:1;text-align:center;max-width:400px}
-        .school-icon{width:80px;height:80px;background:rgba(255,255,255,0.15);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 1.5rem;backdrop-filter:blur(10px)}
+        .school-icon{width:90px;height:90px;background:rgba(255,255,255,0.95);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;backdrop-filter:blur(10px);padding:10px}
+        .school-icon img{max-width:70px;max-height:70px;object-fit:contain}
         .left-content h1{font-size:2rem;font-weight:800;margin-bottom:.5rem}
         .left-content p{font-size:1.05rem;opacity:.85;margin-bottom:2rem}
         .feature-list{list-style:none;padding:0;text-align:left}
@@ -87,7 +90,7 @@ try {
 <div class="split-container">
     <div class="left-panel">
         <div class="left-content">
-            <div class="school-icon"><i class="bi bi-mortarboard-fill"></i></div>
+            <div class="school-icon"><img src="/<?= htmlspecialchars($schoolLogo) ?>" alt="<?= htmlspecialchars($schoolName) ?> Logo"></div>
             <h1><?= htmlspecialchars($schoolName) ?></h1>
             <p><?= htmlspecialchars($schoolTagline) ?></p>
             <ul class="feature-list">
