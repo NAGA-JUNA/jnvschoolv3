@@ -55,7 +55,7 @@ $logoSrc = (strpos($schoolLogo, '/uploads/') === 0 || strpos($schoolLogo, 'uploa
 </head>
 <body>
 <div class="split-container">
-    <div class="left-panel"><div class="left-content"><div class="left-panel"><div class="left-content"><div class="school-icon"><img src="<?= htmlspecialchars($logoSrc) ?>" alt="<?= htmlspecialchars($schoolName) ?> Logo"></div><h1 style="font-size:2rem;font-weight:800"><?= htmlspecialchars($schoolName) ?></h1><p style="opacity:.85">Reset your account password securely</p></div></div><h1 style="font-size:2rem;font-weight:800"><?= htmlspecialchars($schoolName) ?></h1><p style="opacity:.85">Reset your account password securely</p></div></div>
+    <div class="left-panel"><div class="left-content"><div class="school-icon"><img src="<?= htmlspecialchars($logoSrc) ?>" alt="<?= htmlspecialchars($schoolName) ?> Logo"></div><h1 style="font-size:2rem;font-weight:800"><?= htmlspecialchars($schoolName) ?></h1><p style="opacity:.85">Reset your account password securely</p></div></div>
     <div class="right-panel">
         <div class="form-box">
             <h2>Forgot Password?</h2>
