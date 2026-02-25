@@ -236,6 +236,38 @@ if($action==='delete_user'&&isSuperAdmin()){$uid=(int)($_POST['delete_user_id']?
 
 if($action==='clear_audit_logs'&&isSuperAdmin()){$db->exec("DELETE FROM audit_logs");auditLog('clear_audit_logs','system');setFlash('success','Audit logs cleared.');}
 
+if($action==='test_db_connection'&&isSuperAdmin()){
+  $connChecks=['server'=>false,'database'=>false,'privileges'=>false];$connDetails=[];
+  try{
+    $testDsn="mysql:host=".DB_HOST.";charset=".DB_CHARSET;
+    $testPdo=new PDO($testDsn,DB_USER,DB_PASS,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+    $connChecks['server']=true;$connDetails[]='Connected to MySQL server at '.DB_HOST;
+    // Check database exists
+    $testPdo->exec("USE `".DB_NAME."`");
+    $connChecks['database']=true;$connDetails[]='Database "'.DB_NAME.'" accessible';
+    // Check privileges
+    $grants=$testPdo->query("SHOW GRANTS FOR CURRENT_USER()")->fetchAll(PDO::FETCH_COLUMN);
+    $grantStr=implode(' ',$grants);
+    if(stripos($grantStr,'ALL PRIVILEGES')!==false||stripos($grantStr,'ALL')!==false){
+      $connChecks['privileges']=true;$connDetails[]='User has ALL PRIVILEGES';
+    }elseif(preg_match('/CREATE|DROP|ALTER|INSERT|UPDATE|DELETE|SELECT/i',$grantStr)){
+      $connChecks['privileges']=true;$connDetails[]='User has sufficient privileges';
+    }else{
+      $connDetails[]='User may lack CREATE/DROP privileges';
+    }
+    $_SESSION['db_conn_checks']=$connChecks;$_SESSION['db_conn_details']=$connDetails;
+    if($connChecks['server']&&$connChecks['database']&&$connChecks['privileges']){
+      setFlash('success','Database connection verified successfully!');
+    }else{
+      setFlash('warning','Connection partial: '.implode('; ',$connDetails));
+    }
+  }catch(PDOException $e){
+    $connDetails[]='Error: '.$e->getMessage();
+    $_SESSION['db_conn_checks']=$connChecks;$_SESSION['db_conn_details']=$connDetails;
+    setFlash('error','Database connection failed: '.$e->getMessage());
+  }
+}
+
 if($action==='import_schema'&&isSuperAdmin()){
   $confirmWord=trim($_POST['confirm_word']??'');
   if($confirmWord!=='CONFIRM'){setFlash('error','You must type CONFIRM to proceed.');}
@@ -1080,6 +1112,44 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
           </h6>
         </div>
         <div class="card-body">
+          <!-- Pre-Setup Checklist -->
+          <?php
+          $connChecks=$_SESSION['db_conn_checks']??null;
+          $connDetails=$_SESSION['db_conn_details']??[];
+          unset($_SESSION['db_conn_checks'],$_SESSION['db_conn_details']);
+          $checkItems=[
+            ['key'=>'server','label'=>'Server: '.DB_HOST,'desc'=>'MySQL server reachable'],
+            ['key'=>'database','label'=>'Database: '.DB_NAME,'desc'=>'Database exists & accessible'],
+            ['key'=>'privileges','label'=>'User: '.DB_USER,'desc'=>'Has required privileges'],
+          ];
+          ?>
+          <div class="mb-3 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0">
+            <h6 class="fw-semibold mb-2" style="font-size:.8rem"><i class="bi bi-clipboard-check me-1"></i>Pre-Setup Checklist (cPanel)</h6>
+            <div class="mb-2">
+              <?php foreach($checkItems as $ci):
+                $status=$connChecks[$ci['key']]??null;
+                if($status===true){$icon='bi-check-circle-fill text-success';$bg='#f0fdf4';}
+                elseif($status===false){$icon='bi-x-circle-fill text-danger';$bg='#fef2f2';}
+                else{$icon='bi-dash-circle text-muted';$bg='#f8fafc';}
+              ?>
+              <div class="d-flex align-items-center gap-2 py-1 px-2 mb-1 rounded" style="font-size:.8rem;background:<?=$bg?>">
+                <i class="bi <?=$icon?>"></i>
+                <span class="fw-semibold"><?=e($ci['label'])?></span>
+                <small class="text-muted ms-auto"><?=e($ci['desc'])?></small>
+              </div>
+              <?php endforeach;?>
+            </div>
+            <?php if($connChecks!==null&&!empty($connDetails)):?>
+            <div class="mt-2 p-2 rounded" style="font-size:.72rem;background:<?=($connChecks['server']&&$connChecks['database']&&$connChecks['privileges'])?'#f0fdf4':'#fef2f2'?>">
+              <?php foreach($connDetails as $d):?><div><i class="bi bi-info-circle me-1"></i><?=e($d)?></div><?php endforeach;?>
+            </div>
+            <?php endif;?>
+            <form method="POST" class="mt-2"><?=csrfField()?><input type="hidden" name="form_action" value="test_db_connection">
+              <button class="btn btn-outline-primary btn-sm"><i class="bi bi-plug me-1"></i>Test Connection</button>
+            </form>
+          </div>
+
+          <hr class="my-3">
           <div class="d-flex align-items-center gap-2 mb-3">
             <span class="badge rounded-pill <?=$tableCount===$totalExpected?'bg-success':'bg-warning text-dark'?>" style="font-size:.75rem">
               <?=$tableCount?>/<?=$totalExpected?> tables found
