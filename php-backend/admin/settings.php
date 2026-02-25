@@ -236,6 +236,35 @@ if($action==='delete_user'&&isSuperAdmin()){$uid=(int)($_POST['delete_user_id']?
 
 if($action==='clear_audit_logs'&&isSuperAdmin()){$db->exec("DELETE FROM audit_logs");auditLog('clear_audit_logs','system');setFlash('success','Audit logs cleared.');}
 
+if($action==='import_schema'&&isSuperAdmin()){
+  $confirmWord=trim($_POST['confirm_word']??'');
+  if($confirmWord!=='CONFIRM'){setFlash('error','You must type CONFIRM to proceed.');}
+  else{
+    $schemaFile=__DIR__.'/../schema.sql';
+    if(!file_exists($schemaFile)){setFlash('error','schema.sql not found on server.');}
+    else{
+      $sql=file_get_contents($schemaFile);
+      // Remove comments and empty lines
+      $sql=preg_replace('/--.*$/m','',$sql);
+      $sql=preg_replace('/\/\*.*?\*\//s','',$sql);
+      $statements=array_filter(array_map('trim',explode(';',$sql)));
+      $executed=0;$failed='';
+      try{
+        foreach($statements as $stmt){
+          if(empty($stmt)||$stmt==='COMMIT') continue;
+          $db->exec($stmt);
+          $executed++;
+        }
+        $db->exec('COMMIT');
+        auditLog('import_schema','system',null,"Executed $executed SQL statements");
+        setFlash('success',"Schema imported successfully. $executed statements executed.");
+      }catch(PDOException $e){
+        setFlash('error','Schema import failed: '.$e->getMessage().'<br><small>Failed statement: '.htmlspecialchars(substr($stmt,0,200)).'</small>');
+      }
+    }
+  }
+}
+
 if($action==='certificate_settings'){
   foreach(['home_certificates_show','certificates_page_enabled'] as $k){
     $v=isset($_POST[$k])?'1':'0';
@@ -260,6 +289,14 @@ try{$totalEvents=$db->query("SELECT COUNT(*) FROM events")->fetchColumn();}catch
 try{$mysqlVersion=$db->query("SELECT VERSION()")->fetchColumn();}catch(Exception $e){$mysqlVersion='N/A';}
 try{$dbTablesCount=$db->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();}catch(Exception $e){$dbTablesCount='N/A';}
 try{$dbSize=$db->query("SELECT ROUND(SUM(data_length + index_length)/1024/1024, 2) FROM information_schema.tables WHERE table_schema=DATABASE()")->fetchColumn();}catch(Exception $e){$dbSize='N/A';}
+
+// Expected tables for Database Setup card
+$expectedTables=['users','students','teachers','admissions','notifications','notification_reads','notification_versions','notification_attachments','gallery_items','gallery_categories','gallery_albums','events','attendance','exam_results','audit_logs','settings','home_slider','site_quotes','leadership_profiles','nav_menu_items','certificates','feature_cards','fee_structures','fee_components','popup_ads','popup_analytics','enquiries','core_team'];
+$existingTables=[];
+try{$tblStmt=$db->query("SHOW TABLES");while($t=$tblStmt->fetch(PDO::FETCH_NUM))$existingTables[]=$t[0];}catch(Exception $e){}
+$missingTables=array_diff($expectedTables,$existingTables);
+$tableCount=count(array_intersect($expectedTables,$existingTables));
+$totalExpected=count($expectedTables);
 require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
 <!-- Tab Navigation -->
@@ -1034,6 +1071,70 @@ require_once __DIR__.'/../includes/header.php';$s=$settings;?>
 
     <?php if(isSuperAdmin()):?>
     <div class="col-lg-6">
+      <!-- Database Setup Card -->
+      <div class="card border-0 rounded-3 mb-3" style="border:1px solid <?=$tableCount===$totalExpected?'#16a34a':'#eab308'?>!important">
+        <div class="card-header border-0" style="background:<?=$tableCount===$totalExpected?'#f0fdf4':'#fefce8'?>">
+          <h6 class="fw-semibold mb-0" style="color:<?=$tableCount===$totalExpected?'#16a34a':'#ca8a04'?>">
+            <i class="bi bi-database-gear me-2"></i>Database Setup
+            <span class="badge bg-warning text-dark ms-2" style="font-size:.6rem">Super Admin</span>
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill <?=$tableCount===$totalExpected?'bg-success':'bg-warning text-dark'?>" style="font-size:.75rem">
+              <?=$tableCount?>/<?=$totalExpected?> tables found
+            </span>
+            <?php if($tableCount===$totalExpected):?>
+              <small class="text-success"><i class="bi bi-check-circle-fill me-1"></i>All tables present</small>
+            <?php else:?>
+              <small class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Some tables missing</small>
+            <?php endif;?>
+          </div>
+
+          <?php if(!empty($missingTables)):?>
+          <div class="bg-light rounded-3 p-2 mb-3">
+            <small class="fw-semibold text-muted d-block mb-1" style="font-size:.7rem">Missing tables:</small>
+            <?php foreach($missingTables as $mt):?>
+              <span class="badge bg-danger-subtle text-danger me-1 mb-1" style="font-size:.7rem"><i class="bi bi-x-circle me-1"></i><?=e($mt)?></span>
+            <?php endforeach;?>
+          </div>
+          <?php endif;?>
+
+          <details class="mb-3">
+            <summary class="fw-semibold" style="font-size:.8rem;cursor:pointer"><i class="bi bi-list-check me-1"></i>Check All Tables</summary>
+            <div class="mt-2" style="max-height:200px;overflow-y:auto;">
+              <?php foreach($expectedTables as $et):?>
+              <div class="d-flex align-items-center gap-2 py-1" style="font-size:.75rem;border-bottom:1px solid #f1f5f9">
+                <?php if(in_array($et,$existingTables)):?>
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                <?php else:?>
+                  <i class="bi bi-x-circle-fill text-danger"></i>
+                <?php endif;?>
+                <code><?=e($et)?></code>
+              </div>
+              <?php endforeach;?>
+            </div>
+          </details>
+
+          <form method="POST" id="schemaImportForm" onsubmit="return validateSchemaImport()">
+            <?=csrfField()?>
+            <input type="hidden" name="form_action" value="import_schema">
+            <div class="alert alert-danger py-2 mb-2" style="font-size:.75rem">
+              <i class="bi bi-exclamation-octagon-fill me-1"></i>
+              <strong>WARNING:</strong> Importing schema will <strong>DROP ALL existing tables</strong> and recreate them. <strong>ALL DATA WILL BE LOST.</strong> Back up your database first!
+            </div>
+            <div class="mb-2">
+              <label class="form-label" style="font-size:.75rem">Type <strong>CONFIRM</strong> to proceed:</label>
+              <input type="text" name="confirm_word" id="schemaConfirmInput" class="form-control form-control-sm" placeholder="Type CONFIRM" autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-danger btn-sm w-100" id="schemaImportBtn" disabled>
+              <i class="bi bi-database-down me-1"></i>Import / Reset Schema
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Danger Zone Card -->
       <div class="card border-0 rounded-3 border-danger" style="border:1px solid #dc3545!important">
         <div class="card-header bg-danger bg-opacity-10 border-0"><h6 class="fw-semibold mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Danger Zone</h6></div>
         <div class="card-body d-flex flex-wrap gap-2">
@@ -1147,5 +1248,18 @@ document.querySelectorAll('.btn-edit-user').forEach(btn => {
     document.getElementById('eu-active').value = this.dataset.active;
   });
 });
+
+// Schema import confirm validation
+const schemaInput = document.getElementById('schemaConfirmInput');
+const schemaBtn = document.getElementById('schemaImportBtn');
+if (schemaInput && schemaBtn) {
+  schemaInput.addEventListener('input', function() {
+    schemaBtn.disabled = this.value !== 'CONFIRM';
+  });
+}
+function validateSchemaImport() {
+  if (document.getElementById('schemaConfirmInput').value !== 'CONFIRM') return false;
+  return confirm('FINAL WARNING: This will DELETE ALL DATA and recreate tables. Are you absolutely sure?');
+}
 </script>
 <?php require_once __DIR__.'/../includes/footer.php';?>
