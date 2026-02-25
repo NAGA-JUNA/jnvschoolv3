@@ -8,6 +8,7 @@ $db = getDB();
 // KPI counts
 $totalStudents = $db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
 $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'")->fetchColumn();
+$totalEnquiries = $db->query("SELECT COUNT(*) FROM enquiries WHERE status='new'")->fetchColumn();
 $pendingAdmissions = $db->query("SELECT COUNT(*) FROM admissions WHERE status='pending'")->fetchColumn();
 $pendingNotifications = $db->query("SELECT COUNT(*) FROM notifications WHERE status='pending'")->fetchColumn();
 $pendingGallery = $db->query("SELECT COUNT(*) FROM gallery_items WHERE status='pending'")->fetchColumn();
@@ -34,6 +35,7 @@ require_once __DIR__ . '/../includes/header.php';
     $kpis = [
         ['Students', $totalStudents, 'bi-mortarboard-fill', 'primary', '/admin/students.php'],
         ['Teachers', $totalTeachers, 'bi-person-badge-fill', 'success', '/admin/teachers.php'],
+        ['Enquiries', $totalEnquiries, 'bi-envelope-fill', 'purple', '/admin/enquiries.php'],
         ['Pending Admissions', $pendingAdmissions, 'bi-file-earmark-plus-fill', 'warning', '/admin/admissions.php'],
         ['Pending Notifications', $pendingNotifications, 'bi-bell-fill', 'info', '/admin/notifications.php'],
         ['Pending Gallery', $pendingGallery, 'bi-images', 'danger', '/admin/gallery.php'],
