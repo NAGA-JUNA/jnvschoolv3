@@ -1,41 +1,50 @@
 
 
-## Make Mobile Header Always Sticky (No Hide on Scroll)
+## Fix "Need Help?" Form Submission Not Saving to Database
 
-### Problem
+### Root Cause
 
-The navbar currently hides when scrolling down on mobile (the JS adds a `nav-hidden` class that slides it up with `transform: translateY(-100%)`). This makes it harder for mobile users to navigate back quickly.
+The `enquiries` table in the database has these columns: `id`, `name`, `phone`, `email`, `message`, `status`, `created_at`.
 
-### Solution
+However, the public endpoint `php-backend/public/ajax/enquiry-submit.php` (line 51) tries to INSERT into a `source` column that **does not exist** in the table:
 
-Disable the "hide on scroll down" behavior on mobile (below 992px) so the navbar stays fixed/sticky at the top at all times. On desktop, the current hide-on-scroll-down behavior is preserved.
-
-### File: `php-backend/includes/public-navbar.php`
-
-**CSS change** (~line 88): Add a media query so `.nav-hidden` only applies on desktop:
-
-```css
-/* Only hide navbar on scroll for desktop */
-@media (min-width: 992px) {
-  .premium-navbar.nav-hidden { transform: translateY(-100%); }
-}
+```sql
+INSERT INTO enquiries (name, phone, email, message, source, status) VALUES (?, ?, ?, ?, ?, 'new')
 ```
 
-**JS change** (~line 403): Wrap the hide logic in a width check so it only triggers on screens wider than 992px:
+This causes a database error, which is caught and returns "Something went wrong" -- so the form appears to submit but nothing is actually saved.
 
-```js
-if (scroll > lastScroll && scroll > 200 && window.innerWidth >= 992) {
-    nav.classList.add('nav-hidden');
-}
+### Fix
+
+**File: `php-backend/public/ajax/enquiry-submit.php`** (line 51)
+
+Remove the `source` column from the INSERT query:
+
+```sql
+INSERT INTO enquiries (name, phone, email, message, status) VALUES (?, ?, ?, ?, 'new')
 ```
 
-This ensures the navbar always stays visible and sticky on mobile/tablet while keeping the subtle auto-hide effect on desktop.
+And update the execute parameters to remove `$source` (line 52):
+
+```php
+->execute([$name, $mobile, $email ?: null, $message ?: null]);
+```
+
+Also remove the unused `$source` variable (line 33).
+
+### Optional Enhancement
+
+If you want to track the source of enquiries (e.g., "need_help_popup" vs "enquiry_form"), you would need to add a `source` column to the database:
+
+```sql
+ALTER TABLE enquiries ADD COLUMN source VARCHAR(50) DEFAULT NULL AFTER message;
+```
+
+But the immediate fix is simply removing `source` from the INSERT so submissions save correctly.
 
 ### Files Summary
 
 | Action | File | Change |
 |--------|------|--------|
-| Modify | `php-backend/includes/public-navbar.php` | Restrict nav-hidden to desktop only (CSS + JS) |
-
-One small, targeted change -- no other files affected.
+| Modify | `php-backend/public/ajax/enquiry-submit.php` | Remove `source` column from INSERT query (lines 33, 51-52) |
 
