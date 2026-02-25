@@ -1,34 +1,34 @@
 
 
-## Update Backup to Include All Site Files (Not Just Uploads)
+## Add Enquiries KPI to Dashboard
 
 ### What Changes
 
-Currently the **Files Backup** and **Full Backup** only zip the `uploads/` folder. You want it to include **everything** shown in cPanel -- all PHP files, config, admin, includes, etc. -- so you can fully migrate to a new hosting.
+Add an "Enquiries" count card to the dashboard KPI row, sitting between "Teachers" and "Pending Admissions" to match your requested order:
 
-### Changes to `php-backend/admin/ajax/backup-download.php`
+**Students → Teachers → Enquiries → Pending Admissions → Pending Notifications → Pending Gallery → Upcoming Events**
 
-1. **Files backup (`type=files`)**: Change from zipping only `uploads/` to zipping the **entire site root** (the `php-backend/` directory equivalent on the server). This includes:
-   - `admin/`, `config/`, `includes/`, `public/`, `teacher/`, `uploads/`
-   - `.htaccess`, `index.php`, `login.php`, `logout.php`, `forgot-password.php`, `reset-password.php`, `schema.sql`, `README.md`
+### File: `php-backend/admin/dashboard.php`
 
-2. **Exclusions** (for safety and size):
-   - Skip `error_log` files
-   - Skip `.well-known/` and `cgi-bin/` (cPanel system folders)
-   - Skip any `.zip` or temporary backup files to avoid recursion
+1. **Add query** (line ~12 area): Count new/open enquiries from the `enquiries` table:
+   ```php
+   $totalEnquiries = $db->query("SELECT COUNT(*) FROM enquiries WHERE status='new'")->fetchColumn();
+   ```
 
-3. **Full backup (`type=full`)**: Same update -- the ZIP will contain the SQL dump + all site files (not just uploads)
+2. **Add KPI card** to the `$kpis` array, inserted after Teachers:
+   ```php
+   ['Enquiries', $totalEnquiries, 'bi-envelope-fill', 'purple', '/admin/enquiries.php'],
+   ```
 
-### Changes to `php-backend/admin/settings.php`
+3. **Adjust grid**: Since there will now be 7 KPI cards, the existing `col-6 col-md-4 col-xl-2` classes will still work fine -- the 7th card wraps naturally on smaller screens.
 
-4. Update the "Files Backup" label/description from "All uploaded images, logos, documents" to **"All site files (PHP, config, uploads, everything)"** so it's clear what's included.
+### Result
 
-5. Update the folder size calculation to measure the entire site root instead of just `uploads/`.
+The dashboard will show 7 KPI cards in a single row on large screens, with "Enquiries" showing the count of new/unread enquiries linking to the enquiries management page.
 
 ### Files Changed
 
 | Action | File | Change |
 |--------|------|--------|
-| Modify | `php-backend/admin/ajax/backup-download.php` | Zip entire site directory instead of just uploads/ |
-| Modify | `php-backend/admin/settings.php` | Update labels and size calculation |
+| Modify | `php-backend/admin/dashboard.php` | Add enquiries count query + KPI card |
 
