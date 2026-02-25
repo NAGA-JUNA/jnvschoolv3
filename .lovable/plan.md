@@ -1,34 +1,33 @@
 
 
-## Add Enquiries KPI to Dashboard
+## Show Uploaded School Logo on Login Page
 
 ### What Changes
 
-Add an "Enquiries" count card to the dashboard KPI row, sitting between "Teachers" and "Pending Admissions" to match your requested order:
+Replace the graduation cap icon on the login page's left panel with the **actual school logo** uploaded via Admin Settings (stored at `uploads/branding/school_logo.png`).
 
-**Students → Teachers → Enquiries → Pending Admissions → Pending Notifications → Pending Gallery → Upcoming Events**
+### File: `php-backend/login.php`
 
-### File: `php-backend/admin/dashboard.php`
+1. **Fetch logo path from database** (alongside school_name and school_tagline): Query the `school_logo` setting so it uses whatever logo is uploaded via the admin panel.
 
-1. **Add query** (line ~12 area): Count new/open enquiries from the `enquiries` table:
-   ```php
-   $totalEnquiries = $db->query("SELECT COUNT(*) FROM enquiries WHERE status='new'")->fetchColumn();
+2. **Replace the icon with an `<img>` tag** (line 90): Change from:
+   ```html
+   <div class="school-icon"><i class="bi bi-mortarboard-fill"></i></div>
    ```
-
-2. **Add KPI card** to the `$kpis` array, inserted after Teachers:
-   ```php
-   ['Enquiries', $totalEnquiries, 'bi-envelope-fill', 'purple', '/admin/enquiries.php'],
+   To:
+   ```html
+   <div class="school-icon">
+     <img src="/<?= htmlspecialchars($schoolLogo) ?>" alt="School Logo"
+          style="max-width:60px;max-height:60px;object-fit:contain">
+   </div>
    ```
+   With a fallback to `uploads/branding/school_logo.png` if no setting is found.
 
-3. **Adjust grid**: Since there will now be 7 KPI cards, the existing `col-6 col-md-4 col-xl-2` classes will still work fine -- the 7th card wraps naturally on smaller screens.
-
-### Result
-
-The dashboard will show 7 KPI cards in a single row on large screens, with "Enquiries" showing the count of new/unread enquiries linking to the enquiries management page.
+3. **Adjust CSS** for `.school-icon`: Update to use a white/semi-transparent background so the logo is visible against the blue gradient, and allow slightly larger sizing.
 
 ### Files Changed
 
 | Action | File | Change |
 |--------|------|--------|
-| Modify | `php-backend/admin/dashboard.php` | Add enquiries count query + KPI card |
+| Modify | `php-backend/login.php` | Fetch logo setting, replace icon with `<img>` tag |
 
