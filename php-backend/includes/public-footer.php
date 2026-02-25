@@ -214,13 +214,18 @@ if ($_ctaShow === '1'):
 }
 @media (max-width: 576px) {
     .wa-float-btn {
-        padding: 12px;
+        width: 52px;
+        height: 52px;
+        padding: 0;
         border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         bottom: 16px;
         right: 16px;
     }
     .wa-float-text { display: none; }
-    .wa-float-btn i { font-size: 1.6rem; }
+    .wa-float-btn i { font-size: 1.5rem; }
 }
 
 /* Need Help Sidebar Tab */
@@ -294,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
         body.append('message', message);
         body.append('source', 'need_help_popup');
 
-        fetch('/admin/ajax/enquiry-actions.php', {
+        fetch('/public/ajax/enquiry-submit.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString()
