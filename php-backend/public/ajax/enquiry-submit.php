@@ -30,7 +30,7 @@ $name = trim($_POST['parent_name'] ?? '');
 $mobile = trim($_POST['mobile'] ?? '');
 $email = trim($_POST['email'] ?? '');
 $message = trim($_POST['message'] ?? '');
-$source = trim($_POST['source'] ?? 'need_help_popup');
+
 
 // Validate
 if ($name === '' || $mobile === '') {
@@ -48,8 +48,8 @@ if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 try {
     $db = getDB();
-    $db->prepare("INSERT INTO enquiries (name, phone, email, message, source, status) VALUES (?, ?, ?, ?, ?, 'new')")
-       ->execute([$name, $mobile, $email ?: null, $message ?: null, $source]);
+    $db->prepare("INSERT INTO enquiries (name, phone, email, message, status) VALUES (?, ?, ?, ?, 'new')")
+       ->execute([$name, $mobile, $email ?: null, $message ?: null]);
     $_SESSION['enquiry_submissions'][] = time();
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
