@@ -1,52 +1,57 @@
 
 
-## Add Quick Action Buttons to Admissions Table
+## Add Popup Modal for Admission Details with Approve/Reject
 
-Currently, each admission row only shows a "view" (eye) button. All status-change actions are hidden inside the drawer panel. The user needs visible Approve/Reject/Contact buttons directly in the table for faster workflow.
-
----
-
-### Changes to `php-backend/admin/admissions.php`
-
-**1. Expand the Actions column in the table (around line 264-266)**
-
-Replace the single eye button with a button group that includes:
-- **View** (eye icon) -- opens the drawer (existing)
-- **Approve** (check icon, green) -- quick approve with confirmation
-- **Reject** (X icon, red) -- quick reject with confirmation
-- **Next logical status** button based on current status (e.g., "Contacted" for new applications, "Docs Verified" for contacted ones)
-
-The buttons will use the existing `ajaxAction()` function to perform AJAX status updates without page reload.
-
-Each row will show contextual buttons based on the current status:
-- `new` -> View, Contact, Reject
-- `contacted` -> View, Docs Verified, Reject
-- `documents_verified` -> View, Schedule Interview, Approve, Reject
-- `interview_scheduled` -> View, Approve, Reject, Waitlist
-- `waitlisted` -> View, Approve, Reject
-- `approved` -> View, Create Student
-- `rejected` -> View, Reopen (set back to New)
-- `converted` -> View only
-
-**2. Add a remarks prompt for Reject action**
-
-When clicking Reject from the table, show a simple `prompt()` dialog asking for optional rejection remarks before executing.
-
-**3. Add tooltip labels to all action buttons**
-
-Each small icon button gets a `title` attribute so hovering reveals the action name.
+Currently, clicking "View" opens an off-canvas drawer that slides in from the right. You want a centered popup modal instead, with clear Approve and Reject buttons visible.
 
 ---
 
-### Technical Details
+### What Will Change
 
-Only one file is modified: `php-backend/admin/admissions.php`
+**File: `php-backend/admin/admissions.php`**
 
-The actions column markup (lines 264-266) will be expanded from:
-```html
-<button class="btn btn-outline-primary btn-sm" onclick="openDrawer(id)"><i class="bi bi-eye"></i></button>
+1. **Replace the off-canvas drawer with a Bootstrap modal popup**
+   - Convert the `offcanvas` element to a `modal modal-lg` element
+   - The popup will be centered on screen and clearly show all admission details
+   - Keep all existing tabs (Details, Docs, Notes, Timeline)
+
+2. **Add prominent Approve and Reject buttons in the modal footer**
+   - A green "Approve" button and a red "Reject" button always visible at the bottom of the popup
+   - These buttons will only show when the status allows it (hide for already approved/rejected/converted)
+   - Additional contextual status buttons (Contact, Docs Verified, Schedule Interview, Waitlist) shown as smaller buttons
+
+3. **Fix missing action buttons on some rows**
+   - Looking at your screenshot, rows 2 and 3 (ADM-2026-00002 and ADM-2026-00003) only show the eye icon -- this means their status value in the database doesn't match any of the expected values (new, contacted, documents_verified, etc.). I'll add a fallback so every non-converted row always shows at minimum View + Approve + Reject buttons.
+
+4. **Update JavaScript functions**
+   - Change `openDrawer()` to `openModal()` using `bootstrap.Modal` instead of `bootstrap.Offcanvas`
+   - Move Approve/Reject into the modal footer as large, clearly labeled buttons
+   - Keep the AJAX action handling exactly the same
+
+### Visual Layout of the Popup
+
+```text
++------------------------------------------+
+|  ADM-2026-00004          [Status Badge] X |
+|  Submitted Feb 26, 2026                  |
+|------------------------------------------|
+| Details | Docs | Notes | Timeline        |
+|------------------------------------------|
+|                                          |
+|  Student Information                     |
+|  Name: Nagarjuna Y                       |
+|  Class: 7     DOB: ...                   |
+|                                          |
+|  Parent Details                          |
+|  Father: Nagarjuna   Phone: 8106811171   |
+|  ...                                     |
+|                                          |
+|------------------------------------------|
+| [Reject]              [Next Step] [Approve] |
++------------------------------------------+
 ```
-To a button group with 2-4 contextual action buttons per row, all using the existing `ajaxAction()` JS function that already handles AJAX calls, CSRF tokens, drawer reload, and page refresh.
 
-No new files, no schema changes, no new endpoints needed -- all backend handling already exists in `admission-actions.php`.
-
+### Technical Notes
+- Only `php-backend/admin/admissions.php` is modified
+- No schema or backend API changes needed
+- All AJAX action endpoints remain the same
