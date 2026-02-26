@@ -13,32 +13,53 @@ $logoVersion = getSetting('logo_updated_at', '0');
 $logoPath = '';
 if ($navLogo) { $logoPath = (strpos($navLogo, '/uploads/') === 0) ? $navLogo : (file_exists(__DIR__.'/../uploads/branding/'.$navLogo) ? '/uploads/branding/'.$navLogo : '/uploads/logo/'.$navLogo); $logoPath .= '?v=' . $logoVersion; }
 
-// Social links
 $socialFacebook = getSetting('social_facebook', '');
 $socialTwitter = getSetting('social_twitter', '');
 $socialInstagram = getSetting('social_instagram', '');
 $socialYoutube = getSetting('social_youtube', '');
 $socialLinkedin = getSetting('social_linkedin', '');
 
-// Bell notifications
 $bellNotifs = $db->query("SELECT title, type, created_at FROM notifications WHERE status='approved' AND is_public=1 ORDER BY created_at DESC LIMIT 5")->fetchAll();
 $notifCount = $db->query("SELECT COUNT(*) FROM notifications WHERE status='approved' AND is_public=1 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
 
+// Seat availability
+$academicYear = getSetting('academic_year', date('Y').'-'.(date('Y')+1));
+$seatData = [];
+try {
+    $seatStmt = $db->prepare("SELECT c.class, c.total_seats, 
+        COALESCE((SELECT COUNT(*) FROM admissions a WHERE a.class_applied=c.class AND a.status IN ('approved','converted')),0) as filled
+        FROM class_seat_capacity c WHERE c.academic_year=? GROUP BY c.class, c.total_seats ORDER BY CAST(c.class AS UNSIGNED)");
+    $seatStmt->execute([$academicYear]);
+    while ($r = $seatStmt->fetch()) {
+        $seatData[$r['class']] = ['total'=>(int)$r['total_seats'], 'filled'=>(int)$r['filled'], 'available'=>(int)$r['total_seats']-(int)$r['filled']];
+    }
+} catch (Exception $e) { /* table may not exist yet */ }
+
 $success = false;
+$applicationId = '';
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $studentName = trim($_POST['student_name'] ?? '');
-    $dob = $_POST['date_of_birth'] ?? '';
+    $dob = $_POST['dob'] ?? '';
     $gender = $_POST['gender'] ?? '';
+    $bloodGroup = trim($_POST['blood_group'] ?? '');
+    $category = trim($_POST['category'] ?? '');
+    $aadharNo = trim($_POST['aadhar_no'] ?? '');
     $classApplied = $_POST['class_applied'] ?? '';
+    $previousSchool = trim($_POST['previous_school'] ?? '');
     $fatherName = trim($_POST['father_name'] ?? '');
+    $fatherPhone = trim($_POST['father_phone'] ?? '');
+    $fatherOccupation = trim($_POST['father_occupation'] ?? '');
     $motherName = trim($_POST['mother_name'] ?? '');
+    $motherOccupation = trim($_POST['mother_occupation'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $address = trim($_POST['address'] ?? '');
-    $previousSchool = trim($_POST['previous_school'] ?? '');
-    $remarks = trim($_POST['remarks'] ?? '');
+    $village = trim($_POST['village'] ?? '');
+    $district = trim($_POST['district'] ?? '');
+    $state = trim($_POST['state'] ?? '');
+    $pincode = trim($_POST['pincode'] ?? '');
 
     if (!$studentName) $errors[] = 'Student name is required.';
     if (!$dob) $errors[] = 'Date of birth is required.';
@@ -46,28 +67,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$classApplied) $errors[] = 'Class applied for is required.';
     if (!$fatherName) $errors[] = "Father's name is required.";
     if (!$phone) $errors[] = 'Phone number is required.';
-    if ($phone && !preg_match('/^[0-9]{10,15}$/', $phone)) $errors[] = 'Invalid phone number.';
+    if ($phone && !preg_match('/^[0-9]{10}$/', $phone)) $errors[] = 'Phone must be 10 digits.';
+    if ($fatherPhone && !preg_match('/^[0-9]{10}$/', $fatherPhone)) $errors[] = "Father's phone must be 10 digits.";
     if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email address.';
+    if ($aadharNo && !preg_match('/^[0-9]{12}$/', $aadharNo)) $errors[] = 'Aadhar must be 12 digits.';
 
-    if (empty($errors)) {
-        $docPath = null;
-        if (!empty($_FILES['document']['name']) && $_FILES['document']['error'] === UPLOAD_ERR_OK) {
-            $allowed = ['application/pdf', 'image/jpeg', 'image/png'];
-            $maxSize = 5 * 1024 * 1024;
-            if (in_array($_FILES['document']['type'], $allowed) && $_FILES['document']['size'] <= $maxSize) {
-                $ext = pathinfo($_FILES['document']['name'], PATHINFO_EXTENSION);
-                $filename = 'admission_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                $uploadDir = __DIR__ . '/../uploads/documents/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-                if (move_uploaded_file($_FILES['document']['tmp_name'], $uploadDir . $filename)) {
-                    $docPath = 'uploads/documents/' . $filename;
-                }
+    // Handle multiple document uploads
+    $uploadedDocs = [];
+    if (!empty($_FILES['documents']['name'][0])) {
+        $allowed = ['application/pdf','image/jpeg','image/png','image/webp'];
+        $maxSize = 5*1024*1024;
+        $uploadDir = __DIR__.'/../uploads/documents/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        $docLabels = ['birth_certificate','transfer_certificate','report_card','photo','aadhar_card'];
+        
+        foreach ($_FILES['documents']['name'] as $idx => $name) {
+            if ($_FILES['documents']['error'][$idx] !== UPLOAD_ERR_OK || empty($name)) continue;
+            $label = $docLabels[$idx] ?? 'other_'.$idx;
+            $ftype = $_FILES['documents']['type'][$idx];
+            $fsize = $_FILES['documents']['size'][$idx];
+            if (!in_array($ftype, $allowed)) { $errors[] = "File '$name': Invalid type. Only PDF/JPG/PNG/WEBP."; continue; }
+            if ($fsize > $maxSize) { $errors[] = "File '$name': Exceeds 5MB limit."; continue; }
+            $ext = pathinfo($name, PATHINFO_EXTENSION);
+            $filename = 'adm_'.time().'_'.bin2hex(random_bytes(4)).'.'.$ext;
+            if (move_uploaded_file($_FILES['documents']['tmp_name'][$idx], $uploadDir.$filename)) {
+                $uploadedDocs[$label] = 'uploads/documents/'.$filename;
             }
         }
+    }
 
-        $stmt = $db->prepare("INSERT INTO admissions (student_name, dob, gender, class_applied, father_name, mother_name, phone, email, address, previous_school, remarks, documents, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
-        $stmt->execute([$studentName, $dob, $gender, $classApplied, $fatherName, $motherName, $phone, $email ?: null, $address, $previousSchool, $remarks, $docPath]);
-        auditLog('public_admission_submit', 'admission', (int)$db->lastInsertId(), "Student: $studentName, Class: $classApplied");
+    if (empty($errors)) {
+        // Generate application ID
+        $year = date('Y');
+        $lastId = $db->query("SELECT MAX(id) FROM admissions")->fetchColumn();
+        $nextNum = ($lastId ?: 0) + 1;
+        $applicationId = 'ADM-'.$year.'-'.str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+
+        $stmt = $db->prepare("INSERT INTO admissions (application_id, student_name, dob, gender, blood_group, category, aadhar_no, class_applied, previous_school, father_name, father_phone, father_occupation, mother_name, mother_occupation, phone, email, address, village, district, state, pincode, documents, status, source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'new','online')");
+        $stmt->execute([$applicationId, $studentName, $dob, $gender, $bloodGroup ?: null, $category ?: null, $aadharNo ?: null, $classApplied, $previousSchool, $fatherName, $fatherPhone ?: null, $fatherOccupation ?: null, $motherName ?: null, $motherOccupation ?: null, $phone, $email ?: null, $address, $village ?: null, $district ?: null, $state ?: null, $pincode ?: null, !empty($uploadedDocs) ? json_encode($uploadedDocs) : null]);
+        
+        $admId = (int)$db->lastInsertId();
+        
+        // Log initial status
+        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, remarks) VALUES (?, NULL, 'new', 'Application submitted online')")->execute([$admId]);
+        
+        auditLog('public_admission_submit', 'admission', $admId, "Student: $studentName, Class: $classApplied, App: $applicationId");
         $success = true;
     }
 }
@@ -78,6 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Apply for Admission — <?= e($schoolName) ?></title>
+    <meta name="description" content="Apply for admission at <?= e($schoolName) ?>. Submit your application online with our easy multi-step form.">
     <?php $favicon = getSetting('school_favicon', ''); if ($favicon): $favVer = getSetting('favicon_updated_at', '0'); $favPath = (strpos($favicon, '/uploads/') === 0) ? $favicon : (file_exists(__DIR__.'/../uploads/branding/'.$favicon) ? '/uploads/branding/'.$favicon : '/uploads/logo/'.$favicon); ?><link rel="icon" href="<?= e($favPath) ?>?v=<?= e($favVer) ?>"><?php endif; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -103,7 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .whatsapp-float:hover { transform: scale(1.1); color: #fff; }
         @keyframes whatsappPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.4); } 50% { box-shadow: 0 4px 30px rgba(37,211,102,0.7); } }
         .hero-banner { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: #fff; padding: 3rem 0; }
-        /* Dark Footer */
         .site-footer { background: #1a1a2e; color: #fff; margin-top: 0; }
         .footer-cta { background: #0f2557; padding: 4rem 0; text-align: center; }
         .footer-cta h2 { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 2.2rem; color: #fff; margin-bottom: 1rem; }
@@ -115,21 +159,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .footer-social a { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.3s; font-size: 0.9rem; }
         .footer-social a:hover { background: var(--theme-primary, #1e40af); border-color: var(--theme-primary, #1e40af); }
         .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Multi-step wizard */
+        .wizard-progress { display: flex; justify-content: center; gap: 0; margin-bottom: 2rem; position: relative; }
+        .wizard-step-indicator { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; }
+        .wizard-step-indicator::before { content: ''; position: absolute; top: 18px; left: -50%; right: 50%; height: 3px; background: #e2e8f0; z-index: 0; }
+        .wizard-step-indicator:first-child::before { display: none; }
+        .wizard-step-indicator.completed::before { background: #22c55e; }
+        .wizard-step-indicator.active::before { background: #3b82f6; }
+        .step-circle { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; background: #e2e8f0; color: #64748b; position: relative; z-index: 1; transition: all 0.3s; }
+        .wizard-step-indicator.active .step-circle { background: #3b82f6; color: #fff; box-shadow: 0 0 0 4px rgba(59,130,246,0.2); }
+        .wizard-step-indicator.completed .step-circle { background: #22c55e; color: #fff; }
+        .step-label { font-size: 0.7rem; margin-top: 6px; color: #94a3b8; font-weight: 500; text-align: center; }
+        .wizard-step-indicator.active .step-label { color: #3b82f6; font-weight: 600; }
+        .wizard-step-indicator.completed .step-label { color: #22c55e; }
+        .wizard-panel { display: none; animation: fadeIn 0.3s ease; }
+        .wizard-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .seat-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+        .seat-green { background: #dcfce7; color: #16a34a; }
+        .seat-yellow { background: #fef9c3; color: #ca8a04; }
+        .seat-red { background: #fee2e2; color: #dc2626; }
+        .doc-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; }
+        .doc-preview-box { display: flex; align-items: center; gap: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px; }
+        .review-section { background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+        .review-section h6 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 0.75rem; }
+        .review-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
+        .review-row .label { color: #64748b; }
+        .review-row .value { font-weight: 600; color: #1e293b; }
+        .success-card { text-align: center; padding: 3rem 2rem; }
+        .success-icon { width: 80px; height: 80px; border-radius: 50%; background: #dcfce7; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; }
+        .success-icon i { font-size: 2.5rem; color: #22c55e; }
+        .app-id-box { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px dashed #3b82f6; border-radius: 12px; padding: 1rem; margin: 1.5rem auto; max-width: 320px; }
+        .app-id-box .app-id { font-size: 1.5rem; font-weight: 800; color: #1e40af; letter-spacing: 1px; }
         @media (max-width: 767.98px) {
             .top-bar .d-flex { flex-direction: column; gap: 0.3rem; text-align: center; }
+            .step-label { font-size: 0.6rem; }
+            .step-circle { width: 30px; height: 30px; font-size: 0.75rem; }
         }
         @media (max-width: 575.98px) {
             .navbar-brand { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .navbar-collapse .d-flex { flex-direction: column; width: 100%; gap: 0.5rem; margin-top: 0.75rem; }
             .notif-bell-btn, .login-nav-btn { width: 100%; text-align: center; display: block; }
-            .top-bar .d-flex.gap-3 { font-size: 0.7rem; gap: 0.4rem !important; }
             .hero-banner { padding: 2rem 0; }
             .hero-banner h1 { font-size: 1.5rem; }
-            .col-md-3, .col-md-4 { flex: 0 0 100%; max-width: 100%; }
-            .site-footer .row > div { text-align: center; }
-            .footer-heading::after { left: 50%; transform: translateX(-50%); }
-            .footer-social { justify-content: center; }
-            .site-footer { border-radius: 20px 20px 0 0; }
             .whatsapp-float { width: 50px; height: 50px; font-size: 1.5rem; bottom: 16px; right: 16px; }
         }
     </style>
@@ -147,90 +220,217 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="container py-4">
     <?php if ($success): ?>
-        <div class="card border-0 shadow-sm" style="max-width:600px;margin:2rem auto;">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-check-circle-fill text-success" style="font-size:4rem;"></i>
-                <h3 class="fw-bold text-success mt-3">Application Submitted!</h3>
-                <p class="text-muted">Your admission application has been received. Our team will review it and contact you soon.</p>
-                <a href="/public/admission-form.php" class="btn btn-primary">Submit Another</a>
+        <div class="card border-0 shadow-sm" style="max-width:650px;margin:2rem auto;">
+            <div class="card-body success-card">
+                <div class="success-icon"><i class="bi bi-check-circle-fill"></i></div>
+                <h3 class="fw-bold text-success">Application Submitted Successfully!</h3>
+                <p class="text-muted mb-3">Your admission application has been received. Our team will review it and contact you soon.</p>
+                <div class="app-id-box">
+                    <div style="font-size:0.75rem;color:#64748b;margin-bottom:4px;">Your Application ID</div>
+                    <div class="app-id"><?= e($applicationId) ?></div>
+                    <div style="font-size:0.72rem;color:#94a3b8;margin-top:4px;">Please save this for future reference</div>
+                </div>
+                <div class="d-flex gap-2 justify-content-center mt-3">
+                    <button onclick="window.print()" class="btn btn-outline-primary btn-sm"><i class="bi bi-printer me-1"></i>Print Receipt</button>
+                    <a href="/public/admission-form.php" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Submit Another</a>
+                </div>
             </div>
         </div>
     <?php else: ?>
         <?php if (!empty($errors)): ?>
-            <div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
+            <div class="alert alert-danger alert-dismissible fade show" style="max-width:800px;margin:0 auto 1rem;">
+                <ul class="mb-0"><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
         <?php endif; ?>
 
         <div class="card border-0 shadow-sm" style="max-width:800px;margin:0 auto;">
             <div class="card-body p-4">
-                <form method="POST" enctype="multipart/form-data">
-                    <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-person me-2"></i>Student Information</h5>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Student Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="student_name" class="form-control" required maxlength="100" value="<?= e($_POST['student_name'] ?? '') ?>">
+                <!-- Progress Bar -->
+                <div class="wizard-progress">
+                    <div class="wizard-step-indicator active" data-step="1">
+                        <div class="step-circle">1</div>
+                        <div class="step-label">Student Info</div>
+                    </div>
+                    <div class="wizard-step-indicator" data-step="2">
+                        <div class="step-circle">2</div>
+                        <div class="step-label">Parent Info</div>
+                    </div>
+                    <div class="wizard-step-indicator" data-step="3">
+                        <div class="step-circle">3</div>
+                        <div class="step-label">Documents</div>
+                    </div>
+                    <div class="wizard-step-indicator" data-step="4">
+                        <div class="step-circle">4</div>
+                        <div class="step-label">Review</div>
+                    </div>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" id="admissionForm">
+                    <!-- Step 1: Student Information -->
+                    <div class="wizard-panel active" id="step1">
+                        <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-person me-2"></i>Student Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Student Full Name <span class="text-danger">*</span></label>
+                                <input type="text" name="student_name" class="form-control" required maxlength="100" value="<?= e($_POST['student_name'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Date of Birth <span class="text-danger">*</span></label>
+                                <input type="date" name="dob" class="form-control" required value="<?= e($_POST['dob'] ?? '') ?>" id="dobField">
+                                <div class="form-text text-warning" id="ageWarning" style="display:none;font-size:0.72rem;"></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Gender <span class="text-danger">*</span></label>
+                                <select name="gender" class="form-select" required>
+                                    <option value="">Select</option>
+                                    <option value="male" <?= ($_POST['gender'] ?? '') === 'male' ? 'selected' : '' ?>>Male</option>
+                                    <option value="female" <?= ($_POST['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
+                                    <option value="other" <?= ($_POST['gender'] ?? '') === 'other' ? 'selected' : '' ?>>Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Class Applied For <span class="text-danger">*</span></label>
+                                <select name="class_applied" class="form-select" required id="classField">
+                                    <option value="">Select Class</option>
+                                    <?php for ($i = 1; $i <= 12; $i++):
+                                        $seatInfo = $seatData[(string)$i] ?? null;
+                                    ?>
+                                        <option value="<?= $i ?>" <?= ($_POST['class_applied'] ?? '') == $i ? 'selected' : '' ?>
+                                            data-seats="<?= $seatInfo ? $seatInfo['available'] : '' ?>">
+                                            Class <?= $i ?><?= $seatInfo ? ' ('.$seatInfo['available'].' seats)' : '' ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                                <div id="seatBadge" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Blood Group</label>
+                                <select name="blood_group" class="form-select">
+                                    <option value="">Select</option>
+                                    <?php foreach (['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg): ?>
+                                        <option value="<?= $bg ?>" <?= ($_POST['blood_group'] ?? '') === $bg ? 'selected' : '' ?>><?= $bg ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Category</label>
+                                <select name="category" class="form-select">
+                                    <option value="">Select</option>
+                                    <?php foreach (['General','OBC','SC','ST','EWS'] as $cat): ?>
+                                        <option value="<?= $cat ?>" <?= ($_POST['category'] ?? '') === $cat ? 'selected' : '' ?>><?= $cat ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Aadhar No.</label>
+                                <input type="text" name="aadhar_no" class="form-control" maxlength="12" pattern="[0-9]{12}" value="<?= e($_POST['aadhar_no'] ?? '') ?>" placeholder="12 digits">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Previous School</label>
+                                <input type="text" name="previous_school" class="form-control" maxlength="200" value="<?= e($_POST['previous_school'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Date of Birth <span class="text-danger">*</span></label>
-                            <input type="date" name="date_of_birth" class="form-control" required value="<?= e($_POST['date_of_birth'] ?? '') ?>">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Gender <span class="text-danger">*</span></label>
-                            <select name="gender" class="form-select" required>
-                                <option value="">Select</option>
-                                <option value="male" <?= ($_POST['gender'] ?? '') === 'male' ? 'selected' : '' ?>>Male</option>
-                                <option value="female" <?= ($_POST['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
-                                <option value="other" <?= ($_POST['gender'] ?? '') === 'other' ? 'selected' : '' ?>>Other</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Class Applied For <span class="text-danger">*</span></label>
-                            <select name="class_applied" class="form-select" required>
-                                <option value="">Select Class</option>
-                                <?php for ($i = 1; $i <= 12; $i++): ?>
-                                    <option value="<?= $i ?>" <?= ($_POST['class_applied'] ?? '') == $i ? 'selected' : '' ?>>Class <?= $i ?></option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">Previous School</label>
-                            <input type="text" name="previous_school" class="form-control" maxlength="200" value="<?= e($_POST['previous_school'] ?? '') ?>">
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="button" class="btn btn-primary" onclick="wizardNext(1)">Next <i class="bi bi-arrow-right ms-1"></i></button>
                         </div>
                     </div>
 
-                    <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-people me-2"></i>Parent / Guardian Details</h5>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Father's Name <span class="text-danger">*</span></label>
-                            <input type="text" name="father_name" class="form-control" required maxlength="100" value="<?= e($_POST['father_name'] ?? '') ?>">
+                    <!-- Step 2: Parent Information -->
+                    <div class="wizard-panel" id="step2">
+                        <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-people me-2"></i>Parent / Guardian Details</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Father's Name <span class="text-danger">*</span></label>
+                                <input type="text" name="father_name" class="form-control" required maxlength="100" value="<?= e($_POST['father_name'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Father's Phone</label>
+                                <input type="tel" name="father_phone" class="form-control" maxlength="10" pattern="[0-9]{10}" value="<?= e($_POST['father_phone'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Father's Occupation</label>
+                                <input type="text" name="father_occupation" class="form-control" maxlength="100" value="<?= e($_POST['father_occupation'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Mother's Name</label>
+                                <input type="text" name="mother_name" class="form-control" maxlength="100" value="<?= e($_POST['mother_name'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Mother's Occupation</label>
+                                <input type="text" name="mother_occupation" class="form-control" maxlength="100" value="<?= e($_POST['mother_occupation'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Contact Phone <span class="text-danger">*</span></label>
+                                <input type="tel" name="phone" class="form-control" required maxlength="10" pattern="[0-9]{10}" value="<?= e($_POST['phone'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Email</label>
+                                <input type="email" name="email" class="form-control" maxlength="100" value="<?= e($_POST['email'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Address</label>
+                                <textarea name="address" class="form-control" rows="1" maxlength="500"><?= e($_POST['address'] ?? '') ?></textarea>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Village/Town</label>
+                                <input type="text" name="village" class="form-control" maxlength="100" value="<?= e($_POST['village'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">District</label>
+                                <input type="text" name="district" class="form-control" maxlength="100" value="<?= e($_POST['district'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">State</label>
+                                <input type="text" name="state" class="form-control" maxlength="100" value="<?= e($_POST['state'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">PIN Code</label>
+                                <input type="text" name="pincode" class="form-control" maxlength="6" pattern="[0-9]{6}" value="<?= e($_POST['pincode'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Mother's Name</label>
-                            <input type="text" name="mother_name" class="form-control" maxlength="100" value="<?= e($_POST['mother_name'] ?? '') ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Phone <span class="text-danger">*</span></label>
-                            <input type="tel" name="phone" class="form-control" required maxlength="15" pattern="[0-9]{10,15}" value="<?= e($_POST['phone'] ?? '') ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Email</label>
-                            <input type="email" name="email" class="form-control" maxlength="100" value="<?= e($_POST['email'] ?? '') ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Document (optional)</label>
-                            <input type="file" name="document" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
-                            <div class="form-text">PDF or image, max 5MB</div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Address</label>
-                            <textarea name="address" class="form-control" rows="2" maxlength="500"><?= e($_POST['address'] ?? '') ?></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Remarks</label>
-                            <textarea name="remarks" class="form-control" rows="2" maxlength="500"><?= e($_POST['remarks'] ?? '') ?></textarea>
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="wizardPrev(2)"><i class="bi bi-arrow-left me-1"></i> Back</button>
+                            <button type="button" class="btn btn-primary" onclick="wizardNext(2)">Next <i class="bi bi-arrow-right ms-1"></i></button>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-send me-2"></i>Submit Application</button>
+                    <!-- Step 3: Documents -->
+                    <div class="wizard-panel" id="step3">
+                        <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-file-earmark-arrow-up me-2"></i>Document Upload</h5>
+                        <p class="text-muted mb-3" style="font-size:0.85rem;">Upload supporting documents (PDF/JPG/PNG, max 5MB each). All documents are optional.</p>
+                        <div class="row g-3">
+                            <?php
+                            $docFields = [
+                                ['Birth Certificate', 'birth_certificate'],
+                                ['Transfer Certificate', 'transfer_certificate'],
+                                ['Previous Report Card', 'report_card'],
+                                ['Student Photo', 'photo'],
+                                ['Aadhar Card', 'aadhar_card'],
+                            ];
+                            foreach ($docFields as $idx => $df): ?>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold"><?= $df[0] ?></label>
+                                <input type="file" name="documents[]" class="form-control doc-input" accept=".pdf,.jpg,.jpeg,.png,.webp" data-label="<?= $df[1] ?>" data-idx="<?= $idx ?>">
+                                <div class="doc-preview-container" id="preview_<?= $idx ?>"></div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="wizardPrev(3)"><i class="bi bi-arrow-left me-1"></i> Back</button>
+                            <button type="button" class="btn btn-primary" onclick="wizardNext(3)">Review <i class="bi bi-arrow-right ms-1"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Review & Submit -->
+                    <div class="wizard-panel" id="step4">
+                        <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-clipboard-check me-2"></i>Review & Submit</h5>
+                        <div id="reviewContent"></div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="wizardPrev(4)"><i class="bi bi-arrow-left me-1"></i> Back</button>
+                            <button type="submit" class="btn btn-success btn-lg px-4"><i class="bi bi-send me-2"></i>Submit Application</button>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
@@ -238,5 +438,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <?php include __DIR__ . '/../includes/public-footer.php'; ?>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function updateProgress() {
+    document.querySelectorAll('.wizard-step-indicator').forEach(ind => {
+        const s = parseInt(ind.dataset.step);
+        ind.classList.remove('active','completed');
+        if (s === currentStep) ind.classList.add('active');
+        else if (s < currentStep) ind.classList.add('completed');
+    });
+    document.querySelectorAll('.wizard-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step'+currentStep).classList.add('active');
+}
+
+function validateStep(step) {
+    const panel = document.getElementById('step'+step);
+    const required = panel.querySelectorAll('[required]');
+    let valid = true;
+    required.forEach(el => {
+        if (!el.value.trim()) { el.classList.add('is-invalid'); valid = false; }
+        else { el.classList.remove('is-invalid'); }
+    });
+    // Phone validation
+    if (step === 2) {
+        const phone = panel.querySelector('[name="phone"]');
+        if (phone && phone.value && !/^[0-9]{10}$/.test(phone.value)) {
+            phone.classList.add('is-invalid'); valid = false;
+        }
+    }
+    return valid;
+}
+
+function wizardNext(step) {
+    if (!validateStep(step)) return;
+    if (step === 3) buildReview();
+    currentStep = Math.min(step + 1, totalSteps);
+    updateProgress();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function wizardPrev(step) {
+    currentStep = Math.max(step - 1, 1);
+    updateProgress();
+}
+
+function buildReview() {
+    const form = document.getElementById('admissionForm');
+    const fd = new FormData(form);
+    const get = k => fd.get(k) || '—';
+    let html = '<div class="review-section"><h6><i class="bi bi-person me-1"></i>Student Information <button type="button" class="btn btn-link btn-sm p-0 float-end" onclick="wizardPrev(2);wizardPrev(1);">Edit</button></h6>';
+    html += rv('Name', get('student_name')) + rv('DOB', get('dob')) + rv('Gender', get('gender')) + rv('Class', 'Class '+get('class_applied'));
+    html += rv('Blood Group', get('blood_group')) + rv('Category', get('category')) + rv('Aadhar', get('aadhar_no')) + rv('Previous School', get('previous_school'));
+    html += '</div>';
+    html += '<div class="review-section"><h6><i class="bi bi-people me-1"></i>Parent Details <button type="button" class="btn btn-link btn-sm p-0 float-end" onclick="wizardPrev(3);wizardPrev(2);">Edit</button></h6>';
+    html += rv("Father", get('father_name')) + rv("Father Phone", get('father_phone')) + rv("Father Occupation", get('father_occupation'));
+    html += rv("Mother", get('mother_name')) + rv("Mother Occupation", get('mother_occupation'));
+    html += rv("Phone", get('phone')) + rv("Email", get('email'));
+    html += rv("Address", get('address')) + rv("Village", get('village')) + rv("District", get('district')) + rv("State", get('state')) + rv("PIN", get('pincode'));
+    html += '</div>';
+    // Document count
+    const docs = form.querySelectorAll('.doc-input');
+    let docCount = 0;
+    docs.forEach(d => { if (d.files.length) docCount++; });
+    html += '<div class="review-section"><h6><i class="bi bi-file-earmark me-1"></i>Documents <button type="button" class="btn btn-link btn-sm p-0 float-end" onclick="wizardPrev(4);">Edit</button></h6>';
+    html += rv('Files Uploaded', docCount + ' document(s)');
+    html += '</div>';
+    document.getElementById('reviewContent').innerHTML = html;
+}
+
+function rv(label, value) {
+    return '<div class="review-row"><span class="label">'+label+'</span><span class="value">'+value+'</span></div>';
+}
+
+// Seat badge
+document.getElementById('classField')?.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const seats = opt.dataset.seats;
+    const badge = document.getElementById('seatBadge');
+    if (!seats || seats === '') { badge.innerHTML = ''; return; }
+    const s = parseInt(seats);
+    if (s <= 0) badge.innerHTML = '<span class="seat-badge seat-red"><i class="bi bi-x-circle me-1"></i>Full — Waitlist</span>';
+    else if (s <= 9) badge.innerHTML = '<span class="seat-badge seat-yellow"><i class="bi bi-exclamation-triangle me-1"></i>'+s+' seats left</span>';
+    else badge.innerHTML = '<span class="seat-badge seat-green"><i class="bi bi-check-circle me-1"></i>'+s+' seats available</span>';
+});
+
+// DOB age warning
+document.getElementById('dobField')?.addEventListener('change', function() {
+    const dob = new Date(this.value);
+    const age = Math.floor((Date.now() - dob) / (365.25*24*60*60*1000));
+    const cls = document.getElementById('classField')?.value;
+    const warn = document.getElementById('ageWarning');
+    if (!cls) { warn.style.display='none'; return; }
+    const expectedAge = parseInt(cls) + 5;
+    if (Math.abs(age - expectedAge) > 2) {
+        warn.textContent = 'Age '+age+' may not match Class '+cls+' (expected ~'+expectedAge+' yrs)';
+        warn.style.display = 'block';
+    } else { warn.style.display = 'none'; }
+});
+
+// Doc preview
+document.querySelectorAll('.doc-input').forEach(input => {
+    input.addEventListener('change', function() {
+        const idx = this.dataset.idx;
+        const container = document.getElementById('preview_'+idx);
+        container.innerHTML = '';
+        if (!this.files.length) return;
+        const file = this.files[0];
+        if (file.size > 5*1024*1024) { container.innerHTML = '<small class="text-danger">File too large (max 5MB)</small>'; this.value=''; return; }
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.className = 'doc-preview mt-1';
+            img.src = URL.createObjectURL(file);
+            container.appendChild(img);
+        } else {
+            container.innerHTML = '<div class="doc-preview-box mt-1"><i class="bi bi-file-pdf text-danger" style="font-size:1.5rem"></i><small>'+file.name+'</small></div>';
+        }
+    });
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

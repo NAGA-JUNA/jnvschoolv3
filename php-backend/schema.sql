@@ -161,31 +161,96 @@ CREATE TABLE `teachers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- 4. Admissions
+-- 4. Admissions (Advanced pipeline v2)
 -- --------------------------------------------------------
+DROP TABLE IF EXISTS `admission_notes`;
+DROP TABLE IF EXISTS `admission_status_history`;
+DROP TABLE IF EXISTS `class_seat_capacity`;
+
 CREATE TABLE `admissions` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `application_id` VARCHAR(20) NOT NULL,
   `student_name` VARCHAR(100) NOT NULL,
   `father_name` VARCHAR(100) DEFAULT NULL,
   `mother_name` VARCHAR(100) DEFAULT NULL,
   `dob` DATE DEFAULT NULL,
   `gender` ENUM('male','female','other') DEFAULT NULL,
+  `blood_group` VARCHAR(5) DEFAULT NULL,
+  `category` VARCHAR(30) DEFAULT NULL,
+  `aadhar_no` VARCHAR(20) DEFAULT NULL,
   `class_applied` VARCHAR(20) DEFAULT NULL,
   `phone` VARCHAR(20) DEFAULT NULL,
   `email` VARCHAR(191) DEFAULT NULL,
+  `father_phone` VARCHAR(20) DEFAULT NULL,
+  `father_occupation` VARCHAR(100) DEFAULT NULL,
+  `mother_occupation` VARCHAR(100) DEFAULT NULL,
   `address` TEXT DEFAULT NULL,
+  `village` VARCHAR(100) DEFAULT NULL,
+  `district` VARCHAR(100) DEFAULT NULL,
+  `state` VARCHAR(100) DEFAULT NULL,
+  `pincode` VARCHAR(10) DEFAULT NULL,
   `previous_school` VARCHAR(200) DEFAULT NULL,
-  `documents` TEXT DEFAULT NULL,
-  `status` ENUM('pending','approved','rejected','waitlisted') NOT NULL DEFAULT 'pending',
+  `documents` JSON DEFAULT NULL,
+  `status` ENUM('new','contacted','documents_verified','interview_scheduled','approved','rejected','waitlisted','converted') NOT NULL DEFAULT 'new',
   `remarks` TEXT DEFAULT NULL,
+  `interview_date` DATETIME DEFAULT NULL,
+  `follow_up_date` DATE DEFAULT NULL,
+  `source` VARCHAR(30) DEFAULT 'online',
+  `priority` ENUM('normal','high','urgent') NOT NULL DEFAULT 'normal',
+  `converted_student_id` INT UNSIGNED DEFAULT NULL,
   `reviewed_by` INT UNSIGNED DEFAULT NULL,
   `reviewed_at` DATETIME DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `application_id` (`application_id`),
   KEY `idx_status` (`status`),
+  KEY `idx_class` (`class_applied`),
+  KEY `idx_phone` (`phone`),
   KEY `reviewed_by` (`reviewed_by`),
-  CONSTRAINT `fk_admission_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_admission_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_admission_student` FOREIGN KEY (`converted_student_id`) REFERENCES `students`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4a. Admission Notes
+CREATE TABLE `admission_notes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `admission_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED DEFAULT NULL,
+  `note` TEXT NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_admission` (`admission_id`),
+  CONSTRAINT `fk_admnote_admission` FOREIGN KEY (`admission_id`) REFERENCES `admissions`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_admnote_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4b. Admission Status History (audit trail)
+CREATE TABLE `admission_status_history` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `admission_id` INT UNSIGNED NOT NULL,
+  `old_status` VARCHAR(30) DEFAULT NULL,
+  `new_status` VARCHAR(30) NOT NULL,
+  `changed_by` INT UNSIGNED DEFAULT NULL,
+  `remarks` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_admission` (`admission_id`),
+  CONSTRAINT `fk_admhist_admission` FOREIGN KEY (`admission_id`) REFERENCES `admissions`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_admhist_user` FOREIGN KEY (`changed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4c. Class Seat Capacity
+CREATE TABLE `class_seat_capacity` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `class` VARCHAR(20) NOT NULL,
+  `section` VARCHAR(10) DEFAULT 'A',
+  `total_seats` INT NOT NULL DEFAULT 40,
+  `academic_year` VARCHAR(20) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_class_section_year` (`class`, `section`, `academic_year`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
