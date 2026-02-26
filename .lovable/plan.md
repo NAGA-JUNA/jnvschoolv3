@@ -1,79 +1,52 @@
 
-Goal: resolve the “Submit Application not working” issue and restore admin visibility/actions for submitted admissions with a safe, non-destructive fix.
 
-What I found from the current code and your screenshot:
-1) The submit button is likely being blocked by browser validation, not by button click failure.
-   - `father_phone` is optional, but it has `pattern="[0-9]{10}"`.
-   - In your screenshot, the review shows a non-numeric father phone value (“Father’s P”), which fails native HTML pattern validation and silently blocks submit.
-2) Public submit can also fail if DB schema is partially upgraded.
-   - `admission-form.php` inserts into `admission_status_history` immediately after inserting into `admissions`, without transaction safety.
-   - If `admission_status_history` table/columns are missing, submit appears broken.
-3) “Submitted info not viewable / actions not working” is consistent with schema mismatch + one SQL bug.
-   - Drawer data depends on `admission_notes` and `admission_status_history`.
-   - In `admin/admissions.php`, the `set_interview` history INSERT is malformed (wrong VALUES placeholders), which can break action flow.
+## Add Quick Action Buttons to Admissions Table
 
-Implementation plan (after your approval):
+Currently, each admission row only shows a "view" (eye) button. All status-change actions are hidden inside the drawer panel. The user needs visible Approve/Reject/Contact buttons directly in the table for faster workflow.
 
-Phase 1 — Fix submit reliability on public admission form
-- File: `php-backend/public/admission-form.php`
-- Changes:
-  1. Replace fragile submit behavior with explicit “find first invalid field and navigate to its step”.
-  2. Keep optional fields optional, but validate format only when they are filled.
-     - `father_phone`: allow blank OR exactly 10 digits.
-     - same logic for optional fields with pattern constraints.
-  3. On submit:
-     - run step-by-step validation,
-     - auto-jump user to the step with first invalid field,
-     - show a clear inline message (so it never feels like “button not working”).
-  4. Add submit-state UX:
-     - disable submit button after valid click,
-     - show “Submitting…” to avoid double clicks.
+---
 
-Phase 2 — Make server-side submission fail-safe
-- File: `php-backend/public/admission-form.php`
-- Changes:
-  1. Wrap DB operations in transaction:
-     - insert admission,
-     - insert status history,
-     - commit only if both succeed.
-  2. On error:
-     - rollback,
-     - show friendly error alert on page,
-     - log exact exception in `error_log` for diagnostics.
-  3. Add strict server-side validation for optional numeric fields before DB insert (never rely on browser only).
+### Changes to `php-backend/admin/admissions.php`
 
-Phase 3 — Restore admin “view + action” reliability
-- Files:
-  - `php-backend/admin/ajax/admission-actions.php`
-  - `php-backend/admin/admissions.php`
-- Changes:
-  1. Fix malformed SQL in `set_interview` block in `admissions.php` (placeholder/value order).
-  2. Ensure drawer endpoint gracefully handles missing note/history rows and returns valid JSON.
-  3. Standardize action error responses so the UI shows meaningful messages instead of generic failures.
-  4. Keep AJAX actions idempotent and consistent with CSRF/session checks.
+**1. Expand the Actions column in the table (around line 264-266)**
 
-Phase 4 — Safe schema verification (non-destructive)
-- File: DB (phpMyAdmin SQL runbook; no DROP TABLE)
-- I will provide and align a minimal migration checklist to verify/add only missing pieces:
-  - `admission_status_history` table
-  - `admission_notes` table
-  - `class_seat_capacity.is_active`
-  - required new columns in `admissions` (if any still missing)
-- This avoids full schema re-import and prevents data loss.
+Replace the single eye button with a button group that includes:
+- **View** (eye icon) -- opens the drawer (existing)
+- **Approve** (check icon, green) -- quick approve with confirmation
+- **Reject** (X icon, red) -- quick reject with confirmation
+- **Next logical status** button based on current status (e.g., "Contacted" for new applications, "Docs Verified" for contacted ones)
 
-Phase 5 — End-to-end verification checklist
-- Public form:
-  1. Fill valid data with blank optional father phone → should submit and show Application ID.
-  2. Enter invalid father phone text → should show clear validation message and auto-focus relevant step/field.
-  3. Upload docs and submit → should persist correctly.
-- Admin:
-  1. New submission appears in list.
-  2. Drawer opens with details/notes/timeline.
-  3. Status update, note add, follow-up/interview actions complete successfully.
-- Seat management:
-  1. Add class + toggle on/off.
-  2. Public class dropdown reflects only active classes.
+The buttons will use the existing `ajaxAction()` function to perform AJAX status updates without page reload.
 
-Technical notes
-- I cannot run true PHP submit tests inside Lovable’s preview runtime (it serves the frontend shell and shows “this project runs as a PHP application on cPanel”). So implementation will be done in code, and final validation should be performed on your cPanel-hosted environment.
-- I will keep fixes backward-compatible and avoid destructive schema operations.
+Each row will show contextual buttons based on the current status:
+- `new` -> View, Contact, Reject
+- `contacted` -> View, Docs Verified, Reject
+- `documents_verified` -> View, Schedule Interview, Approve, Reject
+- `interview_scheduled` -> View, Approve, Reject, Waitlist
+- `waitlisted` -> View, Approve, Reject
+- `approved` -> View, Create Student
+- `rejected` -> View, Reopen (set back to New)
+- `converted` -> View only
+
+**2. Add a remarks prompt for Reject action**
+
+When clicking Reject from the table, show a simple `prompt()` dialog asking for optional rejection remarks before executing.
+
+**3. Add tooltip labels to all action buttons**
+
+Each small icon button gets a `title` attribute so hovering reveals the action name.
+
+---
+
+### Technical Details
+
+Only one file is modified: `php-backend/admin/admissions.php`
+
+The actions column markup (lines 264-266) will be expanded from:
+```html
+<button class="btn btn-outline-primary btn-sm" onclick="openDrawer(id)"><i class="bi bi-eye"></i></button>
+```
+To a button group with 2-4 contextual action buttons per row, all using the existing `ajaxAction()` JS function that already handles AJAX calls, CSRF tokens, drawer reload, and page refresh.
+
+No new files, no schema changes, no new endpoints needed -- all backend handling already exists in `admission-actions.php`.
+
