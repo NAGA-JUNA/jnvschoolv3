@@ -288,6 +288,9 @@ require_once __DIR__ . '/../includes/header.php';
                                     <button class="btn btn-outline-success py-0 px-2" onclick="ajaxAction('convert_to_student',{id:<?=$id?>},'Create student record from this admission?')" title="Create Student"><i class="bi bi-person-plus"></i></button>
                                 <?php elseif ($s === 'rejected'): ?>
                                     <button class="btn btn-outline-warning py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'new'},'Reopen this application?')" title="Reopen"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                <?php else: // fallback for unknown statuses ?>
+                                    <button class="btn btn-outline-success py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'approved'},'Approve this application?')" title="Approve"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-outline-danger py-0 px-2" onclick="handleReject(<?=$id?>)" title="Reject"><i class="bi bi-x-lg"></i></button>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -300,17 +303,23 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 <?= paginationHtml($p, '/admin/admissions.php?' . http_build_query(array_filter(['status'=>$statusFilter,'search'=>$searchQuery,'class'=>$classFilter,'date_from'=>$dateFrom,'date_to'=>$dateTo]))) ?>
 
-<!-- Slide-In Detail Drawer (Off-Canvas) -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="admissionDrawer" style="width:560px;max-width:95vw;">
-    <div class="offcanvas-header border-bottom">
-        <div>
-            <h5 class="offcanvas-title mb-0" id="drawerTitle">Loading...</h5>
-            <small class="text-muted" id="drawerSubtitle"></small>
+<!-- Detail Modal Popup -->
+<div class="modal fade" id="admissionModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <div>
+                    <h5 class="modal-title mb-0" id="modalTitle">Loading...</h5>
+                    <small class="text-muted" id="modalSubtitle"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="modalBody">
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            </div>
+            <div class="modal-footer d-none" id="modalFooter">
+            </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body p-0" id="drawerBody">
-        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
     </div>
 </div>
 
@@ -338,24 +347,26 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-const drawerEl = document.getElementById('admissionDrawer');
-const drawer = new bootstrap.Offcanvas(drawerEl);
+const modalEl = document.getElementById('admissionModal');
+const modal = new bootstrap.Modal(modalEl);
 
 function openDrawer(id) {
-    drawer.show();
-    document.getElementById('drawerBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+    modal.show();
+    document.getElementById('modalBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+    document.getElementById('modalFooter').classList.add('d-none');
+    document.getElementById('modalFooter').innerHTML = '';
     
     fetch('/admin/ajax/admission-actions.php?action=get_detail&id=' + id)
         .then(r => r.json())
         .then(data => {
-            if (!data.success) { document.getElementById('drawerBody').innerHTML = '<div class="p-4 text-danger">Error loading data</div>'; return; }
+            if (!data.success) { document.getElementById('modalBody').innerHTML = '<div class="p-4 text-danger">Error loading data</div>'; return; }
             const a = data.admission;
             const notes = data.notes || [];
             const history = data.history || [];
             const docs = data.documents || {};
             
-            document.getElementById('drawerTitle').textContent = a.application_id || 'Application #' + a.id;
-            document.getElementById('drawerSubtitle').textContent = 'Submitted ' + a.created_at;
+            document.getElementById('modalTitle').textContent = a.application_id || 'Application #' + a.id;
+            document.getElementById('modalSubtitle').textContent = 'Submitted ' + a.created_at;
             
             const sc = statusColor(a.status);
             const statusLabel = a.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -459,20 +470,49 @@ function openDrawer(id) {
             
             html += '</div>'; // tab-content
             
-            // Bottom actions
-            if (a.status === 'approved') {
-                html += '<div class="p-3 border-top"><button class="btn btn-success btn-sm w-100" onclick="showConvertModal('+a.id+')"><i class="bi bi-person-plus me-1"></i>Create Student Record</button></div>';
-            }
-            <?php if (isSuperAdmin()): ?>
-            if (a.status !== 'converted') {
-                html += '<div class="p-3 pt-0"><button class="btn btn-outline-danger btn-sm w-100" onclick="ajaxAction(\'delete\',{id:'+a.id+'},\'Delete this admission permanently?\')"><i class="bi bi-trash me-1"></i>Delete</button></div>';
-            }
-            <?php endif; ?>
+            document.getElementById('modalBody').innerHTML = html;
             
-            document.getElementById('drawerBody').innerHTML = html;
+            // Build modal footer with Approve/Reject buttons
+            let footerHtml = '';
+            const showFooter = !['converted'].includes(a.status);
+            if (showFooter) {
+                footerHtml += '<div class="d-flex w-100 justify-content-between align-items-center">';
+                // Left side: Reject + Delete
+                footerHtml += '<div class="d-flex gap-2">';
+                if (a.status !== 'approved' && a.status !== 'rejected') {
+                    footerHtml += '<button class="btn btn-danger" onclick="handleReject('+a.id+')"><i class="bi bi-x-lg me-1"></i>Reject</button>';
+                }
+                if (a.status === 'rejected') {
+                    footerHtml += '<button class="btn btn-outline-warning" onclick="ajaxAction(\'update_status\',{id:'+a.id+',new_status:\'new\'},\'Reopen this application?\')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reopen</button>';
+                }
+                <?php if (isSuperAdmin()): ?>
+                footerHtml += '<button class="btn btn-outline-danger btn-sm" onclick="ajaxAction(\'delete\',{id:'+a.id+'},\'Delete this admission permanently?\')"><i class="bi bi-trash me-1"></i>Delete</button>';
+                <?php endif; ?>
+                footerHtml += '</div>';
+                // Right side: Next step + Approve
+                footerHtml += '<div class="d-flex gap-2">';
+                if (a.status === 'new') {
+                    footerHtml += '<button class="btn btn-outline-info" onclick="ajaxAction(\'update_status\',{id:'+a.id+',new_status:\'contacted\'},\'Mark as Contacted?\')"><i class="bi bi-telephone me-1"></i>Contact</button>';
+                } else if (a.status === 'contacted') {
+                    footerHtml += '<button class="btn btn-outline-secondary" onclick="ajaxAction(\'update_status\',{id:'+a.id+',new_status:\'documents_verified\'},\'Mark Docs Verified?\')"><i class="bi bi-file-earmark-check me-1"></i>Docs Verified</button>';
+                } else if (a.status === 'documents_verified') {
+                    footerHtml += '<button class="btn btn-outline-warning" onclick="ajaxAction(\'set_interview\',{id:'+a.id+',interview_date:prompt(\'Interview date (YYYY-MM-DD):\')||\'\'})"><i class="bi bi-calendar-event me-1"></i>Schedule Interview</button>';
+                } else if (a.status === 'interview_scheduled') {
+                    footerHtml += '<button class="btn btn-outline-dark" onclick="ajaxAction(\'update_status\',{id:'+a.id+',new_status:\'waitlisted\'},\'Move to Waitlist?\')"><i class="bi bi-hourglass-split me-1"></i>Waitlist</button>';
+                }
+                if (a.status === 'approved') {
+                    footerHtml += '<button class="btn btn-success" onclick="showConvertModal('+a.id+')"><i class="bi bi-person-plus me-1"></i>Create Student</button>';
+                } else if (a.status !== 'rejected') {
+                    footerHtml += '<button class="btn btn-success" onclick="ajaxAction(\'update_status\',{id:'+a.id+',new_status:\'approved\'},\'Approve this application?\')"><i class="bi bi-check-lg me-1"></i>Approve</button>';
+                }
+                footerHtml += '</div>';
+                footerHtml += '</div>';
+                document.getElementById('modalFooter').classList.remove('d-none');
+            }
+            document.getElementById('modalFooter').innerHTML = footerHtml;
         })
         .catch(err => {
-            document.getElementById('drawerBody').innerHTML = '<div class="p-4 text-danger">Failed to load: '+err.message+'</div>';
+            document.getElementById('modalBody').innerHTML = '<div class="p-4 text-danger">Failed to load: '+err.message+'</div>';
         });
 }
 
@@ -542,7 +582,7 @@ function ajaxAction(action, params, confirmMsg) {
                 if (_currentDrawerId && action !== 'delete') {
                     openDrawer(_currentDrawerId);
                 } else {
-                    drawer.hide();
+                    modal.hide();
                 }
                 // Reload page to update table/KPIs
                 setTimeout(() => location.reload(), 300);
