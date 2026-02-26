@@ -97,22 +97,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // Generate application ID
-        $year = date('Y');
-        $lastId = $db->query("SELECT MAX(id) FROM admissions")->fetchColumn();
-        $nextNum = ($lastId ?: 0) + 1;
-        $applicationId = 'ADM-'.$year.'-'.str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+        try {
+            $db->beginTransaction();
+            
+            // Generate application ID
+            $year = date('Y');
+            $lastId = $db->query("SELECT MAX(id) FROM admissions")->fetchColumn();
+            $nextNum = ($lastId ?: 0) + 1;
+            $applicationId = 'ADM-'.$year.'-'.str_pad($nextNum, 5, '0', STR_PAD_LEFT);
 
-        $stmt = $db->prepare("INSERT INTO admissions (application_id, student_name, dob, gender, blood_group, category, aadhar_no, class_applied, previous_school, father_name, father_phone, father_occupation, mother_name, mother_occupation, phone, email, address, village, district, state, pincode, documents, status, source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'new','online')");
-        $stmt->execute([$applicationId, $studentName, $dob, $gender, $bloodGroup ?: null, $category ?: null, $aadharNo ?: null, $classApplied, $previousSchool, $fatherName, $fatherPhone ?: null, $fatherOccupation ?: null, $motherName ?: null, $motherOccupation ?: null, $phone, $email ?: null, $address, $village ?: null, $district ?: null, $state ?: null, $pincode ?: null, !empty($uploadedDocs) ? json_encode($uploadedDocs) : null]);
-        
-        $admId = (int)$db->lastInsertId();
-        
-        // Log initial status
-        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, remarks) VALUES (?, NULL, 'new', 'Application submitted online')")->execute([$admId]);
-        
-        auditLog('public_admission_submit', 'admission', $admId, "Student: $studentName, Class: $classApplied, App: $applicationId");
-        $success = true;
+            $stmt = $db->prepare("INSERT INTO admissions (application_id, student_name, dob, gender, blood_group, category, aadhar_no, class_applied, previous_school, father_name, father_phone, father_occupation, mother_name, mother_occupation, phone, email, address, village, district, state, pincode, documents, status, source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'new','online')");
+            $stmt->execute([$applicationId, $studentName, $dob, $gender, $bloodGroup ?: null, $category ?: null, $aadharNo ?: null, $classApplied, $previousSchool, $fatherName, $fatherPhone ?: null, $fatherOccupation ?: null, $motherName ?: null, $motherOccupation ?: null, $phone, $email ?: null, $address, $village ?: null, $district ?: null, $state ?: null, $pincode ?: null, !empty($uploadedDocs) ? json_encode($uploadedDocs) : null]);
+            
+            $admId = (int)$db->lastInsertId();
+            
+            // Log initial status (wrapped in try-catch so missing table doesn't break submission)
+            try {
+                $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, remarks) VALUES (?, NULL, 'new', 'Application submitted online')")->execute([$admId]);
+            } catch (Exception $histErr) {
+                error_log("admission_status_history insert failed (table may not exist): " . $histErr->getMessage());
+            }
+            
+            $db->commit();
+            
+            auditLog('public_admission_submit', 'admission', $admId, "Student: $studentName, Class: $classApplied, App: $applicationId");
+            $success = true;
+        } catch (Exception $e) {
+            $db->rollBack();
+            error_log("Admission submit failed: " . $e->getMessage());
+            $errors[] = "Something went wrong while submitting. Please try again. If the problem persists, contact the school office.";
+        }
     }
 }
 ?>
@@ -322,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label fw-semibold">Aadhar No.</label>
-                                <input type="text" name="aadhar_no" class="form-control" maxlength="12" pattern="[0-9]{12}" value="<?= e($_POST['aadhar_no'] ?? '') ?>" placeholder="12 digits">
+                                <input type="text" name="aadhar_no" class="form-control" maxlength="12" value="<?= e($_POST['aadhar_no'] ?? '') ?>" placeholder="12 digits (optional)">
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label fw-semibold">Previous School</label>
@@ -344,7 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Father's Phone</label>
-                                <input type="tel" name="father_phone" class="form-control" maxlength="10" pattern="[0-9]{10}" value="<?= e($_POST['father_phone'] ?? '') ?>">
+                                <input type="tel" name="father_phone" class="form-control" maxlength="10" value="<?= e($_POST['father_phone'] ?? '') ?>" placeholder="10 digits (optional)">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Father's Occupation</label>
@@ -384,7 +398,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-semibold">PIN Code</label>
-                                <input type="text" name="pincode" class="form-control" maxlength="6" pattern="[0-9]{6}" value="<?= e($_POST['pincode'] ?? '') ?>">
+                                <input type="text" name="pincode" class="form-control" maxlength="6" value="<?= e($_POST['pincode'] ?? '') ?>" placeholder="6 digits (optional)">
                             </div>
                         </div>
                         <div class="d-flex justify-content-between mt-4">
@@ -441,25 +455,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 let currentStep = 1;
 const totalSteps = 4;
 
-// Fix: Remove required from hidden panels before submit so browser validation doesn't block
+// Fix: Intercept submit, do full JS validation, then submit programmatically
 document.getElementById('admissionForm')?.addEventListener('submit', function(e) {
-    // Show all panels briefly to avoid hidden-required-field blocking
-    const panels = document.querySelectorAll('.wizard-panel');
-    panels.forEach(p => p.style.display = 'block');
+    e.preventDefault(); // Always prevent default to avoid hidden-field browser validation issues
     
     // Validate all steps
-    let allValid = true;
+    let firstInvalidStep = 0;
     for (let s = 1; s <= 3; s++) {
-        if (!validateStep(s)) { allValid = false; currentStep = s; updateProgress(); break; }
+        if (!validateStep(s)) { firstInvalidStep = s; break; }
     }
-    if (!allValid) {
-        e.preventDefault();
-        // Restore panel visibility
-        panels.forEach(p => p.style.display = '');
-        document.querySelector('.wizard-panel.active').style.display = 'block';
+    
+    if (firstInvalidStep) {
+        currentStep = firstInvalidStep;
+        updateProgress();
         window.scrollTo({top: 0, behavior: 'smooth'});
+        
+        // Focus first invalid field
+        const panel = document.getElementById('step' + firstInvalidStep);
+        const inv = panel.querySelector('.is-invalid');
+        if (inv) setTimeout(() => inv.focus(), 350);
+        return;
     }
-    // If valid, panels stay visible so browser native validation passes
+    
+    // All valid — disable button and submit via JS
+    const btn = document.getElementById('finalSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+    
+    // Remove all pattern attributes to prevent browser blocking on hidden fields
+    this.querySelectorAll('[pattern]').forEach(el => el.removeAttribute('pattern'));
+    
+    // Show all panels so browser doesn't block on hidden required fields
+    this.querySelectorAll('.wizard-panel').forEach(p => p.style.display = 'block');
+    
+    // Submit the form natively
+    this.submit();
 });
 
 function updateProgress() {
@@ -477,16 +507,52 @@ function validateStep(step) {
     const panel = document.getElementById('step'+step);
     const required = panel.querySelectorAll('[required]');
     let valid = true;
+    let errorMsg = '';
     required.forEach(el => {
         if (!el.value.trim()) { el.classList.add('is-invalid'); valid = false; }
         else { el.classList.remove('is-invalid'); }
     });
-    // Phone validation
+    // Phone validation (required contact phone)
     if (step === 2) {
         const phone = panel.querySelector('[name="phone"]');
         if (phone && phone.value && !/^[0-9]{10}$/.test(phone.value)) {
             phone.classList.add('is-invalid'); valid = false;
+            errorMsg = 'Contact phone must be exactly 10 digits.';
         }
+        // Father phone: optional but validate format if filled
+        const fatherPhone = panel.querySelector('[name="father_phone"]');
+        if (fatherPhone && fatherPhone.value.trim() && !/^[0-9]{10}$/.test(fatherPhone.value.trim())) {
+            fatherPhone.classList.add('is-invalid'); valid = false;
+            errorMsg = "Father's phone must be exactly 10 digits or left blank.";
+        } else if (fatherPhone) { fatherPhone.classList.remove('is-invalid'); }
+        // Pincode: optional but validate if filled
+        const pincode = panel.querySelector('[name="pincode"]');
+        if (pincode && pincode.value.trim() && !/^[0-9]{6}$/.test(pincode.value.trim())) {
+            pincode.classList.add('is-invalid'); valid = false;
+            errorMsg = 'PIN code must be exactly 6 digits or left blank.';
+        } else if (pincode) { pincode.classList.remove('is-invalid'); }
+    }
+    // Aadhar: optional but validate if filled
+    if (step === 1) {
+        const aadhar = panel.querySelector('[name="aadhar_no"]');
+        if (aadhar && aadhar.value.trim() && !/^[0-9]{12}$/.test(aadhar.value.trim())) {
+            aadhar.classList.add('is-invalid'); valid = false;
+            errorMsg = 'Aadhar number must be exactly 12 digits or left blank.';
+        } else if (aadhar) { aadhar.classList.remove('is-invalid'); }
+    }
+    if (!valid && errorMsg) {
+        // Show a toast/alert for clarity
+        let alertEl = panel.querySelector('.step-validation-alert');
+        if (!alertEl) {
+            alertEl = document.createElement('div');
+            alertEl.className = 'alert alert-danger alert-dismissible fade show mt-2 step-validation-alert';
+            alertEl.style.fontSize = '0.85rem';
+            panel.prepend(alertEl);
+        }
+        alertEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' + errorMsg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    } else {
+        const old = panel.querySelector('.step-validation-alert');
+        if (old) old.remove();
     }
     return valid;
 }

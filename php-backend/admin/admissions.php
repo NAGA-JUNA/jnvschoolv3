@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         $oldSt->execute([$aid]);
         $oldSt = $oldSt->fetchColumn();
         $db->prepare("UPDATE admissions SET interview_date=?, status='interview_scheduled', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$intDate, currentUserId(), $aid]);
-        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,'interview_scheduled',?,'Interview scheduled')")->execute([$aid, $oldSt ?: 'new', currentUserId()]);
+        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,?,'interview_scheduled',?,'Interview scheduled')")->execute([$aid, $oldSt ?: 'new', currentUserId()]);
         setFlash('success', 'Interview scheduled.');
     } elseif ($action === 'delete' && $aid && isSuperAdmin()) {
         $db->prepare("DELETE FROM admissions WHERE id=?")->execute([$aid]);
