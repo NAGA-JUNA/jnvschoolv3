@@ -92,8 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         setFlash('success', 'Follow-up date updated.');
     } elseif ($action === 'set_interview' && $aid) {
         $intDate = $_POST['interview_date'] ?? null;
+        // Fetch old status first to avoid self-referencing subquery issue
+        $oldSt = $db->prepare("SELECT status FROM admissions WHERE id=?");
+        $oldSt->execute([$aid]);
+        $oldSt = $oldSt->fetchColumn();
         $db->prepare("UPDATE admissions SET interview_date=?, status='interview_scheduled', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$intDate, currentUserId(), $aid]);
-        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,(SELECT status FROM (SELECT status FROM admissions WHERE id=?) t),'interview_scheduled',?,'Interview scheduled')")->execute([$aid, $aid, currentUserId()]);
+        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,'interview_scheduled',?,'Interview scheduled')")->execute([$aid, $oldSt ?: 'new', currentUserId()]);
         setFlash('success', 'Interview scheduled.');
     } elseif ($action === 'delete' && $aid && isSuperAdmin()) {
         $db->prepare("DELETE FROM admissions WHERE id=?")->execute([$aid]);
@@ -338,7 +342,7 @@ function openDrawer(id) {
             if (a.status !== 'converted') {
                 const nextStatuses = getNextStatuses(a.status);
                 nextStatuses.forEach(ns => {
-                    html += '<form method="POST" class="d-inline" onsubmit="return confirm(\'Change to '+ns.replace(/_/g,' ')+'?\')"><input type="hidden" name="csrf_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="'+a.id+'"><input type="hidden" name="action" value="update_status"><input type="hidden" name="new_status" value="'+ns+'"><button class="btn btn-outline-'+statusColor(ns)+' btn-sm py-0 px-2" title="'+ns.replace(/_/g,' ')+'"><i class="bi '+statusIcon(ns)+'"></i></button></form>';
+                    html += '<button class="btn btn-outline-'+statusColor(ns)+' btn-sm py-0 px-2" title="'+ns.replace(/_/g,' ')+'" onclick="ajaxAction(\'update_status\',{id:'+a.id+',new_status:\''+ns+'\'},\'Change to '+ns.replace(/_/g,' ')+'?\')"><i class="bi '+statusIcon(ns)+'"></i></button>';
                 });
             }
             html += '</div></div>';
@@ -375,8 +379,8 @@ function openDrawer(id) {
             // Follow-up & interview forms
             if (a.status !== 'converted') {
                 html += '<div class="row g-2 mt-2">';
-                html += '<div class="col-6"><form method="POST"><input type="hidden" name="csrf_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="'+a.id+'"><input type="hidden" name="action" value="set_followup"><label class="form-label fw-semibold" style="font-size:.75rem">Follow-up Date</label><input type="date" name="follow_up_date" class="form-control form-control-sm" value="'+(a.follow_up_date||'')+'"><button class="btn btn-outline-primary btn-sm mt-1 w-100">Set</button></form></div>';
-                html += '<div class="col-6"><form method="POST"><input type="hidden" name="csrf_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="'+a.id+'"><input type="hidden" name="action" value="set_interview"><label class="form-label fw-semibold" style="font-size:.75rem">Interview Date</label><input type="datetime-local" name="interview_date" class="form-control form-control-sm" value="'+(a.interview_date ? a.interview_date.replace(' ','T') : '')+'"><button class="btn btn-outline-warning btn-sm mt-1 w-100">Schedule</button></form></div>';
+                html += '<div class="col-6"><label class="form-label fw-semibold" style="font-size:.75rem">Follow-up Date</label><input type="date" id="drawerFollowup" class="form-control form-control-sm" value="'+(a.follow_up_date||'')+'"><button class="btn btn-outline-primary btn-sm mt-1 w-100" onclick="ajaxAction(\'set_followup\',{id:'+a.id+',follow_up_date:document.getElementById(\'drawerFollowup\').value})">Set</button></div>';
+                html += '<div class="col-6"><label class="form-label fw-semibold" style="font-size:.75rem">Interview Date</label><input type="datetime-local" id="drawerInterview" class="form-control form-control-sm" value="'+(a.interview_date ? a.interview_date.replace(' ','T') : '')+'"><button class="btn btn-outline-warning btn-sm mt-1 w-100" onclick="ajaxAction(\'set_interview\',{id:'+a.id+',interview_date:document.getElementById(\'drawerInterview\').value})">Schedule</button></div>';
                 html += '</div>';
             }
             html += '</div>';
@@ -399,7 +403,7 @@ function openDrawer(id) {
             
             // Notes tab
             html += '<div class="tab-pane fade" id="dtNotes">';
-            html += '<form method="POST" class="mb-3"><input type="hidden" name="csrf_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="'+a.id+'"><input type="hidden" name="action" value="add_note"><div class="input-group input-group-sm"><input type="text" name="note" class="form-control" placeholder="Add a note..." required><button class="btn btn-primary"><i class="bi bi-plus"></i></button></div></form>';
+            html += '<form onsubmit="event.preventDefault();ajaxAction(\'add_note\',{id:'+a.id+',note:this.note.value});this.note.value=\'\';" class="mb-3"><div class="input-group input-group-sm"><input type="text" name="note" class="form-control" placeholder="Add a note..." required><button class="btn btn-primary"><i class="bi bi-plus"></i></button></div></form>';
             if (notes.length === 0) {
                 html += '<p class="text-muted text-center py-3" style="font-size:.85rem">No notes yet</p>';
             } else {
@@ -434,7 +438,7 @@ function openDrawer(id) {
             }
             <?php if (isSuperAdmin()): ?>
             if (a.status !== 'converted') {
-                html += '<div class="p-3 pt-0"><form method="POST" onsubmit="return confirm(\'Delete this admission permanently?\')"><input type="hidden" name="csrf_token" value="<?= csrfToken() ?>"><input type="hidden" name="id" value="'+a.id+'"><input type="hidden" name="action" value="delete"><button class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash me-1"></i>Delete</button></form></div>';
+                html += '<div class="p-3 pt-0"><button class="btn btn-outline-danger btn-sm w-100" onclick="ajaxAction(\'delete\',{id:'+a.id+'},\'Delete this admission permanently?\')"><i class="bi bi-trash me-1"></i>Delete</button></div>';
             }
             <?php endif; ?>
             
@@ -487,6 +491,41 @@ function escHtml(s) {
     d.textContent = s;
     return d.innerHTML;
 }
+
+let _currentDrawerId = null;
+
+function ajaxAction(action, params, confirmMsg) {
+    if (confirmMsg && !confirm(confirmMsg)) return;
+    const fd = new FormData();
+    fd.append('action', action);
+    fd.append('csrf_token', '<?= csrfToken() ?>');
+    for (const [k,v] of Object.entries(params)) fd.append(k, v);
+    
+    fetch('/admin/ajax/admission-actions.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Reload drawer
+                if (_currentDrawerId && action !== 'delete') {
+                    openDrawer(_currentDrawerId);
+                } else {
+                    drawer.hide();
+                }
+                // Reload page to update table/KPIs
+                setTimeout(() => location.reload(), 300);
+            } else {
+                alert(data.error || 'Action failed');
+            }
+        })
+        .catch(err => alert('Error: ' + err.message));
+}
+
+// Track current drawer ID
+const origOpenDrawer = openDrawer;
+openDrawer = function(id) {
+    _currentDrawerId = id;
+    origOpenDrawer(id);
+};
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

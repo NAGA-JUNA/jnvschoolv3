@@ -28,7 +28,7 @@ $seatData = [];
 try {
     $seatStmt = $db->prepare("SELECT c.class, c.total_seats, 
         COALESCE((SELECT COUNT(*) FROM admissions a WHERE a.class_applied=c.class AND a.status IN ('approved','converted')),0) as filled
-        FROM class_seat_capacity c WHERE c.academic_year=? GROUP BY c.class, c.total_seats ORDER BY CAST(c.class AS UNSIGNED)");
+        FROM class_seat_capacity c WHERE c.academic_year=? AND c.is_active=1 GROUP BY c.class, c.total_seats ORDER BY CASE WHEN c.class REGEXP '^[0-9]+$' THEN CAST(c.class AS UNSIGNED) ELSE 999 END, c.class ASC");
     $seatStmt->execute([$academicYear]);
     while ($r = $seatStmt->fetch()) {
         $seatData[$r['class']] = ['total'=>(int)$r['total_seats'], 'filled'=>(int)$r['filled'], 'available'=>(int)$r['total_seats']-(int)$r['filled']];
@@ -293,14 +293,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <label class="form-label fw-semibold">Class Applied For <span class="text-danger">*</span></label>
                                 <select name="class_applied" class="form-select" required id="classField">
                                     <option value="">Select Class</option>
-                                    <?php for ($i = 1; $i <= 12; $i++):
-                                        $seatInfo = $seatData[(string)$i] ?? null;
-                                    ?>
-                                        <option value="<?= $i ?>" <?= ($_POST['class_applied'] ?? '') == $i ? 'selected' : '' ?>
-                                            data-seats="<?= $seatInfo ? $seatInfo['available'] : '' ?>">
-                                            Class <?= $i ?><?= $seatInfo ? ' ('.$seatInfo['available'].' seats)' : '' ?>
+                                    <?php foreach ($seatData as $cls => $seatInfo): ?>
+                                        <option value="<?= e($cls) ?>" <?= ($_POST['class_applied'] ?? '') == $cls ? 'selected' : '' ?>
+                                            data-seats="<?= $seatInfo['available'] ?>">
+                                            <?= is_numeric($cls) ? 'Class '.$cls : e($cls) ?> (<?= $seatInfo['available'] ?> seats)
                                         </option>
-                                    <?php endfor; ?>
+                                    <?php endforeach; ?>
                                 </select>
                                 <div id="seatBadge" class="mt-1"></div>
                             </div>
@@ -428,7 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div id="reviewContent"></div>
                         <div class="d-flex justify-content-between mt-4">
                             <button type="button" class="btn btn-outline-secondary" onclick="wizardPrev(4)"><i class="bi bi-arrow-left me-1"></i> Back</button>
-                            <button type="submit" class="btn btn-success btn-lg px-4"><i class="bi bi-send me-2"></i>Submit Application</button>
+                            <button type="submit" class="btn btn-success btn-lg px-4" id="finalSubmitBtn"><i class="bi bi-send me-2"></i>Submit Application</button>
                         </div>
                     </div>
                 </form>
@@ -442,6 +440,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
 let currentStep = 1;
 const totalSteps = 4;
+
+// Fix: Remove required from hidden panels before submit so browser validation doesn't block
+document.getElementById('admissionForm')?.addEventListener('submit', function(e) {
+    // Show all panels briefly to avoid hidden-required-field blocking
+    const panels = document.querySelectorAll('.wizard-panel');
+    panels.forEach(p => p.style.display = 'block');
+    
+    // Validate all steps
+    let allValid = true;
+    for (let s = 1; s <= 3; s++) {
+        if (!validateStep(s)) { allValid = false; currentStep = s; updateProgress(); break; }
+    }
+    if (!allValid) {
+        e.preventDefault();
+        // Restore panel visibility
+        panels.forEach(p => p.style.display = '');
+        document.querySelector('.wizard-panel.active').style.display = 'block';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    // If valid, panels stay visible so browser native validation passes
+});
 
 function updateProgress() {
     document.querySelectorAll('.wizard-step-indicator').forEach(ind => {
