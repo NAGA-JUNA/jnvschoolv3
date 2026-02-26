@@ -261,8 +261,35 @@ require_once __DIR__ . '/../includes/header.php';
                         <td style="font-size:.85rem"><?= e($a['phone'] ?? '-') ?></td>
                         <td><span class="badge bg-<?= $sc ?>-subtle text-<?= $sc ?>"><?= ucfirst(str_replace('_',' ',$a['status'])) ?></span></td>
                         <td style="font-size:.8rem"><?= date('M d, Y', strtotime($a['created_at'])) ?></td>
-                        <td>
-                            <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="event.stopPropagation();openDrawer(<?= $a['id'] ?>)"><i class="bi bi-eye"></i></button>
+                        <td onclick="event.stopPropagation()">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-primary py-0 px-2" onclick="openDrawer(<?= $a['id'] ?>)" title="View Details"><i class="bi bi-eye"></i></button>
+                                <?php
+                                $s = $a['status'];
+                                $id = $a['id'];
+                                if ($s === 'new'): ?>
+                                    <button class="btn btn-outline-info py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'contacted'},'Mark as Contacted?')" title="Mark Contacted"><i class="bi bi-telephone"></i></button>
+                                    <button class="btn btn-outline-danger py-0 px-2" onclick="handleReject(<?=$id?>)" title="Reject"><i class="bi bi-x-lg"></i></button>
+                                <?php elseif ($s === 'contacted'): ?>
+                                    <button class="btn btn-outline-info py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'documents_verified'},'Mark Documents Verified?')" title="Docs Verified"><i class="bi bi-file-earmark-check"></i></button>
+                                    <button class="btn btn-outline-danger py-0 px-2" onclick="handleReject(<?=$id?>)" title="Reject"><i class="bi bi-x-lg"></i></button>
+                                <?php elseif ($s === 'documents_verified'): ?>
+                                    <button class="btn btn-outline-warning py-0 px-2" onclick="ajaxAction('set_interview',{id:<?=$id?>,interview_date:prompt('Interview date (YYYY-MM-DD):')||''},'Schedule Interview?')" title="Schedule Interview"><i class="bi bi-calendar-event"></i></button>
+                                    <button class="btn btn-outline-success py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'approved'},'Approve this application?')" title="Approve"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-outline-danger py-0 px-2" onclick="handleReject(<?=$id?>)" title="Reject"><i class="bi bi-x-lg"></i></button>
+                                <?php elseif ($s === 'interview_scheduled'): ?>
+                                    <button class="btn btn-outline-success py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'approved'},'Approve this application?')" title="Approve"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-outline-danger py-0 px-2" onclick="handleReject(<?=$id?>)" title="Reject"><i class="bi bi-x-lg"></i></button>
+                                    <button class="btn btn-outline-secondary py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'waitlisted'},'Move to Waitlist?')" title="Waitlist"><i class="bi bi-hourglass-split"></i></button>
+                                <?php elseif ($s === 'waitlisted'): ?>
+                                    <button class="btn btn-outline-success py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'approved'},'Approve this application?')" title="Approve"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-outline-danger py-0 px-2" onclick="handleReject(<?=$id?>)" title="Reject"><i class="bi bi-x-lg"></i></button>
+                                <?php elseif ($s === 'approved'): ?>
+                                    <button class="btn btn-outline-success py-0 px-2" onclick="ajaxAction('convert_to_student',{id:<?=$id?>},'Create student record from this admission?')" title="Create Student"><i class="bi bi-person-plus"></i></button>
+                                <?php elseif ($s === 'rejected'): ?>
+                                    <button class="btn btn-outline-warning py-0 px-2" onclick="ajaxAction('update_status',{id:<?=$id?>,status:'new'},'Reopen this application?')" title="Reopen"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
@@ -493,6 +520,12 @@ function escHtml(s) {
 }
 
 let _currentDrawerId = null;
+
+function handleReject(id) {
+    const remarks = prompt('Rejection remarks (optional):');
+    if (remarks === null) return; // cancelled
+    ajaxAction('update_status', {id: id, status: 'rejected', remarks: remarks}, 'Reject this application?');
+}
 
 function ajaxAction(action, params, confirmMsg) {
     if (confirmMsg && !confirm(confirmMsg)) return;
