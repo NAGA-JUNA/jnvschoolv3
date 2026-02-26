@@ -47,7 +47,7 @@ try {
     if (isset($pdo) && isAdmin()) {
         $stmt = $pdo->query("SELECT COUNT(*) FROM notifications WHERE status='pending'");
         $_notifCount = (int)$stmt->fetchColumn();
-        $stmt2 = $pdo->query("SELECT COUNT(*) FROM admissions WHERE status='pending'");
+        $stmt2 = $pdo->query("SELECT COUNT(*) FROM admissions WHERE status IN ('new','contacted')");
         $_admissionCount = (int)$stmt2->fetchColumn();
     }
 } catch (Exception $e) { /* silent */ }
@@ -1096,6 +1096,8 @@ try {
             <div class="nav-item">
                 <a href="/admin/admissions.php" class="nav-link <?= navActive('/admin/admissions') ?>" data-bs-title="Admissions"><i class="bi bi-file-earmark-plus"></i> <span>Admissions</span><?php if ($_admissionCount > 0): ?><span class="nav-badge"><?= $_admissionCount > 99 ? '99+' : $_admissionCount ?></span><?php endif; ?></a>
             </div>
+            <div class="nav-item">
+                <a href="/admin/seat-capacity.php" class="nav-link <?= navActive('/admin/seat-capacity') ?>" data-bs-title="Seat Capacity"><i class="bi bi-grid-3x3-gap"></i> <span>Seat Capacity</span></a>
             <?php endif; ?>
             <div class="nav-item">
                 <a href="/admin/fee-structure.php" class="nav-link <?= navActive('/admin/fee-structure') ?>" data-bs-title="Fee Structure"><i class="bi bi-cash-stack"></i> <span>Fee Structure</span></a>

@@ -9,7 +9,7 @@ $db = getDB();
 $totalStudents = $db->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
 $totalTeachers = $db->query("SELECT COUNT(*) FROM teachers WHERE status='active'")->fetchColumn();
 $totalEnquiries = $db->query("SELECT COUNT(*) FROM enquiries WHERE status='new'")->fetchColumn();
-$pendingAdmissions = $db->query("SELECT COUNT(*) FROM admissions WHERE status='pending'")->fetchColumn();
+$pendingAdmissions = $db->query("SELECT COUNT(*) FROM admissions WHERE status IN ('new','contacted')")->fetchColumn();
 $pendingNotifications = $db->query("SELECT COUNT(*) FROM notifications WHERE status='pending'")->fetchColumn();
 $pendingGallery = $db->query("SELECT COUNT(*) FROM gallery_items WHERE status='pending'")->fetchColumn();
 $upcomingEvents = $db->query("SELECT COUNT(*) FROM events WHERE start_date >= CURDATE()")->fetchColumn();
