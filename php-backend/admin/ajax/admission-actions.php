@@ -5,6 +5,125 @@ $db = getDB();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+// ============ POST: AJAX Actions ============
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $aid = (int)($_POST['id'] ?? 0);
+    $csrf = $_POST['csrf_token'] ?? '';
+    
+    // Verify CSRF
+    if (!$csrf || $csrf !== ($_SESSION['csrf_token'] ?? '')) {
+        echo json_encode(['success'=>false,'error'=>'Invalid CSRF token']);
+        exit;
+    }
+
+    if ($action === 'update_status' && $aid) {
+        $allStatuses = ['new','contacted','documents_verified','interview_scheduled','approved','rejected','waitlisted','converted'];
+        $newStatus = $_POST['new_status'] ?? '';
+        $remarks = trim($_POST['remarks'] ?? '');
+        if (!in_array($newStatus, $allStatuses)) {
+            echo json_encode(['success'=>false,'error'=>'Invalid status']);
+            exit;
+        }
+        $oldSt = $db->prepare("SELECT status FROM admissions WHERE id=?");
+        $oldSt->execute([$aid]);
+        $oldStatus = $oldSt->fetchColumn();
+        if (!$oldStatus) { echo json_encode(['success'=>false,'error'=>'Admission not found']); exit; }
+
+        $db->prepare("UPDATE admissions SET status=?, remarks=?, reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$newStatus, $remarks, currentUserId(), $aid]);
+        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,?,?,?,?)")->execute([$aid, $oldStatus, $newStatus, currentUserId(), $remarks]);
+        auditLog("admission_$newStatus", 'admission', $aid);
+
+        // Auto-create student if requested
+        if ($newStatus === 'approved' && !empty($_POST['create_student'])) {
+            $adm = $db->prepare("SELECT * FROM admissions WHERE id=?");
+            $adm->execute([$aid]);
+            $adm = $adm->fetch();
+            if ($adm) {
+                $admNo = 'STU-'.date('Y').'-'.str_pad($aid, 5, '0', STR_PAD_LEFT);
+                $db->prepare("INSERT INTO students (admission_no, name, father_name, mother_name, dob, gender, class, phone, email, address, blood_group, category, aadhar_no, status, admission_date, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'active',CURDATE(),?)")
+                    ->execute([$admNo, $adm['student_name'], $adm['father_name'], $adm['mother_name'], $adm['dob'], $adm['gender'], $adm['class_applied'], $adm['phone'], $adm['email'], $adm['address'], $adm['blood_group'], $adm['category'], $adm['aadhar_no'], currentUserId()]);
+                $studentId = (int)$db->lastInsertId();
+                $db->prepare("UPDATE admissions SET status='converted', converted_student_id=? WHERE id=?")->execute([$studentId, $aid]);
+                $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,'approved','converted',?,'Student record created')")->execute([$aid, currentUserId()]);
+                auditLog('admission_converted', 'admission', $aid, "Student ID: $studentId");
+            }
+        }
+
+        // Send email on key status changes
+        if (in_array($newStatus, ['approved','rejected','waitlisted','interview_scheduled'])) {
+            try {
+                $adm = $db->prepare("SELECT * FROM admissions WHERE id=?");
+                $adm->execute([$aid]);
+                $adm = $adm->fetch();
+                if ($adm && $adm['email']) {
+                    require_once __DIR__.'/../../config/mail.php';
+                    $schoolName = getSetting('school_name','JNV School');
+                    $subjects = [
+                        'approved' => "Admission Approved — $schoolName",
+                        'rejected' => "Admission Update — $schoolName",
+                        'waitlisted' => "Admission Waitlisted — $schoolName",
+                        'interview_scheduled' => "Interview Scheduled — $schoolName"
+                    ];
+                    $bodies = [
+                        'approved' => "<h2>Congratulations!</h2><p>Dear {$adm['student_name']},</p><p>Your admission application <strong>{$adm['application_id']}</strong> has been <strong style='color:#22c55e'>APPROVED</strong>.</p>",
+                        'rejected' => "<h2>Admission Update</h2><p>Dear {$adm['student_name']},</p><p>After careful review, your application <strong>{$adm['application_id']}</strong> could not be accepted at this time.</p>".($remarks ? "<p><strong>Remarks:</strong> $remarks</p>" : ""),
+                        'waitlisted' => "<h2>Application Waitlisted</h2><p>Dear {$adm['student_name']},</p><p>Your application <strong>{$adm['application_id']}</strong> has been placed on the <strong>waitlist</strong>.</p>",
+                        'interview_scheduled' => "<h2>Interview Scheduled</h2><p>Dear {$adm['student_name']},</p><p>An interview has been scheduled for your application <strong>{$adm['application_id']}</strong>.</p>"
+                    ];
+                    $emailBody = "<div style='font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:2rem;'>".$bodies[$newStatus]."</div>";
+                    sendMail($adm['email'], $subjects[$newStatus], $emailBody);
+                }
+            } catch (Exception $e) { /* silent */ }
+        }
+
+        echo json_encode(['success'=>true,'message'=>'Status updated to '.ucfirst(str_replace('_',' ',$newStatus))]);
+        exit;
+    }
+
+    if ($action === 'add_note' && $aid) {
+        $note = trim($_POST['note'] ?? '');
+        if (!$note) { echo json_encode(['success'=>false,'error'=>'Note is required']); exit; }
+        $db->prepare("INSERT INTO admission_notes (admission_id, user_id, note) VALUES (?,?,?)")->execute([$aid, currentUserId(), $note]);
+        auditLog('admission_note_added', 'admission', $aid);
+        echo json_encode(['success'=>true,'message'=>'Note added']);
+        exit;
+    }
+
+    if ($action === 'set_followup' && $aid) {
+        $followUp = $_POST['follow_up_date'] ?? null;
+        $db->prepare("UPDATE admissions SET follow_up_date=? WHERE id=?")->execute([$followUp ?: null, $aid]);
+        echo json_encode(['success'=>true,'message'=>'Follow-up date updated']);
+        exit;
+    }
+
+    if ($action === 'set_interview' && $aid) {
+        $intDate = $_POST['interview_date'] ?? null;
+        $oldSt = $db->prepare("SELECT status FROM admissions WHERE id=?");
+        $oldSt->execute([$aid]);
+        $oldStatus = $oldSt->fetchColumn();
+        $db->prepare("UPDATE admissions SET interview_date=?, status='interview_scheduled', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$intDate, currentUserId(), $aid]);
+        $db->prepare("INSERT INTO admission_status_history (admission_id, old_status, new_status, changed_by, remarks) VALUES (?,?,'interview_scheduled',?,'Interview scheduled')")->execute([$aid, $oldStatus ?: 'new', currentUserId()]);
+        echo json_encode(['success'=>true,'message'=>'Interview scheduled']);
+        exit;
+    }
+
+    if ($action === 'delete' && $aid) {
+        if (!isSuperAdmin()) { echo json_encode(['success'=>false,'error'=>'Unauthorized']); exit; }
+        $db->prepare("DELETE FROM admission_notes WHERE admission_id=?")->execute([$aid]);
+        $db->prepare("DELETE FROM admission_status_history WHERE admission_id=?")->execute([$aid]);
+        $db->prepare("DELETE FROM admissions WHERE id=?")->execute([$aid]);
+        auditLog('admission_deleted', 'admission', $aid);
+        echo json_encode(['success'=>true,'message'=>'Admission deleted']);
+        exit;
+    }
+
+    echo json_encode(['success'=>false,'error'=>'Invalid action']);
+    exit;
+}
+
+// ============ GET Actions ============
+
 // GET: Detail view for drawer
 if ($action === 'get_detail' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     header('Content-Type: application/json');
@@ -97,7 +216,7 @@ if ($action === 'seat_count' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $class = $_GET['class'] ?? '';
     $year = getSetting('academic_year', date('Y').'-'.(date('Y')+1));
     
-    $stmt = $db->prepare("SELECT total_seats FROM class_seat_capacity WHERE class=? AND academic_year=?");
+    $stmt = $db->prepare("SELECT total_seats FROM class_seat_capacity WHERE class=? AND academic_year=? AND is_active=1");
     $stmt->execute([$class, $year]);
     $capacity = $stmt->fetchColumn();
     
