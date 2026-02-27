@@ -1,122 +1,274 @@
 <?php
 /**
- * Shared Public Footer Include
+ * Shared Public Footer Component
  * 
- * Renders: Footer CTA, 4-column dark footer, WhatsApp floating button, Bootstrap JS
- * 
- * Expected variables (set by parent page):
- *   $schoolName, $navLogo, $logoPath, $schoolAddress, $schoolPhone, $schoolEmail,
- *   $socialFacebook, $socialTwitter, $socialInstagram, $socialYoutube, $socialLinkedin,
- *   $whatsappNumber
+ * Expected variables from parent page:
+ *   $schoolName, $navLogo, $logoPath
+ *   Optional: $schoolAddress, $schoolPhone, $schoolEmail, $schoolTimings
  */
 
-// Footer CTA settings
-$_ctaShow = getSetting('home_footer_cta_show', '1');
-$_ctaTitle = getSetting('home_footer_cta_title', '') ?: 'Become a Part of ' . $schoolName;
-$_ctaDesc = getSetting('home_footer_cta_desc', '') ?: 'Give your child the gift of quality education. Contact us today to learn more about admissions.';
-$_ctaBtn = getSetting('home_footer_cta_btn_text', '') ?: 'Get In Touch';
-
-// Footer column settings
-$_fDesc = getSetting('footer_description', 'A professional and modern school with years of experience in nurturing children with senior teachers and a clean environment.');
-$_fLinks = json_decode(getSetting('footer_quick_links', ''), true) ?: [
-    ['label'=>'About Us','url'=>'/public/about.php'],
-    ['label'=>'Our Teachers','url'=>'/public/teachers.php'],
-    ['label'=>'Admissions','url'=>'/public/admission-form.php'],
-    ['label'=>'Gallery','url'=>'/public/gallery.php'],
-    ['label'=>'Events','url'=>'/public/events.php'],
-    ['label'=>'Admin Login','url'=>'/login.php']
-];
-$_fProgs = json_decode(getSetting('footer_programs', ''), true) ?: [
-    ['label'=>'Pre-Primary (LKG & UKG)'],
-    ['label'=>'Primary School (1-5)'],
-    ['label'=>'Upper Primary (6-8)'],
-    ['label'=>'Co-Curricular Activities'],
-    ['label'=>'Sports Programs']
-];
-$_fAddr = getSetting('footer_contact_address', $schoolAddress);
-$_fPhone = getSetting('footer_contact_phone', $schoolPhone);
-$_fEmail = getSetting('footer_contact_email', $schoolEmail);
-$_fHours = getSetting('footer_contact_hours', 'Mon - Sat: 8:00 AM - 5:00 PM');
-$_fSocFb = getSetting('footer_social_facebook', $socialFacebook);
-$_fSocTw = getSetting('footer_social_twitter', $socialTwitter);
-$_fSocIg = getSetting('footer_social_instagram', $socialInstagram);
-$_fSocYt = getSetting('footer_social_youtube', $socialYoutube);
-$_fSocLi = getSetting('footer_social_linkedin', $socialLinkedin);
-
-if ($_ctaShow === '1'):
+$_footerAddress  = $schoolAddress  ?? getSetting('school_address', 'Anantapuram, Andhra Pradesh');
+$_footerPhone    = $schoolPhone    ?? getSetting('school_phone', '+91 00000 00000');
+$_footerEmail    = $schoolEmail    ?? getSetting('school_email', 'info@school.edu.in');
+$_footerTimings  = $schoolTimings  ?? getSetting('school_timings', 'Mon – Sat: 8:00 AM – 4:00 PM');
+$_footerFacebook = getSetting('social_facebook', '#');
+$_footerTwitter  = getSetting('social_twitter', '#');
+$_footerInsta    = getSetting('social_instagram', '#');
+$_footerYoutube  = getSetting('social_youtube', '#');
 ?>
-<!-- Footer CTA -->
+
+<!-- Footer Styles -->
+<style>
+/* ── Footer CTA ── */
+.footer-cta {
+    background: linear-gradient(135deg, #0f2557 0%, #1a3a7a 100%);
+    padding: 3.5rem 0;
+    text-align: center;
+}
+.footer-cta h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.75rem;
+}
+.footer-cta p {
+    color: rgba(255,255,255,0.75);
+    font-size: 1.05rem;
+    max-width: 550px;
+    margin: 0 auto 1.5rem;
+}
+.footer-cta .btn-cta {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff; border: none; border-radius: 50px;
+    padding: 0.65rem 2rem; font-weight: 600; font-size: 0.95rem;
+    box-shadow: 0 4px 15px rgba(239,68,68,0.35);
+    transition: all 0.3s; text-decoration: none; display: inline-block;
+}
+.footer-cta .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(239,68,68,0.5); color: #fff; }
+.footer-cta .btn-outline {
+    background: transparent; color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.4); border-radius: 50px;
+    padding: 0.65rem 2rem; font-weight: 600; font-size: 0.95rem;
+    transition: all 0.3s; text-decoration: none; display: inline-block;
+}
+.footer-cta .btn-outline:hover { background: rgba(255,255,255,0.1); border-color: #fff; color: #fff; }
+
+/* ── Main Footer ── */
+.site-footer {
+    background: #1a1a2e;
+    color: rgba(255,255,255,0.7);
+    padding: 3.5rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+.site-footer .footer-logo img {
+    height: 60px !important; width: auto !important; background: transparent !important;
+    padding: 0 !important; border: none !important; box-shadow: none !important;
+    border-radius: 0 !important; object-fit: contain;
+}
+.site-footer .footer-location {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.82rem;
+    margin-top: 0.5rem;
+}
+.site-footer .footer-tagline {
+    color: #60a5fa;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-style: italic;
+    margin: 0.4rem 0 0.75rem;
+}
+.site-footer .footer-desc {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    margin-bottom: 1.2rem;
+    max-width: 300px;
+}
+
+/* Headings */
+.footer-heading {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.6rem;
+    position: relative;
+}
+.footer-heading::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 30px; height: 2px;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius: 2px;
+}
+
+/* Links */
+.footer-links { list-style: none; padding: 0; margin: 0; }
+.footer-links li { margin-bottom: 0.5rem; }
+.footer-links a {
+    color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    font-size: 0.88rem;
+    transition: color 0.2s, padding-left 0.2s;
+}
+.footer-links a:hover { color: #fff; padding-left: 4px; }
+
+/* Contact */
+.footer-contact-item {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    margin-bottom: 0.85rem; color: rgba(255,255,255,0.65);
+}
+.footer-contact-item i {
+    color: #60a5fa; font-size: 1rem; margin-top: 2px; flex-shrink: 0;
+}
+
+/* Social */
+.footer-social { display: flex; gap: 0.6rem; }
+.footer-social a {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.7); font-size: 1rem;
+    text-decoration: none; transition: all 0.3s;
+}
+.footer-social a:hover { background: #3b82f6; color: #fff; transform: translateY(-2px); }
+
+/* Bottom Bar */
+.footer-bottom {
+    margin-top: 2.5rem;
+    padding: 1.2rem 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    text-align: center;
+    color: rgba(255,255,255,0.4);
+    font-size: 0.8rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 991.98px) {
+    .footer-cta h2 { font-size: 1.6rem; }
+}
+@media (max-width: 767.98px) {
+    .site-footer { padding: 2.5rem 0 0; }
+    .footer-cta { padding: 2.5rem 0; }
+    .footer-cta h2 { font-size: 1.4rem; }
+    .footer-heading { margin-top: 0.5rem; }
+    .footer-brand-row { flex-direction: column; text-align: center; }
+    .footer-desc { margin-left: auto; margin-right: auto; }
+    .footer-social { justify-content: center; }
+    .footer-heading::after { left: 50%; transform: translateX(-50%); }
+}
+</style>
+
+<!-- Footer CTA Section -->
 <section class="footer-cta">
     <div class="container">
-        <h2><?= e(str_replace('[school_name]', $schoolName, $_ctaTitle)) ?></h2>
-        <p><?= e($_ctaDesc) ?></p>
+        <h2>Become a Part of <?= e($schoolName) ?></h2>
+        <p>Empowering students with quality education, strong values, and the skills to succeed in a changing world.</p>
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="/public/admission-form.php" class="btn btn-danger rounded-pill px-4 fw-semibold"><?= e($_ctaBtn) ?> <i class="bi bi-arrow-right ms-1"></i></a>
-            <a href="/public/about.php" class="btn btn-outline-light rounded-pill px-4 fw-semibold">Learn More</a>
+            <a href="/public/admission-form.php" class="btn-cta"><i class="bi bi-send me-1"></i>Get In Touch</a>
+            <a href="/public/about.php" class="btn-outline"><i class="bi bi-arrow-right me-1"></i>Learn More</a>
         </div>
     </div>
 </section>
-<?php endif; ?>
 
-<!-- Dark Footer -->
+<!-- Main Footer -->
 <footer class="site-footer">
     <div class="container">
-        <div class="row g-4 py-5">
-            <div class="col-lg-3 col-md-6">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <?php if ($navLogo): ?><img src="<?= e($logoPath) ?>" alt="Logo" style="max-width:120px;height:auto;border-radius:8px;object-fit:contain;background:#fff;padding:4px;"><?php else: ?><i class="bi bi-mortarboard-fill" style="font-size:1.8rem;"></i><?php endif; ?>
-                    <div>
-                        <h6 class="fw-bold mb-0" style="font-size:0.95rem;"><?= e($schoolName) ?></h6>
-                        <?php if ($_fAddr): ?><small class="opacity-50" style="font-size:0.75rem;"><?= e(explode(',', $_fAddr)[0] ?? '') ?></small><?php endif; ?>
-                    </div>
+        <div class="row g-4">
+            <!-- Brand Column -->
+            <div class="col-lg-4 col-md-6">
+                <div class="footer-logo" style="margin-bottom:15px;">
+                    <?php if ($navLogo): ?>
+                        <img src="<?= e($logoPath) ?>" alt="<?= e($schoolName) ?> Logo">
+                    <?php else: ?>
+                        <div style="width:50px;height:50px;border-radius:10px;background:linear-gradient(135deg,#1e40af,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <p class="small opacity-60 mb-3"><?= e($_fDesc) ?></p>
-                <div class="footer-social d-flex gap-2 flex-wrap">
-                    <?php if ($_fSocFb): ?><a href="<?= e($_fSocFb) ?>" target="_blank"><i class="bi bi-facebook"></i></a><?php endif; ?>
-                    <?php if ($_fSocTw): ?><a href="<?= e($_fSocTw) ?>" target="_blank"><i class="bi bi-twitter-x"></i></a><?php endif; ?>
-                    <?php if ($_fSocIg): ?><a href="<?= e($_fSocIg) ?>" target="_blank"><i class="bi bi-instagram"></i></a><?php endif; ?>
-                    <?php if ($_fSocYt): ?><a href="<?= e($_fSocYt) ?>" target="_blank"><i class="bi bi-youtube"></i></a><?php endif; ?>
-                    <?php if ($_fSocLi): ?><a href="<?= e($_fSocLi) ?>" target="_blank"><i class="bi bi-linkedin"></i></a><?php endif; ?>
+                <div class="footer-tagline">Inspiring Excellence in Education</div>
+                <p class="footer-desc">Dedicated to nurturing young minds through innovative teaching, holistic development, and a commitment to academic excellence.</p>
+                <div class="footer-social">
+                    <a href="<?= e($_footerFacebook) ?>" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="<?= e($_footerTwitter) ?>" aria-label="X / Twitter"><i class="bi bi-twitter-x"></i></a>
+                    <a href="<?= e($_footerInsta) ?>" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="<?= e($_footerYoutube) ?>" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+
+            <!-- Quick Links -->
+            <div class="col-lg-2 col-md-6 col-6">
                 <h6 class="footer-heading">Quick Links</h6>
-                <ul class="list-unstyled">
-                    <?php foreach ($_fLinks as $_fl): ?>
-                    <li class="mb-2"><a href="<?= e($_fl['url']) ?>" class="footer-link"><?= e($_fl['label']) ?></a></li>
-                    <?php endforeach; ?>
+                <ul class="footer-links">
+                    <li><a href="/public/about.php">About Us</a></li>
+                    <li><a href="/public/teachers.php">Our Teachers</a></li>
+                    <li><a href="/public/admission-form.php">Admissions</a></li>
+                    <li><a href="/public/gallery.php">Gallery</a></li>
+                    <li><a href="/public/events.php">Events</a></li>
+                    <li><a href="/login.php">Admin Login</a></li>
                 </ul>
             </div>
-            <div class="col-lg-3 col-md-6">
+
+            <!-- Programs -->
+            <div class="col-lg-3 col-md-6 col-6">
                 <h6 class="footer-heading">Programs</h6>
-                <ul class="list-unstyled">
-                    <?php foreach ($_fProgs as $_fp): ?>
-                    <li class="mb-2"><span class="footer-link"><?= e($_fp['label']) ?></span></li>
-                    <?php endforeach; ?>
+                <ul class="footer-links">
+                    <li><a href="#">Pre-Primary</a></li>
+                    <li><a href="#">Primary School</a></li>
+                    <li><a href="#">Upper Primary</a></li>
+                    <li><a href="#">Co-Curricular Activities</a></li>
+                    <li><a href="#">Sports Programs</a></li>
                 </ul>
             </div>
+
+            <!-- Contact Info -->
             <div class="col-lg-3 col-md-6">
                 <h6 class="footer-heading">Contact Info</h6>
-                <ul class="list-unstyled">
-                    <?php if ($_fAddr): ?><li class="mb-2"><i class="bi bi-geo-alt text-danger me-2"></i><span class="footer-link"><?= e($_fAddr) ?></span></li><?php endif; ?>
-                    <?php if ($_fPhone): ?><li class="mb-2"><i class="bi bi-telephone text-success me-2"></i><a href="tel:<?= e($_fPhone) ?>" class="footer-link"><?= e($_fPhone) ?></a></li><?php endif; ?>
-                    <?php if ($_fEmail): ?><li class="mb-2"><i class="bi bi-envelope text-warning me-2"></i><a href="mailto:<?= e($_fEmail) ?>" class="footer-link"><?= e($_fEmail) ?></a></li><?php endif; ?>
-                    <?php if ($_fHours): ?><li class="mb-2"><i class="bi bi-clock text-info me-2"></i><span class="footer-link"><?= e($_fHours) ?></span></li><?php endif; ?>
-                </ul>
+                <div class="footer-contact-item">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span><?= e($_footerAddress) ?></span>
+                </div>
+                <div class="footer-contact-item">
+                    <i class="bi bi-telephone-fill"></i>
+                    <span><?= e($_footerPhone) ?></span>
+                </div>
+                <div class="footer-contact-item">
+                    <i class="bi bi-envelope-fill"></i>
+                    <span><?= e($_footerEmail) ?></span>
+                </div>
+                <div class="footer-contact-item">
+                    <i class="bi bi-clock-fill"></i>
+                    <span><?= e($_footerTimings) ?></span>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="footer-bottom">
-        <div class="container text-center py-3">
-            <small class="opacity-50">&copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.</small>
+
+        <!-- Bottom Bar -->
+        <div class="footer-bottom">
+            &copy; <?= date('Y') ?> <?= e($schoolName) ?>. All rights reserved.
         </div>
     </div>
 </footer>
 
 <!-- WhatsApp Floating Button -->
-<?php if ($whatsappNumber): 
-    $_waNum = preg_replace('/[^0-9]/', '', $whatsappNumber);
-    $_waText = urlencode('Hi, I need help regarding ' . $schoolName);
+<?php
+    $_waNumber = '';
+    if (function_exists('getSetting')) {
+        $_waNumber = getSetting('whatsapp_api_number', '');
+    }
+    if (empty($_waNumber) && !empty($whatsappNumber)) {
+        $_waNumber = $whatsappNumber;
+    }
+    if (empty($_waNumber) && !empty($_footerPhone)) {
+        $_waNumber = $_footerPhone;
+    }
+    if ($_waNumber):
+        $_waNum = preg_replace('/[^0-9]/', '', $_waNumber);
+        $_waText = urlencode('Hi, I need help regarding ' . ($schoolName ?? 'your school'));
 ?>
 <a href="https://wa.me/<?= e($_waNum) ?>?text=<?= $_waText ?>" target="_blank" class="wa-float-btn" title="Chat on WhatsApp">
     <i class="bi bi-whatsapp"></i>
@@ -144,6 +296,8 @@ if ($_ctaShow === '1'):
             <div class="modal-body" style="padding:24px;">
                 <p class="text-muted small mb-3">Share your details below and our admissions experts will get in touch with you to guide you personally.</p>
                 <form id="needHelpForm">
+                    <!-- Honeypot field for spam protection -->
+                    <input type="text" name="website_url" style="display:none;" tabindex="-1" autocomplete="off">
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Parent's Full Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="parent_name" required maxlength="100" placeholder="Enter your full name">
@@ -292,7 +446,6 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
 
         const body = new URLSearchParams();
-        body.append('action', 'save');
         body.append('parent_name', name);
         body.append('mobile', '91' + mobile);
         body.append('email', email);
@@ -328,5 +481,3 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
